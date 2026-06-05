@@ -1,0 +1,205 @@
+{
+  "name": "git-branches-panel",
+  "displayName": "Git Branches Panel",
+  "description": "Tree view for local Git branches with folder grouping, sync state, and quick branch actions.",
+  "version": "0.0.1",
+  "publisher": "mauragas",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mauragas/vscode-extensions.git",
+    "directory": "extensions/git-branches-panel"
+  },
+  "bugs": {
+    "url": "https://github.com/mauragas/vscode-extensions/issues"
+  },
+  "homepage": "https://github.com/mauragas/vscode-extensions/tree/main/extensions/git-branches-panel#readme",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "SCM Providers"
+  ],
+  "keywords": [
+    "git",
+    "branches",
+    "source control",
+    "tree view",
+    "sync",
+    "merge"
+  ],
+  "files": [
+    "out",
+    "resources",
+    "package.json",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "git-branches-container",
+          "title": "Git Branches",
+          "icon": "resources/branch.svg"
+        }
+      ]
+    },
+    "views": {
+      "git-branches-container": [
+        {
+          "id": "gitBranchesPanel",
+          "name": "Local Branches"
+        }
+      ],
+      "scm": [
+        {
+          "id": "gitBranchesSCM",
+          "name": "Branches",
+          "when": "gitOpenRepositoryCount != 0"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "gitBranchesPanel.refresh",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "gitBranchesPanel.fetchAll",
+        "title": "Fetch All",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "gitBranchesPanel.syncCurrentBranch",
+        "title": "Sync Current Branch",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "gitBranchesPanel.checkout",
+        "title": "Checkout Branch",
+        "icon": "$(arrow-right)"
+      },
+      {
+        "command": "gitBranchesPanel.syncBranch",
+        "title": "Sync Branch",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "gitBranchesPanel.deleteBranch",
+        "title": "Delete Branch",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "gitBranchesPanel.newBranch",
+        "title": "New Branch",
+        "icon": "$(add)"
+      },
+      {
+        "command": "gitBranchesPanel.renameBranch",
+        "title": "Rename Branch",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "gitBranchesPanel.copyBranchName",
+        "title": "Copy Branch Name",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "gitBranchesPanel.mergeIntoCurrent",
+        "title": "Merge into Current Branch",
+        "icon": "$(git-merge)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "view == gitBranchesPanel || view == gitBranchesSCM",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "view == gitBranchesPanel || view == gitBranchesSCM",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "view == gitBranchesPanel || view == gitBranchesSCM",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "view == gitBranchesPanel || view == gitBranchesSCM",
+          "group": "navigation@4"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "gitBranchesPanel.syncBranch",
+          "when": "viewItem == branch || viewItem == currentBranch",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitBranchesPanel.syncBranch",
+          "when": "viewItem == branch || viewItem == currentBranch",
+          "group": "1_branch@1"
+        },
+        {
+          "command": "gitBranchesPanel.checkout",
+          "when": "viewItem == branch || viewItem == currentBranch",
+          "group": "1_branch@2"
+        },
+        {
+          "command": "gitBranchesPanel.renameBranch",
+          "when": "viewItem == branch || viewItem == currentBranch",
+          "group": "1_branch@3"
+        },
+        {
+          "command": "gitBranchesPanel.copyBranchName",
+          "when": "viewItem == branch || viewItem == currentBranch",
+          "group": "1_branch@4"
+        },
+        {
+          "command": "gitBranchesPanel.mergeIntoCurrent",
+          "when": "viewItem == branch",
+          "group": "1_branch@5"
+        },
+        {
+          "command": "gitBranchesPanel.deleteBranch",
+          "when": "viewItem == branch",
+          "group": "2_delete@1"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Git Branches Panel",
+      "properties": {
+        "gitBranchesPanel.groupByFolder": {
+          "type": "boolean",
+          "default": true,
+          "description": "Group branches by folder prefix (for example, feature/my-branch goes into the feature folder)."
+        },
+        "gitBranchesPanel.sortOrder": {
+          "type": "string",
+          "enum": [
+            "alphabetical",
+            "recent"
+          ],
+          "default": "alphabetical",
+          "description": "Sort branches alphabetically or by most recently updated commit."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm --prefix ../.. run build:git-branches-panel",
+    "compile": "npm --prefix ../.. run build:git-branches-panel",
+    "watch": "npm --prefix ../.. run watch:git-branches-panel",
+    "lint": "npm --prefix ../.. run lint:git-branches-panel",
+    "test": "npm --prefix ../.. run test:git-branches-panel"
+  }
+}

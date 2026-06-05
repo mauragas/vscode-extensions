@@ -1,0 +1,33 @@
+{
+  "name": "vscode-extensions",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Monorepo for VS Code extensions maintained by Mauragas.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mauragas/vscode-extensions.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mauragas/vscode-extensions/issues"
+  },
+  "homepage": "https://github.com/mauragas/vscode-extensions#readme",
+  "scripts": {
+    "clean": "node -e \"for (const path of ['out', 'extensions/git-branches-panel/out']) { require('fs').rmSync(path, { recursive: true, force: true }); }\"",
+    "build": "npm run build:git-branches-panel",
+    "build:git-branches-panel": "node -e \"require('fs').rmSync('extensions/git-branches-panel/out', { recursive: true, force: true })\" && tsc -p ./extensions/git-branches-panel/tsconfig.json",
+    "watch:git-branches-panel": "tsc -watch -p ./extensions/git-branches-panel/tsconfig.json",
+    "lint": "npm run lint:git-branches-panel",
+    "lint:git-branches-panel": "eslint extensions/git-branches-panel/src extensions/git-branches-panel/test",
+    "test": "npm run test:git-branches-panel",
+    "test:git-branches-panel": "npm run build:git-branches-panel && node --test extensions/git-branches-panel/test"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0"
+  }
+}

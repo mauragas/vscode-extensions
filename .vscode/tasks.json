@@ -1,0 +1,22 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build:git-branches-panel",
+      "type": "npm",
+      "script": "build:git-branches-panel",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "watch:git-branches-panel",
+      "type": "npm",
+      "script": "watch:git-branches-panel",
+      "isBackground": true,
+      "problemMatcher": "$tsc-watch"
+    }
+  ]
+}
