@@ -2,7 +2,7 @@
   "name": "git-branches-panel",
   "displayName": "Git Branches Panel",
   "description": "Tree view for local and remote Git branches, stashes, worktrees, and tags with grouping, sync state, and quick actions.",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "publisher": "karolis-mauragas",
   "license": "MIT",
   "repository": {

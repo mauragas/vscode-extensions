@@ -123,6 +123,9 @@ function createDataLoader(state) {
     getRepoRoot() {
       return state.repoRoot;
     },
+    isSectionLoaded(section) {
+      return Boolean(state.loadedSections?.has(section));
+    },
   };
 }
 
@@ -189,7 +192,7 @@ test('activate orchestrates provider, views, commands, and auto-refresh wiring',
   assert.equal(calls.views.length, 1);
   assert.equal(calls.commands.length, 1);
   assert.equal(calls.autoRefresh.length, 1);
-  assert.deepEqual(calls.refreshes, [{ fetchRemoteState: true }]);
+  assert.deepEqual(calls.refreshes, []);
   assert.equal(calls.views[0][0], context);
   assert.equal(calls.commands[0][0], context);
   assert.equal(calls.autoRefresh[0][0], context);
@@ -214,6 +217,7 @@ test('BranchTreeProvider refreshes status bar data and exposes tree items', asyn
       },
     ],
     repoRoot: '/repo',
+    loadedSections: new Set(['local']),
   };
   const dataLoader = createDataLoader(state);
   const { BranchTreeProvider } = loadFresh('../out/treeProvider.js', {
@@ -229,6 +233,8 @@ test('BranchTreeProvider refreshes status bar data and exposes tree items', asyn
     },
     './treeDataLoader': {
       BranchDataLoader: class BranchDataLoader {},
+      getBranchSectionKey: (sectionPath) =>
+        sectionPath === 'section:local' ? 'local' : undefined,
     },
     './treeItem': createTreeItemMock(),
     './treePresentation': {
@@ -269,31 +275,58 @@ test('BranchTreeProvider loads nested container children and hides the status ba
     currentBranch: undefined,
     treeData: [],
     repoRoot: '/repo',
-    onRefresh() {
+    loadedSections: new Set(),
+    onRefresh(options) {
+      for (const section of options.sections ?? []) {
+        state.loadedSections.add(section);
+      }
+
       state.treeData = [
         {
           kind: 'section',
           label: 'Local',
           path: 'section:local',
-          children: [
-            {
-              kind: 'folder',
-              label: 'feature',
-              path: 'feature',
-              children: [
+          children: state.loadedSections.has('local')
+            ? [
+                {
+                  kind: 'folder',
+                  label: 'feature',
+                  path: 'feature',
+                  children: [
+                    {
+                      kind: 'branch',
+                      fullName: 'feature/demo',
+                      label: 'demo',
+                      path: 'feature/demo',
+                      info: {
+                        name: 'feature/demo',
+                        isCurrent: false,
+                      },
+                    },
+                  ],
+                },
+              ]
+            : [],
+        },
+        {
+          kind: 'section',
+          label: 'Remote',
+          path: 'section:remote',
+          children: state.loadedSections.has('remote')
+            ? [
                 {
                   kind: 'branch',
-                  fullName: 'feature/demo',
-                  label: 'demo',
-                  path: 'feature/demo',
+                  fullName: 'origin/main',
+                  label: 'main',
+                  path: 'origin/main',
                   info: {
-                    name: 'feature/demo',
+                    name: 'origin/main',
                     isCurrent: false,
+                    scope: 'remote',
                   },
                 },
-              ],
-            },
-          ],
+              ]
+            : [],
         },
       ];
     },
@@ -312,6 +345,17 @@ test('BranchTreeProvider loads nested container children and hides the status ba
     },
     './treeDataLoader': {
       BranchDataLoader: class BranchDataLoader {},
+      getBranchSectionKey: (sectionPath) => {
+        if (sectionPath === 'section:local') {
+          return 'local';
+        }
+
+        if (sectionPath === 'section:remote') {
+          return 'remote';
+        }
+
+        return undefined;
+      },
     },
     './treeItem': createTreeItemMock(),
     './treePresentation': {
@@ -326,11 +370,17 @@ test('BranchTreeProvider loads nested container children and hides the status ba
   const rootChildren = await provider.getChildren();
   const folderChildren = await provider.getChildren(rootChildren[0]);
   const branchChildren = await provider.getChildren(folderChildren[0]);
+  const remoteChildren = await provider.getChildren(rootChildren[1]);
 
-  assert.equal(dataLoader.refreshCalls.length, 1);
+  assert.deepEqual(dataLoader.refreshCalls, [
+    { sections: ['local'], fetchRemoteState: false },
+    { sections: ['remote'], fetchRemoteState: false },
+  ]);
+  assert.equal(rootChildren.length, 2);
   assert.equal(rootChildren[0].containerPath, 'section:local');
   assert.equal(folderChildren[0].containerPath, 'feature');
   assert.equal(branchChildren[0].branchName, 'feature/demo');
+  assert.equal(remoteChildren[0].branchName, 'origin/main');
 
   await provider.refresh();
 

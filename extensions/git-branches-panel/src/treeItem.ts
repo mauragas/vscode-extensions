@@ -45,9 +45,14 @@ export class BranchTreeItem extends vscode.TreeItem {
 function toTreeItemCollapsibleState(
   collapsibleState: TreeItemCollapsibleKind
 ): vscode.TreeItemCollapsibleState {
-  return collapsibleState === 'expanded'
-    ? vscode.TreeItemCollapsibleState.Expanded
-    : vscode.TreeItemCollapsibleState.None;
+  switch (collapsibleState) {
+    case 'expanded':
+      return vscode.TreeItemCollapsibleState.Expanded;
+    case 'collapsed':
+      return vscode.TreeItemCollapsibleState.Collapsed;
+    default:
+      return vscode.TreeItemCollapsibleState.None;
+  }
 }
 
 function toThemeIcon(icon: TreeItemIconDescriptor): vscode.ThemeIcon {

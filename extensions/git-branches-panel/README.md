@@ -10,7 +10,8 @@ This extension lives in the [`vscode-extensions`](../..) repository under `exten
 
 The panel keeps the active branch visible at the top, groups slash-separated
 branch names into folders, and separates Local, Remote, Stash, Worktree, and Tags into their own
-sections so common Git navigation feels fast and tidy.
+sections so common Git navigation feels fast and tidy. The Local section opens first, while
+Remote, Stash, Worktree, and Tags stay collapsed until you expand them.
 
 ![Git Branches Panel overview showing the current branch summary plus Local, Remote, and Tags sections.](https://raw.githubusercontent.com/mauragas/vscode-extensions/main/extensions/git-branches-panel/resources/git-branches-panel-overview.png)
 
@@ -22,6 +23,9 @@ sections so common Git navigation feels fast and tidy.
 - 🪵 **Worktree section** — worktrees are shown under stashes so additional checkouts are easy to find and manage
 - 🏷️ **Tags section** — tags are shown in their own section below remote branches
 - 📁 **Folders first** — folders are listed before branch leaves inside each section
+- ⚡ **Faster first paint** — the tree loads Local branches first so the view opens quickly in larger repositories
+- 📦 **Lazy-loaded sections** — Remote, Stash, Worktree, and Tags are loaded only when you expand them
+- 🧭 **Focused default expansion** — Local starts expanded while other sections and nested folders start collapsed
 - ✅ **Current branch first** — highlighted with a `●` prefix and a green icon
 - 🪄 **Optional current branch banner** — keep or hide the top `Current branch: ...` summary from settings
 - 🕐 **Last commit time** — shown as a relative description and in the tooltip
@@ -35,13 +39,13 @@ sections so common Git navigation feels fast and tidy.
 - 🔀 **Merge into current** — merge a selected branch into the current branch from the context menu
 - 🧰 **Context menu actions** — checkout, sync, create tags, rename, merge into current, push all tags from the Tags section, copy branch name, and delete with merge-safety handling
 - ➕ **Toolbar quick actions** — create a new branch, stash tracked and untracked changes silently, sync the current branch, fetch all remotes, fetch all with prune, and refresh from the panel title bar
-- 🔄 **Auto-refresh** — updates when `.git/HEAD`, `.git/FETCH_HEAD`, `.git/packed-refs`, `.git/refs/heads/`, `.git/refs/remotes/`, `.git/refs/tags/`, `.git/refs/stash`, `.git/logs/refs/stash`, `.git/worktrees/`, workspace folders, or settings change
+- 🔄 **Targeted auto-refresh** — updates loaded sections when `.git/HEAD`, `.git/FETCH_HEAD`, `.git/packed-refs`, `.git/refs/heads/`, `.git/refs/remotes/`, `.git/refs/tags/`, `.git/refs/stash`, `.git/logs/refs/stash`, `.git/worktrees/`, workspace folders, or settings change
 
 ## Commands
 
 | Command | Description |
 | --- | --- |
-| Refresh | Refresh the branch tree and remote sync state |
+| Refresh | Refresh the loaded branch sections and remote sync state |
 | Stash Silently | Stash all tracked and untracked files without prompting for a stash name |
 | Fetch All | Fetch all remotes and refresh the tree without pruning stale refs |
 | Fetch All (Prune) | Fetch all remotes, prune deleted refs, and refresh the tree |

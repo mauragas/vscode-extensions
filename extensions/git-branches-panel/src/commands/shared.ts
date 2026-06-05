@@ -66,7 +66,7 @@ async function resolveRepoRoot(provider: BranchTreeProvider): Promise<string | n
     return existingRepoRoot;
   }
 
-  await provider.refresh({ fetchRemoteState: true });
+  await provider.refresh({ sections: ['local'], fetchRemoteState: false });
   return provider.getRepoRoot();
 }
 
@@ -76,6 +76,6 @@ async function resolveCurrentBranch(provider: BranchTreeProvider): Promise<Branc
     return currentBranch;
   }
 
-  await provider.refresh({ fetchRemoteState: true });
+  await provider.refresh({ sections: ['local'], fetchRemoteState: false });
   return provider.getCurrentBranch();
 }

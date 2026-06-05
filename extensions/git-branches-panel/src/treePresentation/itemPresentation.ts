@@ -16,7 +16,7 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
       label: node.label,
       id: node.path,
       contextValue: getSectionContextValue(node.path),
-      collapsibleState: 'expanded',
+      collapsibleState: getSectionCollapsibleState(node.path),
       icon: { id: getSectionIconId(node.path) },
       containerPath: node.path,
     };
@@ -28,7 +28,7 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
       label: node.label,
       id: `folder:${node.path}`,
       contextValue: 'folder',
-      collapsibleState: 'expanded',
+      collapsibleState: 'collapsed',
       icon: { id: 'folder' },
       containerPath: node.path,
     };
@@ -158,6 +158,10 @@ function buildTreeItemDescription(branch: BranchInfo, syncStatus: string): strin
 
 function getSectionContextValue(sectionPath: string): string {
   return sectionPath === 'section:tags' ? 'tagsSection' : 'section';
+}
+
+function getSectionCollapsibleState(sectionPath: string): 'expanded' | 'collapsed' {
+  return sectionPath === 'section:local' ? 'expanded' : 'collapsed';
 }
 
 function getSectionIconId(sectionPath: string): string {
