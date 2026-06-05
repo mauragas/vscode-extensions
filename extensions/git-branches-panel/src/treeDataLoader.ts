@@ -190,11 +190,16 @@ export class BranchDataLoader {
     section: BranchSectionKey,
     configuration: LoaderConfiguration
   ): Promise<void> {
-    if (!this.repoRoot) {
+    const repoRoot = this.repoRoot;
+    if (!repoRoot) {
       return;
     }
 
-    const branches = await this.loadBranches(section, this.repoRoot);
+    const branches = await this.loadBranches(section, repoRoot);
+    if (this.repoRoot !== repoRoot) {
+      return;
+    }
+
     const sortedBranches = sortBranches(branches, configuration.sortOrder);
     const children = buildBranchTree(
       sortedBranches,

@@ -177,6 +177,65 @@ test('BranchDataLoader only refreshes explicitly requested lazy sections', async
   assert.equal(sections.find((node) => node.path === 'section:tags').children.length, 1);
 });
 
+test('BranchDataLoader ignores stale section results after the repo root changes', async () => {
+  let resolveRemoteBranches;
+  const remoteBranchesPromise = new Promise((resolve) => {
+    resolveRemoteBranches = resolve;
+  });
+  const repoRoots = ['/repo-a', '/repo-b'];
+  const { dependencies } = createDependencies({
+    getRepoRoot: async () => repoRoots.shift() ?? '/repo-b',
+    getBranches: async (repoRoot) => [
+      {
+        name: repoRoot === '/repo-b' ? 'main-b' : 'main-a',
+        isCurrent: true,
+        lastCommitTimestamp: 20,
+      },
+    ],
+    getRemoteBranches: async (repoRoot) => {
+      if (repoRoot === '/repo-a') {
+        return remoteBranchesPromise;
+      }
+
+      return [
+        {
+          name: 'origin/main-b',
+          isCurrent: false,
+          scope: 'remote',
+          remoteName: 'origin',
+          lastCommitTimestamp: 20,
+        },
+      ];
+    },
+  });
+  const loader = new BranchDataLoader(dependencies);
+
+  const staleRefresh = loader.refresh({ sections: ['remote'], fetchRemoteState: false });
+  await Promise.resolve();
+
+  await loader.refresh({ sections: ['local'], fetchRemoteState: false });
+
+  resolveRemoteBranches([
+    {
+      name: 'origin/main-a',
+      isCurrent: false,
+      scope: 'remote',
+      remoteName: 'origin',
+      lastCommitTimestamp: 10,
+    },
+  ]);
+  await staleRefresh;
+
+  assert.equal(loader.getRepoRoot(), '/repo-b');
+  assert.equal(loader.getCurrentBranch().name, 'main-b');
+  assert.equal(loader.isSectionLoaded('local'), true);
+  assert.equal(loader.isSectionLoaded('remote'), false);
+
+  const remoteSection = loader.getTreeData().find((node) => node.path === 'section:remote');
+  assert.ok(remoteSection);
+  assert.equal(remoteSection.children.length, 0);
+});
+
 test('BranchDataLoader clears data when no workspace folders are available', async () => {
   const { dependencies } = createDependencies({
     getWorkspaceFolderPaths: () => [],
