@@ -12,7 +12,7 @@ The panel keeps the active branch visible at the top, groups slash-separated
 branch names into folders, and separates Local, Remote, and Tags into their own
 sections so common Git navigation feels fast and tidy.
 
-![Git Branches Panel overview showing the current branch summary plus Local, Remote, and Tags sections.](resources/git-branches-panel-overview.png)
+![Git Branches Panel overview showing the current branch summary plus Local, Remote, and Tags sections.](https://raw.githubusercontent.com/mauragas/vscode-extensions/main/extensions/git-branches-panel/resources/git-branches-panel-overview.png)
 
 ## Features
 
