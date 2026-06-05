@@ -413,7 +413,7 @@ async function syncBranchByName(
     const syncResult = await syncBranch(repoRoot, branchName);
     vscode.window.showInformationMessage(buildSyncResultMessage(syncResult));
     activationTracker.reset();
-    await provider.refresh({ fetchRemoteState: false });
+    await provider.refresh({ fetchRemoteState: true, forceFetchRemoteState: true });
   } catch (error) {
     vscode.window.showErrorMessage(
       `Failed to sync '${branchName}': ${getErrorMessage(error)}`

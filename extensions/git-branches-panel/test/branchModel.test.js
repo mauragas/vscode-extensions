@@ -3,6 +3,7 @@ const test = require('node:test');
 
 const {
   buildBranchDescription,
+  buildBranchSections,
   buildBranchTree,
   findFolderNode,
   formatSyncStatus,
@@ -59,17 +60,24 @@ test('sortBranches keeps the current branch first for recent sorting', () => {
   ]);
 });
 
-test('buildBranchTree groups slash-separated branches into nested folders', () => {
+test('buildBranchTree groups slash-separated branches into nested folders and keeps folders first', () => {
   const tree = buildBranchTree(sortBranches(sampleBranches, 'alphabetical'), true);
 
-  assert.equal(tree[0]?.kind, 'branch');
-  assert.equal(tree[0]?.kind === 'branch' ? tree[0].fullName : '', 'main');
+  assert.equal(tree[0]?.kind, 'folder');
+  assert.equal(tree[0]?.kind === 'folder' ? tree[0].path : '', 'feature');
+  assert.equal(tree[1]?.kind, 'branch');
+  assert.equal(tree[1]?.kind === 'branch' ? tree[1].fullName : '', 'main');
 
   const featureFolder = findFolderNode(tree, 'feature');
   assert.ok(featureFolder);
-  assert.equal(featureFolder.children[0]?.kind, 'branch');
+  assert.equal(featureFolder.children[0]?.kind, 'folder');
   assert.equal(
-    featureFolder.children[0]?.kind === 'branch' ? featureFolder.children[0].fullName : '',
+    featureFolder.children[0]?.kind === 'folder' ? featureFolder.children[0].path : '',
+    'feature/payments'
+  );
+  assert.equal(featureFolder.children[1]?.kind, 'branch');
+  assert.equal(
+    featureFolder.children[1]?.kind === 'branch' ? featureFolder.children[1].fullName : '',
     'feature/auth'
   );
 
@@ -79,6 +87,60 @@ test('buildBranchTree groups slash-separated branches into nested folders', () =
   assert.equal(
     paymentsFolder.children[0]?.kind === 'branch' ? paymentsFolder.children[0].fullName : '',
     'feature/payments/stripe'
+  );
+});
+
+test('buildBranchSections shows local branches before remote branches', () => {
+  const localBranches = sortBranches(
+    [
+      { name: 'feature/auth', isCurrent: false },
+      { name: 'main', isCurrent: true },
+    ],
+    'alphabetical'
+  );
+  const remoteBranches = sortBranches(
+    [
+      { name: 'origin/main', isCurrent: false, scope: 'remote', remoteName: 'origin' },
+      {
+        name: 'origin/feature/auth',
+        isCurrent: false,
+        scope: 'remote',
+        remoteName: 'origin',
+      },
+      {
+        name: 'upstream/release/1.0',
+        isCurrent: false,
+        scope: 'remote',
+        remoteName: 'upstream',
+      },
+    ],
+    'alphabetical'
+  );
+
+  const sections = buildBranchSections(localBranches, remoteBranches, true);
+
+  assert.equal(sections.length, 2);
+  assert.equal(sections[0]?.kind, 'section');
+  assert.equal(sections[0]?.label, 'Local');
+  assert.equal(sections[1]?.kind, 'section');
+  assert.equal(sections[1]?.label, 'Remote');
+
+  assert.deepEqual(
+    sections[1].children.map((node) => (node.kind === 'folder' ? node.path : node.fullName)),
+    ['origin', 'upstream']
+  );
+
+  const originFolder = findFolderNode(sections[1].children, 'origin');
+  assert.ok(originFolder);
+  assert.equal(originFolder.children[0]?.kind, 'folder');
+  assert.equal(
+    originFolder.children[0]?.kind === 'folder' ? originFolder.children[0].path : '',
+    'origin/feature'
+  );
+  assert.equal(originFolder.children[1]?.kind, 'branch');
+  assert.equal(
+    originFolder.children[1]?.kind === 'branch' ? originFolder.children[1].fullName : '',
+    'origin/main'
   );
 });
 

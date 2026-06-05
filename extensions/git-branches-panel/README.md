@@ -7,6 +7,8 @@ This extension lives in the [`vscode-extensions`](../..) repository under `exten
 ## Features
 
 - 🌿 **Folder grouping** — branches like `feature/auth` or `feature/payments/stripe` are nested into folders automatically
+- 🧭 **Local and remote sections** — local branches are shown first, with remote branches listed in a separate group below them
+- 📁 **Folders first** — folders are listed before branch leaves inside each section
 - ✅ **Current branch first** — highlighted with a `●` prefix and a green icon
 - 🕐 **Last commit time** — shown as a relative description and in the tooltip
 - 🔄 **Sync state badges** — incoming and outgoing commits are shown as `↓` and `↑` counts in the branch description

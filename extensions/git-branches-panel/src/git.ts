@@ -48,11 +48,27 @@ export async function getRepoRoot(workspaceFolder: string): Promise<string | nul
 }
 
 export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
+  return listBranches(repoRoot, 'refs/heads', 'local');
+}
+
+export async function getRemoteBranches(repoRoot: string): Promise<BranchInfo[]> {
+  const branches = await listBranches(repoRoot, 'refs/remotes', 'remote');
+
+  return branches.filter(
+    (branch) => branch.name.includes('/') && !branch.name.endsWith('/HEAD')
+  );
+}
+
+async function listBranches(
+  repoRoot: string,
+  refPattern: string,
+  scope: 'local' | 'remote'
+): Promise<BranchInfo[]> {
   const { stdout } = await runGit(repoRoot, [
     'for-each-ref',
     '--sort=-committerdate',
     `--format=${GIT_OUTPUT_FORMAT}`,
-    'refs/heads',
+    refPattern,
   ]);
 
   return stdout
@@ -74,7 +90,9 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
 
       return {
         name,
-        isCurrent: headMarker === '*',
+        isCurrent: scope === 'local' && headMarker === '*',
+        scope,
+        remoteName: scope === 'remote' ? getRemoteName(name) : undefined,
         lastCommitDate,
         lastCommitTimestamp: Number.isFinite(Number(lastCommitTimestamp))
           ? Number(lastCommitTimestamp)
@@ -342,4 +360,9 @@ function getErrorMessage(error: unknown): string {
   }
 
   return 'Unknown git error';
+}
+
+function getRemoteName(branchName: string): string | undefined {
+  const [remoteName] = branchName.split('/');
+  return remoteName || undefined;
 }

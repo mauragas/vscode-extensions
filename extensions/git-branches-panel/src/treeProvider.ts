@@ -2,8 +2,7 @@ import * as vscode from 'vscode';
 
 import {
   buildBranchDescription,
-  buildBranchTree,
-  findFolderNode,
+  buildBranchSections,
   formatSyncStatus,
   sortBranches,
   type BranchInfo,
@@ -11,37 +10,50 @@ import {
   type BranchTreeNode,
   type TreeBranch,
 } from './branchModel';
-import { fetchRemoteState, getBranches, getRepoRoot } from './git';
+import { fetchRemoteState, getBranches, getRemoteBranches, getRepoRoot } from './git';
 
-export type NodeType = 'folder' | 'branch' | 'currentBranch';
+export type NodeType = 'section' | 'folder' | 'branch' | 'currentBranch' | 'remoteBranch';
 const REMOTE_FETCH_INTERVAL_MS = 30_000;
 
 export class BranchTreeItem extends vscode.TreeItem {
   public readonly nodeType: NodeType;
   public readonly branchName?: string;
   public readonly branchInfo?: BranchInfo;
-  public readonly folderPath?: string;
+  public readonly containerPath?: string;
   public readonly repoRoot?: string;
 
   constructor(node: BranchTreeNode, repoRoot?: string) {
+    if (node.kind === 'section') {
+      super(node.label, vscode.TreeItemCollapsibleState.Expanded);
+      this.nodeType = 'section';
+      this.containerPath = node.path;
+      this.id = node.path;
+      this.iconPath = new vscode.ThemeIcon(
+        node.path === 'section:remote' ? 'cloud' : 'source-control'
+      );
+      this.contextValue = 'section';
+      return;
+    }
+
     if (node.kind === 'folder') {
       super(node.label, vscode.TreeItemCollapsibleState.Expanded);
       this.nodeType = 'folder';
-      this.folderPath = node.path;
+      this.containerPath = node.path;
       this.id = `folder:${node.path}`;
       this.iconPath = new vscode.ThemeIcon('folder');
       this.contextValue = 'folder';
       return;
     }
 
-    const isCurrentBranch = node.info.isCurrent;
+    const isRemoteBranch = node.info.scope === 'remote';
+    const isCurrentBranch = !isRemoteBranch && node.info.isCurrent;
     super(isCurrentBranch ? `● ${node.label}` : node.label, vscode.TreeItemCollapsibleState.None);
 
-    this.nodeType = isCurrentBranch ? 'currentBranch' : 'branch';
+    this.nodeType = isCurrentBranch ? 'currentBranch' : isRemoteBranch ? 'remoteBranch' : 'branch';
     this.branchName = node.fullName;
     this.branchInfo = node.info;
     this.repoRoot = repoRoot;
-    this.id = `branch:${node.fullName}`;
+    this.id = `${node.info.scope ?? 'local'}:branch:${node.fullName}`;
     this.contextValue = this.nodeType;
     this.description = buildBranchDescription(node.info);
     this.tooltip = createBranchTooltip(node);
@@ -51,6 +63,8 @@ export class BranchTreeItem extends vscode.TreeItem {
         'git-branch',
         new vscode.ThemeColor('gitDecoration.addedResourceForeground')
       );
+    } else if (isRemoteBranch) {
+      this.iconPath = new vscode.ThemeIcon('cloud');
     } else {
       this.iconPath = new vscode.ThemeIcon('git-branch');
       this.command = {
@@ -69,7 +83,7 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
   readonly onDidChangeTreeData = this.onDidChangeTreeDataEmitter.event;
 
   private treeData: BranchTreeNode[] = [];
-  private branches: BranchInfo[] = [];
+  private localBranches: BranchInfo[] = [];
   private repoRoot: string | null = null;
   private lastRemoteFetchAt = 0;
   private readonly statusBarItem: vscode.StatusBarItem;
@@ -80,7 +94,9 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     context.subscriptions.push(this.statusBarItem);
   }
 
-  async refresh(options: { fetchRemoteState?: boolean } = {}): Promise<void> {
+  async refresh(
+    options: { fetchRemoteState?: boolean; forceFetchRemoteState?: boolean } = {}
+  ): Promise<void> {
     await this.loadBranches(options);
     this.onDidChangeTreeDataEmitter.fire();
   }
@@ -98,12 +114,12 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
       return this.nodesToItems(this.treeData);
     }
 
-    if (element.nodeType !== 'folder' || !element.folderPath) {
+    if ((element.nodeType !== 'folder' && element.nodeType !== 'section') || !element.containerPath) {
       return [];
     }
 
-    const folder = findFolderNode(this.treeData, element.folderPath);
-    return folder ? this.nodesToItems(folder.children) : [];
+    const container = findContainerNode(this.treeData, element.containerPath);
+    return container ? this.nodesToItems(container.children) : [];
   }
 
   getRepoRoot(): string | null {
@@ -111,14 +127,16 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
   }
 
   getCurrentBranch(): BranchInfo | undefined {
-    return this.branches.find((branch) => branch.isCurrent);
+    return this.localBranches.find((branch) => branch.isCurrent);
   }
 
-  private async loadBranches(options: { fetchRemoteState?: boolean } = {}): Promise<void> {
+  private async loadBranches(
+    options: { fetchRemoteState?: boolean; forceFetchRemoteState?: boolean } = {}
+  ): Promise<void> {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
       this.repoRoot = null;
-      this.branches = [];
+      this.localBranches = [];
       this.treeData = [];
       this.statusBarItem.hide();
       return;
@@ -128,32 +146,37 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     this.repoRoot = await getRepoRoot(workspaceRoot);
 
     if (!this.repoRoot) {
-      this.branches = [];
+      this.localBranches = [];
       this.treeData = [];
       this.statusBarItem.hide();
       return;
     }
 
     if (options.fetchRemoteState ?? true) {
-      await this.maybeRefreshRemoteState(this.repoRoot);
+      await this.maybeRefreshRemoteState(this.repoRoot, options.forceFetchRemoteState ?? false);
     }
 
     const configuration = vscode.workspace.getConfiguration('gitBranchesPanel');
     const groupByFolder = configuration.get<boolean>('groupByFolder', true);
     const sortOrder = configuration.get<BranchSortOrder>('sortOrder', 'alphabetical');
-    const branches = sortBranches(await getBranches(this.repoRoot), sortOrder);
+    const [localBranches, remoteBranches] = await Promise.all([
+      getBranches(this.repoRoot),
+      getRemoteBranches(this.repoRoot),
+    ]);
+    const sortedLocalBranches = sortBranches(localBranches, sortOrder);
+    const sortedRemoteBranches = sortBranches(remoteBranches, sortOrder);
 
-    this.branches = branches;
-    this.treeData = buildBranchTree(branches, groupByFolder);
-    this.updateStatusBar(branches.find((branch) => branch.isCurrent));
+    this.localBranches = sortedLocalBranches;
+    this.treeData = buildBranchSections(sortedLocalBranches, sortedRemoteBranches, groupByFolder);
+    this.updateStatusBar(sortedLocalBranches.find((branch) => branch.isCurrent));
   }
 
   private nodesToItems(nodes: readonly BranchTreeNode[]): BranchTreeItem[] {
     return nodes.map((node) => new BranchTreeItem(node, this.repoRoot ?? undefined));
   }
 
-  private async maybeRefreshRemoteState(repoRoot: string): Promise<void> {
-    if (Date.now() - this.lastRemoteFetchAt < REMOTE_FETCH_INTERVAL_MS) {
+  private async maybeRefreshRemoteState(repoRoot: string, force = false): Promise<void> {
+    if (!force && Date.now() - this.lastRemoteFetchAt < REMOTE_FETCH_INTERVAL_MS) {
       return;
     }
 
@@ -183,8 +206,15 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
 
 function createBranchTooltip(node: TreeBranch): vscode.MarkdownString {
   const tooltipLines = [`**${node.fullName}**`];
+  const isRemoteBranch = node.info.scope === 'remote';
 
-  if (node.info.isCurrent) {
+  if (isRemoteBranch) {
+    tooltipLines.push('', '_Remote branch_');
+
+    if (node.info.remoteName) {
+      tooltipLines.push('', `Remote: ${node.info.remoteName}`);
+    }
+  } else if (node.info.isCurrent) {
     tooltipLines.push('', '_Current branch_');
   }
 
@@ -192,17 +222,19 @@ function createBranchTooltip(node: TreeBranch): vscode.MarkdownString {
     tooltipLines.push('', `Last commit: ${node.info.lastCommitDate}`);
   }
 
-  if (node.info.upstreamName) {
-    tooltipLines.push('', `Upstream: ${node.info.upstreamName}`);
-  } else {
-    tooltipLines.push('', '_No upstream configured yet_');
-  }
+  if (!isRemoteBranch) {
+    if (node.info.upstreamName) {
+      tooltipLines.push('', `Upstream: ${node.info.upstreamName}`);
+    } else {
+      tooltipLines.push('', '_No upstream configured yet_');
+    }
 
-  if (node.info.upstreamMissing) {
-    tooltipLines.push('', '_Tracked upstream no longer exists_');
-  } else {
-    const syncStatus = formatSyncStatus(node.info);
-    tooltipLines.push('', syncStatus ? `Sync state: ${syncStatus}` : 'Sync state: up to date');
+    if (node.info.upstreamMissing) {
+      tooltipLines.push('', '_Tracked upstream no longer exists_');
+    } else {
+      const syncStatus = formatSyncStatus(node.info);
+      tooltipLines.push('', syncStatus ? `Sync state: ${syncStatus}` : 'Sync state: up to date');
+    }
   }
 
   if (node.info.lastCommit) {
@@ -239,4 +271,26 @@ function getErrorMessage(error: unknown): string {
   }
 
   return 'Unknown error';
+}
+
+function findContainerNode(
+  nodes: readonly BranchTreeNode[],
+  containerPath: string
+): Extract<BranchTreeNode, { kind: 'section' | 'folder' }> | undefined {
+  for (const node of nodes) {
+    if (node.kind === 'branch') {
+      continue;
+    }
+
+    if (node.path === containerPath) {
+      return node;
+    }
+
+    const nestedMatch = findContainerNode(node.children, containerPath);
+    if (nestedMatch) {
+      return nestedMatch;
+    }
+  }
+
+  return undefined;
 }
