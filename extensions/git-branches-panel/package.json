@@ -2,7 +2,7 @@
   "name": "git-branches-panel",
   "displayName": "Git Branches Panel",
   "description": "Tree view for local Git branches with folder grouping, sync state, and quick branch actions.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "karolis-mauragas",
   "license": "MIT",
   "repository": {
