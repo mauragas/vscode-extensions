@@ -10,7 +10,7 @@ const {
   findContainerNode,
 } = require('../out/treePresentation.js');
 
-test('buildBranchTooltipContent describes local, remote, and tag items', () => {
+test('buildBranchTooltipContent describes local, remote, stash, tag, and worktree items', () => {
   const localTooltip = buildBranchTooltipContent({
     kind: 'branch',
     fullName: 'feature/demo',
@@ -50,6 +50,33 @@ test('buildBranchTooltipContent describes local, remote, and tag items', () => {
       scope: 'tag',
     },
   });
+  const stashTooltip = buildBranchTooltipContent({
+    kind: 'branch',
+    fullName: 'stash@{0}',
+    label: 'stash@{0}',
+    path: 'stash@{0}',
+    info: {
+      name: 'stash@{0}',
+      isCurrent: false,
+      scope: 'stash',
+      lastCommitDate: '5 minutes ago',
+      lastCommit: 'WIP on main: stash support',
+    },
+  });
+  const worktreeTooltip = buildBranchTooltipContent({
+    kind: 'branch',
+    fullName: '/tmp/git-branches-panel-feature-worktree',
+    label: 'git-branches-panel-feature-worktree',
+    path: '/tmp/git-branches-panel-feature-worktree',
+    info: {
+      name: '/tmp/git-branches-panel-feature-worktree',
+      isCurrent: false,
+      scope: 'worktree',
+      worktreePath: '/tmp/git-branches-panel-feature-worktree',
+      worktreeRef: 'feature/worktree',
+      worktreeLockedReason: 'in use elsewhere',
+    },
+  });
 
   assert.match(localTooltip, /\*\*feature\/demo\*\*/);
   assert.match(localTooltip, /_Current branch_/);
@@ -61,6 +88,12 @@ test('buildBranchTooltipContent describes local, remote, and tag items', () => {
   assert.match(remoteTooltip, /_Remote branch_/);
   assert.match(remoteTooltip, /Remote: origin/);
   assert.match(tagTooltip, /_Tag_/);
+  assert.match(stashTooltip, /_Stash_/);
+  assert.match(stashTooltip, /Saved: 5 minutes ago/);
+  assert.match(stashTooltip, /Message: WIP on main: stash support/);
+  assert.match(worktreeTooltip, /_Worktree_/);
+  assert.match(worktreeTooltip, /Reference: feature\/worktree/);
+  assert.match(worktreeTooltip, /Locked: in use elsewhere/);
 });
 
 test('buildStatusBar helpers format sync state and guidance', () => {
@@ -95,6 +128,24 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
     path: 'section:remote',
     children: [],
   });
+  const stashSectionPresentation = buildTreeItemPresentation({
+    kind: 'section',
+    label: 'Stash',
+    path: 'section:stash',
+    children: [],
+  });
+  const worktreeSectionPresentation = buildTreeItemPresentation({
+    kind: 'section',
+    label: 'Worktree',
+    path: 'section:worktree',
+    children: [],
+  });
+  const tagsSectionPresentation = buildTreeItemPresentation({
+    kind: 'section',
+    label: 'Tags',
+    path: 'section:tags',
+    children: [],
+  });
   const folderPresentation = buildTreeItemPresentation({
     kind: 'folder',
     label: 'feature',
@@ -111,6 +162,19 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
       isCurrent: false,
       lastCommitDate: '1 hour ago',
       aheadCount: 1,
+    },
+  });
+  const currentBranchWithSyncPresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'main',
+    label: 'main',
+    path: 'main',
+    info: {
+      name: 'main',
+      isCurrent: true,
+      lastCommitDate: '2 hours ago',
+      aheadCount: 1,
+      behindCount: 2,
     },
   });
   const currentBranchPresentation = buildTreeItemPresentation({
@@ -146,10 +210,61 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
       scope: 'tag',
     },
   });
+  const stashPresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'stash@{0}',
+    label: 'stash@{0}',
+    path: 'stash@{0}',
+    info: {
+      name: 'stash@{0}',
+      isCurrent: false,
+      scope: 'stash',
+      lastCommit: 'WIP on main: stash support',
+      lastCommitDate: '5 minutes ago',
+    },
+  });
+  const worktreePresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: '/tmp/git-branches-panel-feature-worktree',
+    label: 'git-branches-panel-feature-worktree',
+    path: '/tmp/git-branches-panel-feature-worktree',
+    info: {
+      name: '/tmp/git-branches-panel-feature-worktree',
+      isCurrent: false,
+      scope: 'worktree',
+      worktreePath: '/tmp/git-branches-panel-feature-worktree',
+      worktreeRef: 'feature/worktree',
+    },
+  });
+  const currentWorktreePresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: '/tmp/git-branches-panel-main-worktree',
+    label: 'git-branches-panel-main-worktree',
+    path: '/tmp/git-branches-panel-main-worktree',
+    info: {
+      name: '/tmp/git-branches-panel-main-worktree',
+      isCurrent: true,
+      scope: 'worktree',
+      worktreePath: '/tmp/git-branches-panel-main-worktree',
+      worktreeRef: 'main',
+    },
+  });
 
   assert.equal(sectionPresentation.nodeType, 'section');
   assert.equal(sectionPresentation.icon.id, 'cloud');
   assert.equal(sectionPresentation.collapsibleState, 'expanded');
+  assert.equal(sectionPresentation.contextValue, 'section');
+
+  assert.equal(stashSectionPresentation.nodeType, 'section');
+  assert.equal(stashSectionPresentation.icon.id, 'archive');
+  assert.equal(stashSectionPresentation.contextValue, 'section');
+
+  assert.equal(worktreeSectionPresentation.nodeType, 'section');
+  assert.equal(worktreeSectionPresentation.icon.id, 'folder');
+  assert.equal(worktreeSectionPresentation.contextValue, 'section');
+
+  assert.equal(tagsSectionPresentation.nodeType, 'section');
+  assert.equal(tagsSectionPresentation.contextValue, 'tagsSection');
 
   assert.equal(folderPresentation.nodeType, 'folder');
   assert.equal(folderPresentation.id, 'folder:feature');
@@ -157,8 +272,13 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
 
   assert.equal(localBranchPresentation.nodeType, 'branch');
   assert.equal(localBranchPresentation.id, 'local:branch:feature/demo');
-  assert.equal(localBranchPresentation.description, '1↑ • 1 hour ago');
+  assert.equal(localBranchPresentation.label, '1↑ demo');
+  assert.equal(localBranchPresentation.description, '1 hour ago');
   assert.equal(localBranchPresentation.command.command, 'gitBranchesPanel.activateBranchItem');
+
+  assert.equal(currentBranchWithSyncPresentation.nodeType, 'currentBranch');
+  assert.equal(currentBranchWithSyncPresentation.label, '● 2↓ 1↑ main');
+  assert.equal(currentBranchWithSyncPresentation.description, '2 hours ago');
 
   assert.equal(currentBranchPresentation.nodeType, 'currentBranch');
   assert.equal(currentBranchPresentation.label, '● main');
@@ -172,12 +292,29 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(tagPresentation.nodeType, 'tag');
   assert.equal(tagPresentation.icon.id, 'tag');
   assert.equal(tagPresentation.command, undefined);
+
+  assert.equal(stashPresentation.nodeType, 'stash');
+  assert.equal(stashPresentation.icon.id, 'archive');
+  assert.equal(stashPresentation.description, 'WIP on main: stash support • 5 minutes ago');
+  assert.equal(stashPresentation.command, undefined);
+
+  assert.equal(worktreePresentation.nodeType, 'worktree');
+  assert.equal(worktreePresentation.contextValue, 'worktree');
+  assert.equal(worktreePresentation.icon.id, 'folder');
+  assert.equal(worktreePresentation.description, 'feature/worktree');
+  assert.equal(worktreePresentation.command, undefined);
+
+  assert.equal(currentWorktreePresentation.nodeType, 'worktree');
+  assert.equal(currentWorktreePresentation.label, '● git-branches-panel-main-worktree');
+  assert.equal(currentWorktreePresentation.contextValue, 'currentWorktree');
 });
 
 test('findContainerNode resolves section and nested folder paths', () => {
   const sections = buildBranchSections(
     [{ name: 'main', isCurrent: true }],
     [{ name: 'origin/feature/demo', isCurrent: false, scope: 'remote', remoteName: 'origin' }],
+    [{ name: 'stash@{0}', isCurrent: false, scope: 'stash' }],
+    [{ name: '/tmp/git-branches-panel-main-worktree', isCurrent: true, scope: 'worktree' }],
     [],
     true
   );

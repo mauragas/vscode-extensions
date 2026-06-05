@@ -1,7 +1,7 @@
 # Git Branches Panel
 
 `Git Branches Panel` is a Visual Studio Code extension that shows local and
-remote Git branches plus tags in a dedicated tree view with folder grouping,
+remote Git branches, stashes, worktrees, and tags in a dedicated tree view with folder grouping,
 sync status, current-branch context, and quick actions.
 
 This extension lives in the [`vscode-extensions`](../..) repository under `extensions/git-branches-panel/`.
@@ -9,7 +9,7 @@ This extension lives in the [`vscode-extensions`](../..) repository under `exten
 ## Overview
 
 The panel keeps the active branch visible at the top, groups slash-separated
-branch names into folders, and separates Local, Remote, and Tags into their own
+branch names into folders, and separates Local, Remote, Stash, Worktree, and Tags into their own
 sections so common Git navigation feels fast and tidy.
 
 ![Git Branches Panel overview showing the current branch summary plus Local, Remote, and Tags sections.](https://raw.githubusercontent.com/mauragas/vscode-extensions/main/extensions/git-branches-panel/resources/git-branches-panel-overview.png)
@@ -18,30 +18,49 @@ sections so common Git navigation feels fast and tidy.
 
 - 🌿 **Folder grouping** — branches like `feature/auth` or `feature/payments/stripe` are nested into folders automatically
 - 🧭 **Local and remote sections** — local branches are shown first, with remote branches listed in a separate group below them
+- 🧺 **Stash section** — stashes are shown between remote branches and tags so parked work stays close at hand
+- 🪵 **Worktree section** — worktrees are shown under stashes so additional checkouts are easy to find and manage
 - 🏷️ **Tags section** — tags are shown in their own section below remote branches
 - 📁 **Folders first** — folders are listed before branch leaves inside each section
 - ✅ **Current branch first** — highlighted with a `●` prefix and a green icon
+- 🪄 **Optional current branch banner** — keep or hide the top `Current branch: ...` summary from settings
 - 🕐 **Last commit time** — shown as a relative description and in the tooltip
-- 🔄 **Sync state badges** — incoming and outgoing commits are shown as `↓` and `↑` counts in the branch description
+- 🔄 **Sync state badges** — incoming and outgoing commits stay visible even when branch names are long
 - ☁️ **Inline sync button** — every branch gets a small sync button, including branches that are not currently checked out
 - 🚀 **Non-current branch sync** — sync a branch with its upstream without checking it out first
+- 🆚 **Compare with current branch** — compare a local or remote branch against the currently checked out branch from the context menu
+- 📦 **Stash actions** — apply, pop, or drop a stash from the context menu
+- 🪟 **Worktree actions** — open, reveal, copy, or remove worktrees from the context menu
 - ⚡ **Double-click checkout** — double-click a branch to switch instantly
 - 🔀 **Merge into current** — merge a selected branch into the current branch from the context menu
-- 🧰 **Context menu actions** — checkout, sync, rename, merge into current, copy branch name, and delete with merge-safety handling
-- ➕ **Toolbar quick actions** — create a new branch, sync the current branch, fetch all remotes, and refresh from the panel title bar
-- 🔄 **Auto-refresh** — updates when `.git/HEAD`, `.git/FETCH_HEAD`, `.git/refs/heads/`, `.git/refs/remotes/`, workspace folders, or settings change
+- 🧰 **Context menu actions** — checkout, sync, create tags, rename, merge into current, push all tags from the Tags section, copy branch name, and delete with merge-safety handling
+- ➕ **Toolbar quick actions** — create a new branch, stash tracked and untracked changes silently, sync the current branch, fetch all remotes, fetch all with prune, and refresh from the panel title bar
+- 🔄 **Auto-refresh** — updates when `.git/HEAD`, `.git/FETCH_HEAD`, `.git/packed-refs`, `.git/refs/heads/`, `.git/refs/remotes/`, `.git/refs/tags/`, `.git/refs/stash`, `.git/logs/refs/stash`, `.git/worktrees/`, workspace folders, or settings change
 
 ## Commands
 
 | Command | Description |
 | --- | --- |
 | Refresh | Refresh the branch tree and remote sync state |
-| Fetch All | Fetch and prune all remotes, then refresh the tree |
+| Stash Silently | Stash all tracked and untracked files without prompting for a stash name |
+| Fetch All | Fetch all remotes and refresh the tree without pruning stale refs |
+| Fetch All (Prune) | Fetch all remotes, prune deleted refs, and refresh the tree |
 | Sync Current Branch | Sync the currently checked out branch with its upstream |
 | Checkout Branch | Switch to the selected local or remote branch |
 | Checkout Tag | Check out the selected tag in detached HEAD state |
 | Sync Branch | Pull and/or push the branch with its remote, even when it is not checked out |
 | Rename Branch | Rename the selected branch |
+| Create Tag | Create a local tag on the selected local branch |
+| Compare with Current Branch | Open a multi-file comparison between the selected branch and the checked out branch |
+| Apply Stash | Apply the selected stash without removing it |
+| Pop Stash | Apply the selected stash and remove it if successful |
+| Drop Stash | Delete the selected stash |
+| Open Worktree | Open the selected worktree in the current window |
+| Open Worktree in New Window | Open the selected worktree in a new window |
+| Reveal Worktree in File Explorer | Reveal the selected worktree in the OS file browser |
+| Copy Worktree Path | Copy the selected worktree path to the clipboard |
+| Remove Worktree | Remove the selected linked worktree |
+| Push All Tags | Push all local tags to a selected remote from the Tags section context menu |
 | Merge into Current Branch | Merge the selected branch into the current branch |
 | Copy Branch Name | Copy the branch name to the clipboard |
 | Copy Tag Name | Copy the selected tag name to the clipboard |
@@ -54,6 +73,7 @@ sections so common Git navigation feels fast and tidy.
 | --- | --- | --- |
 | `gitBranchesPanel.groupByFolder` | `true` | Group branches by `/`-separated prefix |
 | `gitBranchesPanel.sortOrder` | `alphabetical` | `alphabetical` or `recent` |
+| `gitBranchesPanel.showCurrentBranchInfo` | `true` | Show the current branch summary above the tree views |
 
 ## Development
 

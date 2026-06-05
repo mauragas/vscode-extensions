@@ -91,12 +91,61 @@ export function validateBranchName(value: string, currentName?: string): string 
   return undefined;
 }
 
+export function validateTagName(value: string): string | undefined {
+  const trimmedValue = value.trim();
+  const invalidTagCharacters = ['~', '^', ':', '?', '*', '[', '\\'];
+
+  if (!trimmedValue) {
+    return 'Tag name cannot be empty.';
+  }
+
+  if (/\s/.test(trimmedValue)) {
+    return 'Tag name cannot contain spaces.';
+  }
+
+  if (trimmedValue.startsWith('-')) {
+    return 'Tag name cannot start with a dash.';
+  }
+
+  if (
+    trimmedValue.startsWith('/') ||
+    trimmedValue.endsWith('/') ||
+    trimmedValue.includes('//')
+  ) {
+    return 'Tag name cannot start or end with a slash or contain empty path segments.';
+  }
+
+  if (trimmedValue.endsWith('.') || trimmedValue.includes('..')) {
+    return 'Tag name cannot end with a dot or contain consecutive dots.';
+  }
+
+  if (trimmedValue === '@') {
+    return "Tag name cannot be '@'.";
+  }
+
+  if (trimmedValue.endsWith('.lock')) {
+    return "Tag name cannot end with '.lock'.";
+  }
+
+  if (
+    invalidTagCharacters.some((character) => trimmedValue.includes(character)) ||
+    trimmedValue.includes('@{')
+  ) {
+    return 'Tag name contains invalid Git characters.';
+  }
+
+  return undefined;
+}
+
 export function looksLikeMergeSafetyError(message: string): boolean {
   return /not fully merged/i.test(message);
 }
 
-export function buildCurrentBranchMessage(currentBranch: BranchInfo | undefined): string {
-  if (!currentBranch) {
+export function buildCurrentBranchMessage(
+  currentBranch: BranchInfo | undefined,
+  showCurrentBranchInfo = true
+): string {
+  if (!showCurrentBranchInfo || !currentBranch) {
     return '';
   }
 

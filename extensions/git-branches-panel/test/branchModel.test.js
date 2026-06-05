@@ -90,7 +90,7 @@ test('buildBranchTree groups slash-separated branches into nested folders and ke
   );
 });
 
-test('buildBranchSections shows local, remote, and tag groups in order', () => {
+test('buildBranchSections shows local, remote, stash, worktree, and tag groups in order', () => {
   const localBranches = sortBranches(
     [
       { name: 'feature/auth', isCurrent: false },
@@ -116,6 +116,44 @@ test('buildBranchSections shows local, remote, and tag groups in order', () => {
     ],
     'alphabetical'
   );
+  const stashBranches = sortBranches(
+    [
+      {
+        name: 'stash@{1}',
+        isCurrent: false,
+        scope: 'stash',
+        lastCommit: 'Older stash',
+        lastCommitTimestamp: 100,
+      },
+      {
+        name: 'stash@{0}',
+        isCurrent: false,
+        scope: 'stash',
+        lastCommit: 'Newest stash',
+        lastCommitTimestamp: 200,
+      },
+    ],
+    'alphabetical'
+  );
+  const worktreeBranches = sortBranches(
+    [
+      {
+        name: '/tmp/git-branches-panel-feature-worktree',
+        isCurrent: false,
+        scope: 'worktree',
+        worktreePath: '/tmp/git-branches-panel-feature-worktree',
+        worktreeRef: 'feature/worktree',
+      },
+      {
+        name: '/tmp/git-branches-panel-main-worktree',
+        isCurrent: true,
+        scope: 'worktree',
+        worktreePath: '/tmp/git-branches-panel-main-worktree',
+        worktreeRef: 'main',
+      },
+    ],
+    'alphabetical'
+  );
   const tagBranches = sortBranches(
     [
       { name: 'release/v1.0.0', isCurrent: false, scope: 'tag' },
@@ -124,15 +162,26 @@ test('buildBranchSections shows local, remote, and tag groups in order', () => {
     'alphabetical'
   );
 
-  const sections = buildBranchSections(localBranches, remoteBranches, tagBranches, true);
+  const sections = buildBranchSections(
+    localBranches,
+    remoteBranches,
+    stashBranches,
+    worktreeBranches,
+    tagBranches,
+    true
+  );
 
-  assert.equal(sections.length, 3);
+  assert.equal(sections.length, 5);
   assert.equal(sections[0]?.kind, 'section');
   assert.equal(sections[0]?.label, 'Local');
   assert.equal(sections[1]?.kind, 'section');
   assert.equal(sections[1]?.label, 'Remote');
   assert.equal(sections[2]?.kind, 'section');
-  assert.equal(sections[2]?.label, 'Tags');
+  assert.equal(sections[2]?.label, 'Stash');
+  assert.equal(sections[3]?.kind, 'section');
+  assert.equal(sections[3]?.label, 'Worktree');
+  assert.equal(sections[4]?.kind, 'section');
+  assert.equal(sections[4]?.label, 'Tags');
 
   assert.deepEqual(
     sections[1].children.map((node) => (node.kind === 'folder' ? node.path : node.fullName)),
@@ -154,13 +203,25 @@ test('buildBranchSections shows local, remote, and tag groups in order', () => {
 
   assert.deepEqual(
     sections[2].children.map((node) => (node.kind === 'folder' ? node.path : node.fullName)),
+    ['stash@{0}', 'stash@{1}']
+  );
+
+  assert.deepEqual(
+    sections[3].children.map((node) => (node.kind === 'folder' ? node.path : node.fullName)),
+    ['/tmp/git-branches-panel-main-worktree', '/tmp/git-branches-panel-feature-worktree']
+  );
+
+  assert.deepEqual(
+    sections[4].children.map((node) => (node.kind === 'folder' ? node.path : node.fullName)),
     ['release', 'v0.9.0']
   );
 });
 
-test('buildBranchSections omits empty local, remote, or tag groups', () => {
+test('buildBranchSections omits empty local, remote, stash, worktree, or tag groups', () => {
   const localOnlySections = buildBranchSections(
     [{ name: 'main', isCurrent: true }],
+    [],
+    [],
     [],
     [],
     true
@@ -169,9 +230,29 @@ test('buildBranchSections omits empty local, remote, or tag groups', () => {
     [],
     [{ name: 'origin/main', isCurrent: false, scope: 'remote', remoteName: 'origin' }],
     [],
+    [],
+    [],
+    true
+  );
+  const stashOnlySections = buildBranchSections(
+    [],
+    [],
+    [{ name: 'stash@{0}', isCurrent: false, scope: 'stash' }],
+    [],
+    [],
+    true
+  );
+  const worktreeOnlySections = buildBranchSections(
+    [],
+    [],
+    [],
+    [{ name: '/tmp/git-branches-panel-main-worktree', isCurrent: true, scope: 'worktree' }],
+    [],
     true
   );
   const tagOnlySections = buildBranchSections(
+    [],
+    [],
     [],
     [],
     [{ name: 'v1.0.0', isCurrent: false, scope: 'tag' }],
@@ -180,6 +261,8 @@ test('buildBranchSections omits empty local, remote, or tag groups', () => {
 
   assert.deepEqual(localOnlySections.map((section) => section.label), ['Local']);
   assert.deepEqual(remoteOnlySections.map((section) => section.label), ['Remote']);
+  assert.deepEqual(stashOnlySections.map((section) => section.label), ['Stash']);
+  assert.deepEqual(worktreeOnlySections.map((section) => section.label), ['Worktree']);
   assert.deepEqual(tagOnlySections.map((section) => section.label), ['Tags']);
 });
 
@@ -189,6 +272,29 @@ test('buildBranchTree keeps sorted order when folder grouping is disabled', () =
   assert.deepEqual(
     tree.map((node) => (node.kind === 'branch' ? node.fullName : node.path)),
     ['main', 'feature/payments/stripe', 'feature/auth']
+  );
+});
+
+test('buildBranchTree uses the final path segment for worktree labels on slash and backslash paths', () => {
+  const tree = buildBranchTree(
+    [
+      {
+        name: '/tmp/git-branches-panel/feature-worktree',
+        isCurrent: false,
+        scope: 'worktree',
+      },
+      {
+        name: 'C:\\Users\\demo\\git-branches-panel\\windows-worktree',
+        isCurrent: false,
+        scope: 'worktree',
+      },
+    ],
+    false
+  );
+
+  assert.deepEqual(
+    tree.map((node) => (node.kind === 'branch' ? node.label : node.path)),
+    ['feature-worktree', 'windows-worktree']
   );
 });
 
@@ -223,6 +329,8 @@ test('findFolderNode can traverse through section roots', () => {
   const sections = buildBranchSections(
     [{ name: 'main', isCurrent: true }],
     [{ name: 'origin/feature/auth', isCurrent: false, scope: 'remote', remoteName: 'origin' }],
+    [],
+    [],
     [],
     true
   );
@@ -287,5 +395,27 @@ test('buildBranchDescription combines sync badges with commit timing', () => {
       behindCount: 0,
     }),
     'just now'
+  );
+
+  assert.equal(
+    buildBranchDescription({
+      name: 'stash@{0}',
+      isCurrent: false,
+      scope: 'stash',
+      lastCommit: 'WIP on main: add stash support',
+      lastCommitDate: '5 minutes ago',
+    }),
+    'WIP on main: add stash support • 5 minutes ago'
+  );
+
+  assert.equal(
+    buildBranchDescription({
+      name: '/tmp/git-branches-panel-feature-worktree',
+      isCurrent: false,
+      scope: 'worktree',
+      worktreeRef: 'feature/worktree',
+      worktreeLockedReason: 'in use elsewhere',
+    }),
+    'feature/worktree • locked'
   );
 });
