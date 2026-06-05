@@ -2,9 +2,17 @@
 
 `Git Branches Panel` is a Visual Studio Code extension that shows local and
 remote Git branches plus tags in a dedicated tree view with folder grouping,
-sync status, and quick actions.
+sync status, current-branch context, and quick actions.
 
 This extension lives in the [`vscode-extensions`](../..) repository under `extensions/git-branches-panel/`.
+
+## Overview
+
+The panel keeps the active branch visible at the top, groups slash-separated
+branch names into folders, and separates Local, Remote, and Tags into their own
+sections so common Git navigation feels fast and tidy.
+
+![Git Branches Panel overview showing the current branch summary plus Local, Remote, and Tags sections.](resources/git-branches-panel-overview.png)
 
 ## Features
 
