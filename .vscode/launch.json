@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Git Branches Panel",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/extensions/git-branches-panel",
+        "${workspaceFolder}"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/extensions/git-branches-panel/out/**/*.js"
+      ],
+      "preLaunchTask": "build:git-branches-panel"
+    }
+  ]
+}
