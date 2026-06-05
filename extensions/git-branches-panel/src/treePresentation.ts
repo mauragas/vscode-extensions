@@ -48,18 +48,9 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
       nodeType: 'section',
       label: node.label,
       id: node.path,
-      contextValue: node.path === 'section:tags' ? 'tagsSection' : 'section',
+      contextValue: getSectionContextValue(node.path),
       collapsibleState: 'expanded',
-      icon: {
-        id:
-          node.path === 'section:remote'
-            ? 'cloud'
-            : node.path === 'section:stash'
-              ? 'archive'
-              : node.path === 'section:worktree'
-                ? 'folder'
-              : 'source-control',
-      },
+      icon: { id: getSectionIconId(node.path) },
       containerPath: node.path,
     };
   }
@@ -76,55 +67,22 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
     };
   }
 
-  const isRemoteBranch = node.info.scope === 'remote';
-  const isTag = node.info.scope === 'tag';
-  const isStash = node.info.scope === 'stash';
-  const isWorktree = node.info.scope === 'worktree';
-  const isCurrentBranch = !isRemoteBranch && !isTag && !isStash && !isWorktree && node.info.isCurrent;
-  const nodeType: NodeType = isCurrentBranch
-    ? 'currentBranch'
-    : isStash
-      ? 'stash'
-      : isWorktree
-        ? 'worktree'
-    : isTag
-      ? 'tag'
-      : isRemoteBranch
-        ? 'remoteBranch'
-        : 'branch';
-  const syncStatus = !isRemoteBranch && !isTag && !isStash && !isWorktree
-    ? formatSyncStatus(node.info)
-    : '';
+  const nodeType = resolveNodeType(node.info);
+  const syncStatus = shouldShowSyncStatus(nodeType) ? formatSyncStatus(node.info) : '';
   const description = buildTreeItemDescription(node.info, syncStatus);
-  const labelPrefix = isCurrentBranch || (isWorktree && node.info.isCurrent) ? '● ' : '';
-  const prioritizedLabel = syncStatus
-    ? `${labelPrefix}${syncStatus} ${node.label}`
-    : `${labelPrefix}${node.label}`;
+  const prioritizedLabel = buildTreeItemLabel(node.label, nodeType, syncStatus, node.info.isCurrent);
 
   return {
     nodeType,
     label: prioritizedLabel,
     id: `${node.info.scope ?? 'local'}:branch:${node.fullName}`,
-    contextValue: isWorktree ? (node.info.isCurrent ? 'currentWorktree' : 'worktree') : nodeType,
+    contextValue: getItemContextValue(nodeType, node.info.isCurrent),
     collapsibleState: 'none',
-    icon: isCurrentBranch
-      ? {
-        id: 'git-branch',
-        colorId: 'gitDecoration.addedResourceForeground',
-      }
-      : isWorktree
-        ? { id: 'folder' }
-      : isStash
-        ? { id: 'archive' }
-      : isTag
-        ? { id: 'tag' }
-        : isRemoteBranch
-          ? { id: 'cloud' }
-          : { id: 'git-branch' },
+    icon: getItemIcon(nodeType),
     description,
     tooltip: buildBranchTooltipContent(node),
     branchName: node.fullName,
-    command: !isCurrentBranch && !isRemoteBranch && !isTag && !isStash && !isWorktree
+    command: shouldActivateOnClick(nodeType)
       ? {
         command: 'gitBranchesPanel.activateBranchItem',
         title: 'Activate Branch Item',
@@ -224,6 +182,85 @@ function buildTreeItemDescription(branch: BranchInfo, syncStatus: string): strin
   }
 
   return branch.lastCommitDate || undefined;
+}
+
+function getSectionContextValue(sectionPath: string): string {
+  return sectionPath === 'section:tags' ? 'tagsSection' : 'section';
+}
+
+function getSectionIconId(sectionPath: string): string {
+  switch (sectionPath) {
+    case 'section:remote':
+      return 'cloud';
+    case 'section:stash':
+      return 'archive';
+    case 'section:worktree':
+      return 'folder';
+    default:
+      return 'source-control';
+  }
+}
+
+function resolveNodeType(info: BranchInfo): NodeType {
+  switch (info.scope) {
+    case 'stash':
+      return 'stash';
+    case 'worktree':
+      return 'worktree';
+    case 'tag':
+      return 'tag';
+    case 'remote':
+      return 'remoteBranch';
+    default:
+      return info.isCurrent ? 'currentBranch' : 'branch';
+  }
+}
+
+function shouldShowSyncStatus(nodeType: NodeType): boolean {
+  return nodeType === 'branch' || nodeType === 'currentBranch';
+}
+
+function buildTreeItemLabel(
+  label: string,
+  nodeType: NodeType,
+  syncStatus: string,
+  isCurrent: boolean
+): string {
+  const prefix = nodeType === 'currentBranch' || (nodeType === 'worktree' && isCurrent) ? '● ' : '';
+
+  return syncStatus ? `${prefix}${syncStatus} ${label}` : `${prefix}${label}`;
+}
+
+function getItemContextValue(nodeType: NodeType, isCurrent: boolean): string {
+  if (nodeType === 'worktree') {
+    return isCurrent ? 'currentWorktree' : 'worktree';
+  }
+
+  return nodeType;
+}
+
+function getItemIcon(nodeType: NodeType): TreeItemIconDescriptor {
+  switch (nodeType) {
+    case 'currentBranch':
+      return {
+        id: 'git-branch',
+        colorId: 'gitDecoration.addedResourceForeground',
+      };
+    case 'remoteBranch':
+      return { id: 'cloud' };
+    case 'tag':
+      return { id: 'tag' };
+    case 'stash':
+      return { id: 'archive' };
+    case 'worktree':
+      return { id: 'folder' };
+    default:
+      return { id: 'git-branch' };
+  }
+}
+
+function shouldActivateOnClick(nodeType: NodeType): boolean {
+  return nodeType === 'branch';
 }
 
 export function buildStatusBarText(branch: BranchInfo | undefined): string {

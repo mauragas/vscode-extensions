@@ -275,6 +275,29 @@ test('buildBranchTree keeps sorted order when folder grouping is disabled', () =
   );
 });
 
+test('buildBranchTree uses the final path segment for worktree labels on slash and backslash paths', () => {
+  const tree = buildBranchTree(
+    [
+      {
+        name: '/tmp/git-branches-panel/feature-worktree',
+        isCurrent: false,
+        scope: 'worktree',
+      },
+      {
+        name: 'C:\\Users\\demo\\git-branches-panel\\windows-worktree',
+        isCurrent: false,
+        scope: 'worktree',
+      },
+    ],
+    false
+  );
+
+  assert.deepEqual(
+    tree.map((node) => (node.kind === 'branch' ? node.label : node.path)),
+    ['feature-worktree', 'windows-worktree']
+  );
+});
+
 test('findFolderNode resolves duplicate labels using the full folder path', () => {
   const tree = buildBranchTree(
     [

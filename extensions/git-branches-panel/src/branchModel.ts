@@ -271,24 +271,13 @@ export function buildBranchDescription(
     | 'worktreePrunableReason'
   >
 ): string {
-  const descriptionParts =
-    branch.scope === 'stash'
-      ? [branch.lastCommit ?? '', branch.lastCommitDate ?? ''].filter(Boolean)
-      : branch.scope === 'worktree'
-        ? [
-            branch.worktreeRef ?? '',
-            branch.worktreeIsBare ? 'bare' : '',
-            branch.worktreeLockedReason ? 'locked' : '',
-            branch.worktreePrunableReason ? 'prunable' : '',
-          ].filter(Boolean)
-        : [formatSyncStatus(branch), branch.lastCommitDate ?? ''].filter(Boolean);
+  const descriptionParts = getDescriptionParts(branch);
 
   return descriptionParts.join(' • ');
 }
 
 function createBranchNode(branch: BranchInfo): TreeBranch {
-  const segments = branch.name.split('/').filter(Boolean);
-  const label = segments.length > 0 ? segments[segments.length - 1] : branch.name;
+  const label = getBranchNodeLabel(branch);
 
   return {
     kind: 'branch',
@@ -332,4 +321,40 @@ function sortTreeNodes(
 
 function getBranchKey(branch: Pick<BranchInfo, 'name' | 'scope'>): string {
   return `${branch.scope ?? 'local'}:${branch.name}`;
+}
+
+function getDescriptionParts(
+  branch: Pick<
+    BranchInfo,
+    | 'aheadCount'
+    | 'behindCount'
+    | 'lastCommit'
+    | 'lastCommitDate'
+    | 'scope'
+    | 'worktreeRef'
+    | 'worktreeIsBare'
+    | 'worktreeLockedReason'
+    | 'worktreePrunableReason'
+  >
+): string[] {
+  switch (branch.scope) {
+    case 'stash':
+      return [branch.lastCommit ?? '', branch.lastCommitDate ?? ''].filter(Boolean);
+    case 'worktree':
+      return [
+        branch.worktreeRef ?? '',
+        branch.worktreeIsBare ? 'bare' : '',
+        branch.worktreeLockedReason ? 'locked' : '',
+        branch.worktreePrunableReason ? 'prunable' : '',
+      ].filter(Boolean);
+    default:
+      return [formatSyncStatus(branch), branch.lastCommitDate ?? ''].filter(Boolean);
+  }
+}
+
+function getBranchNodeLabel(branch: Pick<BranchInfo, 'name' | 'scope'>): string {
+  const separatorPattern = branch.scope === 'worktree' ? /[\\/]+/u : /\//u;
+  const segments = branch.name.split(separatorPattern).filter(Boolean);
+
+  return segments.length > 0 ? segments[segments.length - 1] : branch.name;
 }
