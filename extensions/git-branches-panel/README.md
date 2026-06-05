@@ -65,7 +65,7 @@ You can also run `npm run compile`, `npm run lint`, or `npm run test` from this 
 
 This repository is ready for open-source development and close to marketplace publishing. Before the first public release, the remaining publishing steps are:
 
-1. Create or configure the `mauragas` VS Code Marketplace publisher
+1. Create or configure the `karolis-mauragas` VS Code Marketplace publisher
 2. Add a dedicated marketplace icon (PNG recommended)
 3. Run a package/publish flow from Node.js 20+
 4. Publish the extension to the Visual Studio Code Marketplace

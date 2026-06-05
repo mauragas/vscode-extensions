@@ -3,7 +3,7 @@
   "displayName": "Git Branches Panel",
   "description": "Tree view for local Git branches with folder grouping, sync state, and quick branch actions.",
   "version": "0.0.1",
-  "publisher": "mauragas",
+  "publisher": "karolis-mauragas",
   "license": "MIT",
   "repository": {
     "type": "git",
