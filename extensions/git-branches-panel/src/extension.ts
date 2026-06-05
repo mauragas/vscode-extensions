@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 
+import { buildBranchDescription, type BranchInfo } from './branchModel';
 import {
   checkoutBranch,
   checkoutRemoteBranch,
@@ -59,15 +60,22 @@ export function activate(context: vscode.ExtensionContext): void {
     treeDataProvider: provider,
     showCollapseAll: true,
   });
-  mainTreeView.message = 'Double-click a branch to check it out.';
 
   const scmTreeView = vscode.window.createTreeView('gitBranchesSCM', {
     treeDataProvider: provider,
     showCollapseAll: true,
   });
-  scmTreeView.message = 'Double-click a branch to check it out.';
+
+  const treeViews = [mainTreeView, scmTreeView] as const;
+
+  updateTreeViewMessages(treeViews, provider);
 
   context.subscriptions.push(mainTreeView, scmTreeView);
+  context.subscriptions.push(
+    provider.onDidChangeTreeData(() => {
+      updateTreeViewMessages(treeViews, provider);
+    })
+  );
 
   context.subscriptions.push(
     vscode.commands.registerCommand('gitBranchesPanel.refresh', async () => {
@@ -600,6 +608,29 @@ function validateBranchName(value: string, currentName?: string): string | undef
 
 function looksLikeMergeSafetyError(message: string): boolean {
   return /not fully merged/i.test(message);
+}
+
+function updateTreeViewMessages(
+  treeViews: readonly vscode.TreeView<BranchTreeItem>[],
+  provider: BranchTreeProvider
+): void {
+  const message = buildCurrentBranchMessage(provider.getCurrentBranch());
+
+  for (const treeView of treeViews) {
+    treeView.message = message;
+  }
+}
+
+function buildCurrentBranchMessage(currentBranch: BranchInfo | undefined): string {
+  if (!currentBranch) {
+    return '';
+  }
+
+  const description = buildBranchDescription(currentBranch);
+
+  return description
+    ? `Current branch: ${currentBranch.name} • ${description}`
+    : `Current branch: ${currentBranch.name}`;
 }
 
 function getErrorMessage(error: unknown): string {
