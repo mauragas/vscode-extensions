@@ -52,13 +52,15 @@
       "git-branches-container": [
         {
           "id": "gitBranchesPanel",
-          "name": "Local Branches"
+          "name": "Local Branches",
+          "icon": "resources/branch.svg"
         }
       ],
       "scm": [
         {
           "id": "gitBranchesSCM",
           "name": "Branches",
+          "icon": "resources/branch.svg",
           "when": "gitOpenRepositoryCount != 0"
         }
       ]
@@ -151,7 +153,7 @@
         },
         {
           "command": "gitBranchesPanel.checkout",
-          "when": "viewItem == branch || viewItem == currentBranch",
+          "when": "viewItem == branch || viewItem == currentBranch || viewItem == remoteBranch",
           "group": "1_branch@2"
         },
         {
@@ -161,17 +163,17 @@
         },
         {
           "command": "gitBranchesPanel.copyBranchName",
-          "when": "viewItem == branch || viewItem == currentBranch",
+          "when": "viewItem == branch || viewItem == currentBranch || viewItem == remoteBranch",
           "group": "1_branch@4"
         },
         {
           "command": "gitBranchesPanel.mergeIntoCurrent",
-          "when": "viewItem == branch",
+          "when": "viewItem == branch || viewItem == remoteBranch",
           "group": "1_branch@5"
         },
         {
           "command": "gitBranchesPanel.deleteBranch",
-          "when": "viewItem == branch",
+          "when": "viewItem == branch || viewItem == remoteBranch",
           "group": "2_delete@1"
         }
       ]

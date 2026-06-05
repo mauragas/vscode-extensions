@@ -27,6 +27,18 @@ export interface SyncBranchResult {
   publishedUpstream: boolean;
 }
 
+export interface RemoteBranchReference {
+  remoteName: string;
+  branchName: string;
+  fullName: string;
+}
+
+export interface CheckoutRemoteBranchResult {
+  localBranchName: string;
+  remoteBranchName: string;
+  createdLocalBranch: boolean;
+}
+
 interface BranchSyncTarget {
   remoteName: string;
   remoteBranchName: string;
@@ -59,6 +71,64 @@ export async function getRemoteBranches(repoRoot: string): Promise<BranchInfo[]>
   );
 }
 
+export async function checkoutRemoteBranch(
+  repoRoot: string,
+  remoteBranchName: string
+): Promise<CheckoutRemoteBranchResult> {
+  const remoteBranchRef = parseRemoteBranchReference(remoteBranchName);
+  if (!remoteBranchRef) {
+    throw new Error(`Remote branch '${remoteBranchName}' is invalid.`);
+  }
+
+  if (await doesLocalBranchExist(repoRoot, remoteBranchRef.branchName)) {
+    await checkoutBranch(repoRoot, remoteBranchRef.branchName);
+    return {
+      localBranchName: remoteBranchRef.branchName,
+      remoteBranchName: remoteBranchRef.fullName,
+      createdLocalBranch: false,
+    };
+  }
+
+  await runGit(repoRoot, [
+    'checkout',
+    '-b',
+    remoteBranchRef.branchName,
+    '--track',
+    remoteBranchRef.fullName,
+  ]);
+
+  return {
+    localBranchName: remoteBranchRef.branchName,
+    remoteBranchName: remoteBranchRef.fullName,
+    createdLocalBranch: true,
+  };
+}
+
+export async function deleteRemoteBranch(repoRoot: string, remoteBranchName: string): Promise<void> {
+  const remoteBranchRef = parseRemoteBranchReference(remoteBranchName);
+  if (!remoteBranchRef) {
+    throw new Error(`Remote branch '${remoteBranchName}' is invalid.`);
+  }
+
+  await ensureRemoteExists(repoRoot, remoteBranchRef.remoteName);
+  await runGit(repoRoot, ['push', remoteBranchRef.remoteName, '--delete', remoteBranchRef.branchName]);
+}
+
+export function parseRemoteBranchReference(remoteBranchName: string): RemoteBranchReference | null {
+  const [remoteName, ...branchSegments] = remoteBranchName.split('/');
+  const branchName = branchSegments.join('/').trim();
+
+  if (!remoteName || !branchName) {
+    return null;
+  }
+
+  return {
+    remoteName,
+    branchName,
+    fullName: remoteBranchName,
+  };
+}
+
 async function listBranches(
   repoRoot: string,
   refPattern: string,
@@ -87,12 +157,13 @@ async function listBranches(
       ] =
         record.split(GIT_FIELD_SEPARATOR);
       const syncState = parseUpstreamTrack(upstreamTrack);
+      const remoteBranchRef = scope === 'remote' ? parseRemoteBranchReference(name) : null;
 
       return {
         name,
         isCurrent: scope === 'local' && headMarker === '*',
         scope,
-        remoteName: scope === 'remote' ? getRemoteName(name) : undefined,
+        remoteName: remoteBranchRef?.remoteName,
         lastCommitDate,
         lastCommitTimestamp: Number.isFinite(Number(lastCommitTimestamp))
           ? Number(lastCommitTimestamp)
@@ -327,6 +398,15 @@ async function doesRemoteBranchExist(
   }
 }
 
+async function doesLocalBranchExist(repoRoot: string, branchName: string): Promise<boolean> {
+  try {
+    await runGit(repoRoot, ['show-ref', '--verify', '--quiet', `refs/heads/${branchName}`]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function getAheadBehindCounts(
   repoRoot: string,
   localRef: string,
@@ -360,9 +440,4 @@ function getErrorMessage(error: unknown): string {
   }
 
   return 'Unknown git error';
-}
-
-function getRemoteName(branchName: string): string | undefined {
-  const [remoteName] = branchName.split('/');
-  return remoteName || undefined;
 }

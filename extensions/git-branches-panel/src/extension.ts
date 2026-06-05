@@ -2,7 +2,9 @@ import * as vscode from 'vscode';
 
 import {
   checkoutBranch,
+  checkoutRemoteBranch,
   createBranch,
+  deleteRemoteBranch,
   deleteBranch,
   fetchRemoteState,
   mergeBranchIntoCurrent,
@@ -143,6 +145,30 @@ export function activate(context: vscode.ExtensionContext): void {
       'gitBranchesPanel.deleteBranch',
       async (item: BranchTreeItem) => {
         if (!item.branchName || !item.repoRoot) {
+          return;
+        }
+
+        if (item.nodeType === 'remoteBranch') {
+          const confirmation = await vscode.window.showWarningMessage(
+            `Delete remote branch '${item.branchName}'?`,
+            { modal: true },
+            'Delete'
+          );
+          if (confirmation !== 'Delete') {
+            return;
+          }
+
+          try {
+            await deleteRemoteBranch(item.repoRoot, item.branchName);
+            vscode.window.showInformationMessage(`Deleted remote branch '${item.branchName}'.`);
+            activationTracker.reset();
+            await provider.refresh({ fetchRemoteState: true, forceFetchRemoteState: true });
+          } catch (error) {
+            vscode.window.showErrorMessage(
+              `Failed to delete remote branch '${item.branchName}': ${getErrorMessage(error)}`
+            );
+          }
+
           return;
         }
 
@@ -322,6 +348,25 @@ async function checkoutBranchItem(
       vscode.window.showInformationMessage(`Already on '${item.branchName}'.`);
     }
     activationTracker.reset();
+    return;
+  }
+
+  if (item.nodeType === 'remoteBranch') {
+    try {
+      const checkoutResult = await checkoutRemoteBranch(item.repoRoot, item.branchName);
+      vscode.window.showInformationMessage(
+        checkoutResult.createdLocalBranch
+          ? `Created and switched to local branch '${checkoutResult.localBranchName}' tracking '${checkoutResult.remoteBranchName}'.`
+          : `Switched to existing local branch '${checkoutResult.localBranchName}' for '${checkoutResult.remoteBranchName}'.`
+      );
+      activationTracker.reset();
+      await provider.refresh({ fetchRemoteState: false });
+    } catch (error) {
+      vscode.window.showErrorMessage(
+        `Failed to checkout '${item.branchName}': ${getErrorMessage(error)}`
+      );
+    }
+
     return;
   }
 
