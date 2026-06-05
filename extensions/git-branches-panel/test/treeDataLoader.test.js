@@ -78,19 +78,36 @@ test('shouldRefreshRemoteState honors interval and force-refresh rules', () => {
   assert.equal(shouldRefreshRemoteState(1_000, 1_001, true), true);
 });
 
-test('BranchDataLoader refreshes and throttles remote fetches', async () => {
+test('BranchDataLoader lazily loads sections and throttles explicit remote fetches', async () => {
   let now = 10_000;
   const { dependencies, calls } = createDependencies();
   const loader = new BranchDataLoader(dependencies, () => now);
 
-  await loader.refresh({ fetchRemoteState: true });
+  await loader.refresh();
 
-  assert.equal(calls.fetchRemoteState, 1);
-  assert.equal(calls.getStashes, 1);
-  assert.equal(calls.getWorktrees, 1);
+  assert.equal(calls.fetchRemoteState, 0);
+  assert.equal(calls.getBranches, 1);
+  assert.equal(calls.getRemoteBranches, 0);
+  assert.equal(calls.getStashes, 0);
+  assert.equal(calls.getWorktrees, 0);
+  assert.equal(calls.getTags, 0);
   assert.equal(loader.getRepoRoot(), '/repo');
   assert.equal(loader.getCurrentBranch().name, 'main');
-  assert.deepEqual(loader.getTreeData().map((node) => node.label), ['Local', 'Remote']);
+  assert.equal(loader.isSectionLoaded('local'), true);
+  assert.equal(loader.isSectionLoaded('remote'), false);
+  assert.deepEqual(loader.getTreeData().map((node) => node.label), [
+    'Local',
+    'Remote',
+    'Stash',
+    'Worktree',
+    'Tags',
+  ]);
+  assert.ok(loader.getTreeData()[0].children.length > 0);
+  assert.equal(loader.getTreeData()[1].children.length, 0);
+
+  await loader.refresh({ sections: ['remote'] });
+  assert.equal(calls.getRemoteBranches, 1);
+  assert.equal(loader.isSectionLoaded('remote'), true);
 
   await loader.refresh({ fetchRemoteState: true });
   assert.equal(calls.fetchRemoteState, 1);
@@ -114,12 +131,14 @@ test('BranchDataLoader warns on refresh failures and still loads branch data', a
   await loader.refresh({ fetchRemoteState: true });
 
   assert.equal(loader.getCurrentBranch().name, 'main');
-  assert.equal(loader.getTreeData().length, 2);
+  assert.equal(loader.isSectionLoaded('local'), true);
+  assert.equal(loader.isSectionLoaded('remote'), false);
+  assert.equal(loader.getTreeData().length, 5);
   assert.match(warnings[0], /network is grumpy/);
 });
 
-test('BranchDataLoader inserts stash and worktree sections before tags', async () => {
-  const { dependencies } = createDependencies({
+test('BranchDataLoader only refreshes explicitly requested lazy sections', async () => {
+  const { dependencies, calls } = createDependencies({
     getStashes: async () => [
       {
         name: 'stash@{0}',
@@ -142,15 +161,20 @@ test('BranchDataLoader inserts stash and worktree sections before tags', async (
   });
   const loader = new BranchDataLoader(dependencies, () => 1_000);
 
-  await loader.refresh({ fetchRemoteState: false });
+  await loader.refresh({ sections: ['remote'], onlyIfLoaded: true });
+  assert.equal(calls.getRemoteBranches, 0);
 
-  assert.deepEqual(loader.getTreeData().map((node) => node.label), [
-    'Local',
-    'Remote',
-    'Stash',
-    'Worktree',
-    'Tags',
-  ]);
+  await loader.refresh({ sections: ['stash', 'worktree', 'tags'], fetchRemoteState: false });
+
+  assert.equal(loader.isSectionLoaded('stash'), true);
+  assert.equal(loader.isSectionLoaded('worktree'), true);
+  assert.equal(loader.isSectionLoaded('tags'), true);
+  assert.equal(loader.isSectionLoaded('local'), false);
+
+  const sections = loader.getTreeData();
+  assert.equal(sections.find((node) => node.path === 'section:stash').children.length, 1);
+  assert.equal(sections.find((node) => node.path === 'section:worktree').children.length, 1);
+  assert.equal(sections.find((node) => node.path === 'section:tags').children.length, 1);
 });
 
 test('BranchDataLoader clears data when no workspace folders are available', async () => {

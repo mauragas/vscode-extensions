@@ -10,7 +10,12 @@ import {
   getTags,
   getWorktrees,
 } from './git';
-import { BranchDataLoader, type BranchDataLoaderDependencies, type BranchLoadOptions } from './treeDataLoader';
+import {
+  BranchDataLoader,
+  getBranchSectionKey,
+  type BranchDataLoaderDependencies,
+  type BranchLoadOptions,
+} from './treeDataLoader';
 import { BranchTreeItem } from './treeItem';
 import { buildStatusBarText, buildStatusBarTooltipContent, findContainerNode } from './treePresentation';
 
@@ -48,8 +53,8 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
 
   async getChildren(element?: BranchTreeItem): Promise<BranchTreeItem[]> {
     if (!element) {
-      if (this.dataLoader.getTreeData().length === 0) {
-        await this.refresh({ fetchRemoteState: true });
+      if (this.dataLoader.getTreeData().length === 0 || !this.dataLoader.isSectionLoaded('local')) {
+        await this.refresh({ sections: ['local'], fetchRemoteState: false });
       }
 
       return this.nodesToItems(this.dataLoader.getTreeData());
@@ -57,6 +62,14 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
 
     if ((element.nodeType !== 'folder' && element.nodeType !== 'section') || !element.containerPath) {
       return [];
+    }
+
+    if (element.nodeType === 'section') {
+      const section = getBranchSectionKey(element.containerPath);
+
+      if (section && !this.dataLoader.isSectionLoaded(section)) {
+        await this.refresh({ sections: [section], fetchRemoteState: false });
+      }
     }
 
     const container = findContainerNode(this.dataLoader.getTreeData(), element.containerPath);

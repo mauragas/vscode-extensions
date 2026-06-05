@@ -1,15 +1,21 @@
 import {
-  buildBranchSections,
+  buildBranchTree,
   sortBranches,
   type BranchInfo,
   type BranchSortOrder,
   type BranchTreeNode,
+  type TreeChildNode,
+  type TreeSection,
 } from './branchModel';
 import { formatErrorMessage } from './errorUtils';
+
+export type BranchSectionKey = 'local' | 'remote' | 'stash' | 'worktree' | 'tags';
 
 export interface BranchLoadOptions {
   fetchRemoteState?: boolean;
   forceFetchRemoteState?: boolean;
+  sections?: readonly BranchSectionKey[];
+  onlyIfLoaded?: boolean;
 }
 
 export interface BranchDataLoaderDependencies {
@@ -30,6 +36,41 @@ export interface BranchDataLoaderDependencies {
 
 export const REMOTE_FETCH_INTERVAL_MS = 30_000;
 
+const DEFAULT_SECTION: BranchSectionKey = 'local';
+const BRANCH_SECTION_ORDER: readonly BranchSectionKey[] = [
+  'local',
+  'remote',
+  'stash',
+  'worktree',
+  'tags',
+] as const;
+
+const BRANCH_SECTION_LABELS: Record<BranchSectionKey, string> = {
+  local: 'Local',
+  remote: 'Remote',
+  stash: 'Stash',
+  worktree: 'Worktree',
+  tags: 'Tags',
+};
+
+const BRANCH_SECTION_PATHS: Record<BranchSectionKey, string> = {
+  local: 'section:local',
+  remote: 'section:remote',
+  stash: 'section:stash',
+  worktree: 'section:worktree',
+  tags: 'section:tags',
+};
+
+interface SectionState {
+  loaded: boolean;
+  children: TreeChildNode[];
+}
+
+interface LoaderConfiguration {
+  groupByFolder: boolean;
+  sortOrder: BranchSortOrder;
+}
+
 export function shouldRefreshRemoteState(
   lastRemoteFetchAt: number,
   now: number,
@@ -39,11 +80,15 @@ export function shouldRefreshRemoteState(
   return lastRemoteFetchAt === 0 || force || now - lastRemoteFetchAt >= intervalMs;
 }
 
+export function getBranchSectionKey(sectionPath: string): BranchSectionKey | undefined {
+  return BRANCH_SECTION_ORDER.find((section) => BRANCH_SECTION_PATHS[section] === sectionPath);
+}
+
 export class BranchDataLoader {
-  private treeData: BranchTreeNode[] = [];
   private localBranches: BranchInfo[] = [];
   private repoRoot: string | null = null;
   private lastRemoteFetchAt = 0;
+  private readonly sectionStates = createEmptySectionStates();
 
   constructor(
     private readonly dependencies: BranchDataLoaderDependencies,
@@ -51,7 +96,16 @@ export class BranchDataLoader {
   ) {}
 
   getTreeData(): readonly BranchTreeNode[] {
-    return this.treeData;
+    if (!this.repoRoot) {
+      return [];
+    }
+
+    return BRANCH_SECTION_ORDER.map((section) => ({
+      kind: 'section',
+      label: BRANCH_SECTION_LABELS[section],
+      path: BRANCH_SECTION_PATHS[section],
+      children: this.sectionStates[section].children,
+    }) satisfies TreeSection);
   }
 
   getRepoRoot(): string | null {
@@ -60,6 +114,10 @@ export class BranchDataLoader {
 
   getCurrentBranch(): BranchInfo | undefined {
     return this.localBranches.find((branch) => branch.isCurrent);
+  }
+
+  isSectionLoaded(section: BranchSectionKey): boolean {
+    return this.sectionStates[section].loaded;
   }
 
   async refresh(options: BranchLoadOptions = {}): Promise<void> {
@@ -73,6 +131,7 @@ export class BranchDataLoader {
     const nextRepoRoot = await this.dependencies.getRepoRoot(workspaceRoot);
     if (nextRepoRoot !== this.repoRoot) {
       this.lastRemoteFetchAt = 0;
+      this.clearSections();
     }
 
     this.repoRoot = nextRepoRoot;
@@ -81,40 +140,92 @@ export class BranchDataLoader {
       return;
     }
 
-    if (options.fetchRemoteState ?? true) {
+    if (options.fetchRemoteState ?? false) {
       await this.maybeRefreshRemoteState(this.repoRoot, options.forceFetchRemoteState ?? false);
     }
 
     const configuration = this.dependencies.getConfiguration();
-    const [localBranches, remoteBranches, stashBranches, worktreeBranches, tagBranches] = await Promise.all([
-      this.dependencies.getBranches(this.repoRoot),
-      this.dependencies.getRemoteBranches(this.repoRoot),
-      this.dependencies.getStashes(this.repoRoot),
-      this.dependencies.getWorktrees(this.repoRoot),
-      this.dependencies.getTags(this.repoRoot),
-    ]);
-    const sortedLocalBranches = sortBranches(localBranches, configuration.sortOrder);
-    const sortedRemoteBranches = sortBranches(remoteBranches, configuration.sortOrder);
-    const sortedStashBranches = sortBranches(stashBranches, configuration.sortOrder);
-    const sortedWorktreeBranches = sortBranches(worktreeBranches, configuration.sortOrder);
-    const sortedTagBranches = sortBranches(tagBranches, configuration.sortOrder);
+    const sections = this.resolveSections(options.sections, options.onlyIfLoaded ?? false);
+    if (sections.length === 0) {
+      return;
+    }
 
-    this.localBranches = sortedLocalBranches;
-    this.treeData = buildBranchSections(
-      sortedLocalBranches,
-      sortedRemoteBranches,
-      sortedStashBranches,
-      sortedWorktreeBranches,
-      sortedTagBranches,
-      configuration.groupByFolder
-    );
+    await Promise.all(sections.map((section) => this.loadSection(section, configuration)));
   }
 
   private clearData(): void {
     this.repoRoot = null;
     this.localBranches = [];
-    this.treeData = [];
     this.lastRemoteFetchAt = 0;
+    this.clearSections();
+  }
+
+  private clearSections(): void {
+    this.localBranches = [];
+
+    for (const section of BRANCH_SECTION_ORDER) {
+      this.sectionStates[section] = createEmptySectionState();
+    }
+  }
+
+  private resolveSections(
+    requestedSections: readonly BranchSectionKey[] | undefined,
+    onlyIfLoaded: boolean
+  ): BranchSectionKey[] {
+    const baseSections =
+      requestedSections ??
+      (this.getLoadedSections().length > 0 ? this.getLoadedSections() : [DEFAULT_SECTION]);
+    const uniqueSections = [...new Set(baseSections)];
+
+    return onlyIfLoaded
+      ? uniqueSections.filter((section) => this.sectionStates[section].loaded)
+      : uniqueSections;
+  }
+
+  private getLoadedSections(): BranchSectionKey[] {
+    return BRANCH_SECTION_ORDER.filter((section) => this.sectionStates[section].loaded);
+  }
+
+  private async loadSection(
+    section: BranchSectionKey,
+    configuration: LoaderConfiguration
+  ): Promise<void> {
+    if (!this.repoRoot) {
+      return;
+    }
+
+    const branches = await this.loadBranches(section, this.repoRoot);
+    const sortedBranches = sortBranches(branches, configuration.sortOrder);
+    const children = buildBranchTree(
+      sortedBranches,
+      section === 'worktree' ? false : configuration.groupByFolder
+    );
+
+    if (section === 'local') {
+      this.localBranches = sortedBranches;
+    }
+
+    this.sectionStates[section] = {
+      loaded: true,
+      children,
+    };
+  }
+
+  private loadBranches(section: BranchSectionKey, repoRoot: string): Promise<BranchInfo[]> {
+    switch (section) {
+      case 'local':
+        return this.dependencies.getBranches(repoRoot);
+      case 'remote':
+        return this.dependencies.getRemoteBranches(repoRoot);
+      case 'stash':
+        return this.dependencies.getStashes(repoRoot);
+      case 'worktree':
+        return this.dependencies.getWorktrees(repoRoot);
+      case 'tags':
+        return this.dependencies.getTags(repoRoot);
+      default:
+        return Promise.resolve([]);
+    }
   }
 
   private async maybeRefreshRemoteState(repoRoot: string, force = false): Promise<void> {
@@ -131,4 +242,21 @@ export class BranchDataLoader {
       );
     }
   }
+}
+
+function createEmptySectionState(): SectionState {
+  return {
+    loaded: false,
+    children: [],
+  };
+}
+
+function createEmptySectionStates(): Record<BranchSectionKey, SectionState> {
+  return {
+    local: createEmptySectionState(),
+    remote: createEmptySectionState(),
+    stash: createEmptySectionState(),
+    worktree: createEmptySectionState(),
+    tags: createEmptySectionState(),
+  };
 }

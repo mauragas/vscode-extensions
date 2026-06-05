@@ -10,7 +10,7 @@ export type NodeType =
   | 'stash'
   | 'worktree';
 
-export type TreeItemCollapsibleKind = 'expanded' | 'none';
+export type TreeItemCollapsibleKind = 'expanded' | 'collapsed' | 'none';
 export type TreeContainerNode = Extract<BranchTreeNode, { kind: 'section' | 'folder' }>;
 
 export interface TreeItemIconDescriptor {

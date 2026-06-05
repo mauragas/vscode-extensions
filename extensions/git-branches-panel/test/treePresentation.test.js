@@ -122,6 +122,12 @@ test('buildStatusBar helpers format sync state and guidance', () => {
 });
 
 test('buildTreeItemPresentation maps sections, folders, and branch types consistently', () => {
+  const localSectionPresentation = buildTreeItemPresentation({
+    kind: 'section',
+    label: 'Local',
+    path: 'section:local',
+    children: [],
+  });
   const sectionPresentation = buildTreeItemPresentation({
     kind: 'section',
     label: 'Remote',
@@ -250,9 +256,12 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
     },
   });
 
+  assert.equal(localSectionPresentation.nodeType, 'section');
+  assert.equal(localSectionPresentation.collapsibleState, 'expanded');
+
   assert.equal(sectionPresentation.nodeType, 'section');
   assert.equal(sectionPresentation.icon.id, 'cloud');
-  assert.equal(sectionPresentation.collapsibleState, 'expanded');
+  assert.equal(sectionPresentation.collapsibleState, 'collapsed');
   assert.equal(sectionPresentation.contextValue, 'section');
 
   assert.equal(stashSectionPresentation.nodeType, 'section');
@@ -269,6 +278,7 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(folderPresentation.nodeType, 'folder');
   assert.equal(folderPresentation.id, 'folder:feature');
   assert.equal(folderPresentation.icon.id, 'folder');
+  assert.equal(folderPresentation.collapsibleState, 'collapsed');
 
   assert.equal(localBranchPresentation.nodeType, 'branch');
   assert.equal(localBranchPresentation.id, 'local:branch:feature/demo');
