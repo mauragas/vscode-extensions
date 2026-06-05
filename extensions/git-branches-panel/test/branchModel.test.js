@@ -144,6 +144,31 @@ test('buildBranchSections shows local branches before remote branches', () => {
   );
 });
 
+test('buildBranchSections omits empty local or remote groups', () => {
+  const localOnlySections = buildBranchSections(
+    [{ name: 'main', isCurrent: true }],
+    [],
+    true
+  );
+  const remoteOnlySections = buildBranchSections(
+    [],
+    [{ name: 'origin/main', isCurrent: false, scope: 'remote', remoteName: 'origin' }],
+    true
+  );
+
+  assert.deepEqual(localOnlySections.map((section) => section.label), ['Local']);
+  assert.deepEqual(remoteOnlySections.map((section) => section.label), ['Remote']);
+});
+
+test('buildBranchTree keeps sorted order when folder grouping is disabled', () => {
+  const tree = buildBranchTree(sortBranches(sampleBranches, 'recent'), false);
+
+  assert.deepEqual(
+    tree.map((node) => (node.kind === 'branch' ? node.fullName : node.path)),
+    ['main', 'feature/payments/stripe', 'feature/auth']
+  );
+});
+
 test('findFolderNode resolves duplicate labels using the full folder path', () => {
   const tree = buildBranchTree(
     [
@@ -168,6 +193,25 @@ test('findFolderNode resolves duplicate labels using the full folder path', () =
   assert.equal(
     releaseFoo.children[0]?.kind === 'branch' ? releaseFoo.children[0].fullName : '',
     'release/foo/two'
+  );
+});
+
+test('findFolderNode can traverse through section roots', () => {
+  const sections = buildBranchSections(
+    [{ name: 'main', isCurrent: true }],
+    [{ name: 'origin/feature/auth', isCurrent: false, scope: 'remote', remoteName: 'origin' }],
+    true
+  );
+
+  const remoteFeatureFolder = findFolderNode(sections, 'origin/feature');
+
+  assert.ok(remoteFeatureFolder);
+  assert.equal(remoteFeatureFolder.label, 'feature');
+  assert.equal(
+    remoteFeatureFolder.children[0]?.kind === 'branch'
+      ? remoteFeatureFolder.children[0].fullName
+      : '',
+    'origin/feature/auth'
   );
 });
 

@@ -202,6 +202,7 @@
     "watch": "npm --prefix ../.. run watch:git-branches-panel",
     "lint": "npm --prefix ../.. run lint:git-branches-panel",
     "test": "npm --prefix ../.. run test:git-branches-panel",
+    "test:coverage": "npm --prefix ../.. run test:coverage:git-branches-panel",
     "package": "npx -y -p node@20 -p @vscode/vsce vsce package"
   }
 }
