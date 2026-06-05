@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 - Added a `Stash Silently` toolbar action for tracked and untracked files
 - Added a Worktree section between Stash and Tags with common worktree actions
 - Prioritized incoming/outgoing sync badges so they stay visible for long branch names
+- Added a branch context action to compare any local or remote branch with the currently checked out branch
 
 ## [1.0.0] - 2026-06-05
 

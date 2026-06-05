@@ -142,6 +142,11 @@
         "icon": "$(git-merge)"
       },
       {
+        "command": "gitBranchesPanel.compareBranchWithCurrent",
+        "title": "Compare with Current Branch",
+        "icon": "$(diff-multiple)"
+      },
+      {
         "command": "gitBranchesPanel.deleteTag",
         "title": "Delete Tag",
         "icon": "$(trash)"
@@ -253,9 +258,14 @@
           "group": "1_branch@5"
         },
         {
-          "command": "gitBranchesPanel.mergeIntoCurrent",
+          "command": "gitBranchesPanel.compareBranchWithCurrent",
           "when": "viewItem == branch || viewItem == remoteBranch",
           "group": "1_branch@6"
+        },
+        {
+          "command": "gitBranchesPanel.mergeIntoCurrent",
+          "when": "viewItem == branch || viewItem == remoteBranch",
+          "group": "1_branch@7"
         },
         {
           "command": "gitBranchesPanel.deleteBranch",

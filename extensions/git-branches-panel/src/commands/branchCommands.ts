@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { join } from 'node:path';
 
 import { getErrorMessage } from '../errorUtils';
 import {
@@ -7,6 +8,7 @@ import {
   createBranch,
   deleteBranch,
   deleteRemoteBranch,
+  getDiffFilesBetweenRefs,
   mergeBranchIntoCurrent,
   renameBranch,
   syncBranch,
@@ -53,6 +55,12 @@ export function registerBranchDomainCommands(
     vscode.commands.registerCommand('gitBranchesPanel.copyBranchName', async (item: BranchTreeItem) => {
       await handleCopyBranchName(item);
     }),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.compareBranchWithCurrent',
+      async (item: BranchTreeItem) => {
+        await handleCompareBranchWithCurrent(item, commandContext);
+      }
+    ),
     vscode.commands.registerCommand(
       'gitBranchesPanel.mergeIntoCurrent',
       async (item: BranchTreeItem) => {
@@ -281,6 +289,74 @@ async function handleCopyBranchName(item: BranchTreeItem): Promise<void> {
   vscode.window.showInformationMessage(`Copied '${item.branchName}' to the clipboard.`);
 }
 
+async function handleCompareBranchWithCurrent(
+  item: BranchTreeItem,
+  commandContext: CommandContext
+): Promise<void> {
+  if (!item.branchName || !item.repoRoot) {
+    return;
+  }
+
+  if (item.nodeType !== 'branch' && item.nodeType !== 'remoteBranch') {
+    return;
+  }
+
+  const compareBranchName = item.branchName;
+  const repoRoot = item.repoRoot;
+
+  const currentBranch = await commandContext.requireCurrentBranch(NO_CURRENT_BRANCH_MESSAGE);
+  if (!currentBranch) {
+    return;
+  }
+
+  if (item.nodeType === 'branch' && compareBranchName === currentBranch.name) {
+    vscode.window.showInformationMessage(`'${compareBranchName}' is already the current branch.`);
+    return;
+  }
+
+  try {
+    const changes = await getDiffFilesBetweenRefs(repoRoot, currentBranch.name, compareBranchName);
+    if (changes.length === 0) {
+      vscode.window.showInformationMessage(
+        `No differences found between current branch '${currentBranch.name}' and '${compareBranchName}'.`
+      );
+      return;
+    }
+
+    const gitApi = await getGitApi();
+    if (!gitApi) {
+      vscode.window.showErrorMessage('The built-in Git extension API is not available.');
+      return;
+    }
+
+    const repository = gitApi.getRepository(vscode.Uri.file(repoRoot));
+    if (!repository) {
+      vscode.window.showErrorMessage('Could not resolve the Git repository for this workspace.');
+      return;
+    }
+
+    const resources = changes.map((change) =>
+      buildCompareResource(change, repoRoot, currentBranch.name, compareBranchName, gitApi)
+    );
+    const reveal = resources.find((resource) => resource.modifiedUri || resource.originalUri);
+
+    await vscode.commands.executeCommand('_workbench.openMultiDiffEditor', {
+      multiDiffSourceUri: vscode.Uri.from({
+        scheme: 'scm-history-item',
+        path: `${repository.rootUri.path}/${currentBranch.name}..${compareBranchName}`,
+      }),
+      title: `Compare '${compareBranchName}' with current '${currentBranch.name}'`,
+      resources,
+      reveal,
+    });
+  } catch (error) {
+    commandContext.showCommandError(
+      `Failed to compare '${compareBranchName}' with current branch '${currentBranch.name}'`,
+      error
+    );
+  }
+}
+
 async function handleMergeIntoCurrent(
   item: BranchTreeItem,
   commandContext: CommandContext
@@ -333,4 +409,62 @@ async function syncBranchByName(
   } catch (error) {
     commandContext.showCommandError(`Failed to sync '${branchName}'`, error);
   }
+}
+
+function buildCompareResource(
+  change: {
+    status: 'A' | 'D' | 'M' | 'R';
+    path: string;
+    originalPath?: string;
+  },
+  repoRoot: string,
+  currentRef: string,
+  compareRef: string,
+  gitApi: GitApi
+): { originalUri?: vscode.Uri; modifiedUri?: vscode.Uri } {
+  switch (change.status) {
+    case 'A':
+      return {
+        modifiedUri: gitApi.toGitUri(vscode.Uri.file(join(repoRoot, change.path)), compareRef),
+      };
+    case 'D':
+      return {
+        originalUri: gitApi.toGitUri(vscode.Uri.file(join(repoRoot, change.path)), currentRef),
+      };
+    case 'R':
+      return {
+        originalUri: change.originalPath
+          ? gitApi.toGitUri(vscode.Uri.file(join(repoRoot, change.originalPath)), currentRef)
+          : undefined,
+        modifiedUri: gitApi.toGitUri(vscode.Uri.file(join(repoRoot, change.path)), compareRef),
+      };
+    default:
+      return {
+        originalUri: gitApi.toGitUri(vscode.Uri.file(join(repoRoot, change.path)), currentRef),
+        modifiedUri: gitApi.toGitUri(vscode.Uri.file(join(repoRoot, change.path)), compareRef),
+      };
+  }
+}
+
+async function getGitApi(): Promise<GitApi | undefined> {
+  const extension = vscode.extensions.getExtension<GitExtensionExports>('vscode.git');
+  if (!extension) {
+    return undefined;
+  }
+
+  const exports = extension.isActive ? extension.exports : await extension.activate();
+  if (!exports || typeof exports.getAPI !== 'function') {
+    return undefined;
+  }
+
+  return exports.getAPI(1);
+}
+
+interface GitApi {
+  getRepository(uri: vscode.Uri): { rootUri: vscode.Uri } | null;
+  toGitUri(uri: vscode.Uri, ref: string): vscode.Uri;
+}
+
+interface GitExtensionExports {
+  getAPI(version: number): GitApi;
 }

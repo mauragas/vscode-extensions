@@ -14,6 +14,7 @@ const {
   dropStash,
   fetchAllRemotes,
   fetchRemoteState,
+  getDiffFilesBetweenRefs,
   getBranches,
   getRemotes,
   getRemoteBranches,
@@ -318,6 +319,32 @@ test('fetchAllRemotes keeps stale remote refs while fetchRemoteState prunes them
 
   await fetchRemoteState(repoRoot);
   assert.equal(hasRef(repoRoot, 'refs/remotes/origin/feature/stale'), false);
+});
+
+test('getDiffFilesBetweenRefs reports added, modified, and deleted files between refs', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/compare']);
+  writeFileSync(join(repoRoot, 'README.md'), '# Test repo\nupdated\n');
+  writeFileSync(join(repoRoot, 'feature.txt'), 'feature\n');
+  runGit(repoRoot, ['add', 'README.md', 'feature.txt']);
+  runGit(repoRoot, ['commit', '-m', 'Update readme and add feature file']);
+  runGit(repoRoot, ['checkout', 'main']);
+
+  writeFileSync(join(repoRoot, 'legacy.txt'), 'legacy\n');
+  runGit(repoRoot, ['add', 'legacy.txt']);
+  runGit(repoRoot, ['commit', '-m', 'Add legacy file on main']);
+
+  const changes = await getDiffFilesBetweenRefs(repoRoot, 'main', 'feature/compare');
+
+  assert.deepEqual(
+    changes.sort((left, right) => left.path.localeCompare(right.path)),
+    [
+      { status: 'A', path: 'feature.txt' },
+      { status: 'D', path: 'legacy.txt' },
+      { status: 'M', path: 'README.md' },
+    ].sort((left, right) => left.path.localeCompare(right.path))
+  );
 });
 
 test('getBranches includes upstream tracking details for local branches', async (t) => {

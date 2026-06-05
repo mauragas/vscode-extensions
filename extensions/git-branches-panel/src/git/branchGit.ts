@@ -20,6 +20,12 @@ export interface SyncBranchResult {
   publishedUpstream: boolean;
 }
 
+export interface RefComparisonChange {
+  status: 'A' | 'D' | 'M' | 'R';
+  path: string;
+  originalPath?: string;
+}
+
 interface BranchSyncTarget {
   remoteName: string;
   remoteBranchName: string;
@@ -125,6 +131,24 @@ export async function mergeBranchIntoCurrent(
   await runGit(repoRoot, ['merge', '--no-edit', branchName]);
 }
 
+export async function getDiffFilesBetweenRefs(
+  repoRoot: string,
+  leftRef: string,
+  rightRef: string
+): Promise<RefComparisonChange[]> {
+  const { stdout } = await runGit(repoRoot, [
+    'diff',
+    '--name-status',
+    '--find-renames',
+    '--diff-filter=ADMR',
+    '-z',
+    `${leftRef}..${rightRef}`,
+    '--',
+  ]);
+
+  return parseRefComparison(stdout);
+}
+
 async function syncNonCurrentBranch(
   repoRoot: string,
   branchName: string,
@@ -223,4 +247,38 @@ async function resolveBranchSyncTarget(
     upstreamName: `origin/${branchName}`,
     hasConfiguredUpstream: false,
   };
+}
+
+function parseRefComparison(stdout: string): RefComparisonChange[] {
+  const entries = stdout.split('\u0000').filter(Boolean);
+  const changes: RefComparisonChange[] = [];
+
+  for (let index = 0; index < entries.length; ) {
+    const rawStatus = entries[index] ?? '';
+    const status = rawStatus[0];
+
+    if (!status) {
+      index += 1;
+      continue;
+    }
+
+    if (status === 'R') {
+      const originalPath = entries[index + 1];
+      const path = entries[index + 2];
+      if (originalPath && path) {
+        changes.push({ status: 'R', originalPath, path });
+      }
+      index += 3;
+      continue;
+    }
+
+    const path = entries[index + 1];
+    if (path && (status === 'A' || status === 'D' || status === 'M')) {
+      changes.push({ status, path });
+    }
+
+    index += 2;
+  }
+
+  return changes;
 }

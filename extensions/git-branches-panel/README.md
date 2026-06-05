@@ -28,6 +28,7 @@ sections so common Git navigation feels fast and tidy.
 - 🔄 **Sync state badges** — incoming and outgoing commits stay visible even when branch names are long
 - ☁️ **Inline sync button** — every branch gets a small sync button, including branches that are not currently checked out
 - 🚀 **Non-current branch sync** — sync a branch with its upstream without checking it out first
+- 🆚 **Compare with current branch** — compare a local or remote branch against the currently checked out branch from the context menu
 - 📦 **Stash actions** — apply, pop, or drop a stash from the context menu
 - 🪟 **Worktree actions** — open, reveal, copy, or remove worktrees from the context menu
 - ⚡ **Double-click checkout** — double-click a branch to switch instantly
@@ -50,6 +51,7 @@ sections so common Git navigation feels fast and tidy.
 | Sync Branch | Pull and/or push the branch with its remote, even when it is not checked out |
 | Rename Branch | Rename the selected branch |
 | Create Tag | Create a local tag on the selected local branch |
+| Compare with Current Branch | Open a multi-file comparison between the selected branch and the checked out branch |
 | Apply Stash | Apply the selected stash without removing it |
 | Pop Stash | Apply the selected stash and remove it if successful |
 | Drop Stash | Delete the selected stash |
