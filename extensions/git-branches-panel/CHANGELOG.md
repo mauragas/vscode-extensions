@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+- Added a Stash section between Remote and Tags
+- Added stash context actions to apply, pop, and drop stashes
+- Added a `Stash Silently` toolbar action for tracked and untracked files
+
 ## [1.1.0] - 2026-06-05
 
 - Added a local-branch context menu action to create a tag on the selected branch

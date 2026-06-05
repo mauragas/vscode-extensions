@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { type BranchInfo } from './branchModel';
 import { formatErrorMessage, getErrorMessage } from './errorUtils';
 import {
+  applyStash,
   checkoutBranch,
   checkoutRemoteBranch,
   checkoutTag,
@@ -10,13 +11,16 @@ import {
   createTag,
   deleteRemoteBranch,
   deleteBranch,
+  dropStash,
   deleteTag,
   fetchAllRemotes,
   fetchRemoteState,
   getRemotes,
   mergeBranchIntoCurrent,
+  popStash,
   pushAllTags,
   renameBranch,
+  stashSilently,
   syncBranch,
 } from './git';
 import {
@@ -48,6 +52,9 @@ export function registerBranchCommands(
     }),
     vscode.commands.registerCommand('gitBranchesPanel.fetchAllPrune', async () => {
       await handleFetchAllPrune(provider, activationTracker);
+    }),
+    vscode.commands.registerCommand('gitBranchesPanel.stashSilently', async () => {
+      await handleStashSilently(provider, activationTracker);
     }),
     vscode.commands.registerCommand(
       'gitBranchesPanel.activateBranchItem',
@@ -100,6 +107,15 @@ export function registerBranchCommands(
     vscode.commands.registerCommand('gitBranchesPanel.pushAllTags', async (item?: BranchTreeItem) => {
       await handlePushAllTags(item, provider, activationTracker);
     }),
+    vscode.commands.registerCommand('gitBranchesPanel.applyStash', async (item: BranchTreeItem) => {
+      await handleApplyStash(item, provider, activationTracker);
+    }),
+    vscode.commands.registerCommand('gitBranchesPanel.popStash', async (item: BranchTreeItem) => {
+      await handlePopStash(item, provider, activationTracker);
+    }),
+    vscode.commands.registerCommand('gitBranchesPanel.dropStash', async (item: BranchTreeItem) => {
+      await handleDropStash(item, provider, activationTracker);
+    }),
     vscode.commands.registerCommand(
       'gitBranchesPanel.mergeIntoCurrent',
       async (item: BranchTreeItem) => {
@@ -135,6 +151,33 @@ async function handleFetchAll(
     );
   } catch (error) {
     showCommandError('Failed to fetch remotes', error);
+  }
+}
+
+async function handleStashSilently(
+  provider: BranchTreeProvider,
+  activationTracker: BranchItemActivationTracker
+): Promise<void> {
+  const repoRoot = await requireRepoRoot(provider);
+  if (!repoRoot) {
+    return;
+  }
+
+  try {
+    const didStash = await stashSilently(repoRoot);
+    if (!didStash) {
+      vscode.window.showInformationMessage('No tracked or untracked changes to stash.');
+      return;
+    }
+
+    await showSuccessAndRefresh(
+      'Stashed tracked and untracked changes.',
+      provider,
+      activationTracker,
+      { fetchRemoteState: false }
+    );
+  } catch (error) {
+    showCommandError('Failed to stash changes', error);
   }
 }
 
@@ -503,6 +546,81 @@ async function handleDeleteTag(
     );
   } catch (error) {
     showCommandError(`Failed to delete tag '${item.branchName}'`, error);
+  }
+}
+
+async function handleApplyStash(
+  item: BranchTreeItem,
+  provider: BranchTreeProvider,
+  activationTracker: BranchItemActivationTracker
+): Promise<void> {
+  if (!item.branchName || !item.repoRoot || item.nodeType !== 'stash') {
+    return;
+  }
+
+  try {
+    await applyStash(item.repoRoot, item.branchName);
+    await showSuccessAndRefresh(
+      `Applied stash '${item.branchName}'.`,
+      provider,
+      activationTracker,
+      { fetchRemoteState: false }
+    );
+  } catch (error) {
+    showCommandError(`Failed to apply stash '${item.branchName}'`, error);
+  }
+}
+
+async function handlePopStash(
+  item: BranchTreeItem,
+  provider: BranchTreeProvider,
+  activationTracker: BranchItemActivationTracker
+): Promise<void> {
+  if (!item.branchName || !item.repoRoot || item.nodeType !== 'stash') {
+    return;
+  }
+
+  try {
+    await popStash(item.repoRoot, item.branchName);
+    await showSuccessAndRefresh(
+      `Popped stash '${item.branchName}'.`,
+      provider,
+      activationTracker,
+      { fetchRemoteState: false }
+    );
+  } catch (error) {
+    showCommandError(`Failed to pop stash '${item.branchName}'`, error);
+  }
+}
+
+async function handleDropStash(
+  item: BranchTreeItem,
+  provider: BranchTreeProvider,
+  activationTracker: BranchItemActivationTracker
+): Promise<void> {
+  if (!item.branchName || !item.repoRoot || item.nodeType !== 'stash') {
+    return;
+  }
+
+  const confirmation = await vscode.window.showWarningMessage(
+    `Drop stash '${item.branchName}'?`,
+    { modal: true },
+    'Drop'
+  );
+  if (confirmation !== 'Drop') {
+    return;
+  }
+
+  try {
+    await dropStash(item.repoRoot, item.branchName);
+    await showSuccessAndRefresh(
+      `Dropped stash '${item.branchName}'.`,
+      provider,
+      activationTracker,
+      { fetchRemoteState: false }
+    );
+  } catch (error) {
+    showCommandError(`Failed to drop stash '${item.branchName}'`, error);
   }
 }
 

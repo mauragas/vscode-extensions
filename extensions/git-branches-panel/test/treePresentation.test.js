@@ -50,6 +50,19 @@ test('buildBranchTooltipContent describes local, remote, and tag items', () => {
       scope: 'tag',
     },
   });
+  const stashTooltip = buildBranchTooltipContent({
+    kind: 'branch',
+    fullName: 'stash@{0}',
+    label: 'stash@{0}',
+    path: 'stash@{0}',
+    info: {
+      name: 'stash@{0}',
+      isCurrent: false,
+      scope: 'stash',
+      lastCommitDate: '5 minutes ago',
+      lastCommit: 'WIP on main: stash support',
+    },
+  });
 
   assert.match(localTooltip, /\*\*feature\/demo\*\*/);
   assert.match(localTooltip, /_Current branch_/);
@@ -61,6 +74,9 @@ test('buildBranchTooltipContent describes local, remote, and tag items', () => {
   assert.match(remoteTooltip, /_Remote branch_/);
   assert.match(remoteTooltip, /Remote: origin/);
   assert.match(tagTooltip, /_Tag_/);
+  assert.match(stashTooltip, /_Stash_/);
+  assert.match(stashTooltip, /Saved: 5 minutes ago/);
+  assert.match(stashTooltip, /Message: WIP on main: stash support/);
 });
 
 test('buildStatusBar helpers format sync state and guidance', () => {
@@ -93,6 +109,12 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
     kind: 'section',
     label: 'Remote',
     path: 'section:remote',
+    children: [],
+  });
+  const stashSectionPresentation = buildTreeItemPresentation({
+    kind: 'section',
+    label: 'Stash',
+    path: 'section:stash',
     children: [],
   });
   const tagsSectionPresentation = buildTreeItemPresentation({
@@ -152,11 +174,28 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
       scope: 'tag',
     },
   });
+  const stashPresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'stash@{0}',
+    label: 'stash@{0}',
+    path: 'stash@{0}',
+    info: {
+      name: 'stash@{0}',
+      isCurrent: false,
+      scope: 'stash',
+      lastCommit: 'WIP on main: stash support',
+      lastCommitDate: '5 minutes ago',
+    },
+  });
 
   assert.equal(sectionPresentation.nodeType, 'section');
   assert.equal(sectionPresentation.icon.id, 'cloud');
   assert.equal(sectionPresentation.collapsibleState, 'expanded');
   assert.equal(sectionPresentation.contextValue, 'section');
+
+  assert.equal(stashSectionPresentation.nodeType, 'section');
+  assert.equal(stashSectionPresentation.icon.id, 'archive');
+  assert.equal(stashSectionPresentation.contextValue, 'section');
 
   assert.equal(tagsSectionPresentation.nodeType, 'section');
   assert.equal(tagsSectionPresentation.contextValue, 'tagsSection');
@@ -182,12 +221,18 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(tagPresentation.nodeType, 'tag');
   assert.equal(tagPresentation.icon.id, 'tag');
   assert.equal(tagPresentation.command, undefined);
+
+  assert.equal(stashPresentation.nodeType, 'stash');
+  assert.equal(stashPresentation.icon.id, 'archive');
+  assert.equal(stashPresentation.description, 'WIP on main: stash support • 5 minutes ago');
+  assert.equal(stashPresentation.command, undefined);
 });
 
 test('findContainerNode resolves section and nested folder paths', () => {
   const sections = buildBranchSections(
     [{ name: 'main', isCurrent: true }],
     [{ name: 'origin/feature/demo', isCurrent: false, scope: 'remote', remoteName: 'origin' }],
+    [{ name: 'stash@{0}', isCurrent: false, scope: 'stash' }],
     [],
     true
   );

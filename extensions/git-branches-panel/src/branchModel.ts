@@ -1,7 +1,7 @@
 export interface BranchInfo {
   name: string;
   isCurrent: boolean;
-  scope?: 'local' | 'remote' | 'tag';
+  scope?: 'local' | 'remote' | 'tag' | 'stash';
   remoteName?: string;
   lastCommit?: string;
   lastCommitDate?: string;
@@ -131,6 +131,7 @@ export function buildBranchTree(
 export function buildBranchSections(
   localBranches: readonly BranchInfo[],
   remoteBranches: readonly BranchInfo[],
+  stashBranches: readonly BranchInfo[],
   tagBranches: readonly BranchInfo[],
   groupByFolder: boolean
 ): TreeSection[] {
@@ -151,6 +152,15 @@ export function buildBranchSections(
       label: 'Remote',
       path: 'section:remote',
       children: buildBranchTree(remoteBranches, groupByFolder),
+    });
+  }
+
+  if (stashBranches.length > 0) {
+    sections.push({
+      kind: 'section',
+      label: 'Stash',
+      path: 'section:stash',
+      children: buildBranchTree(stashBranches, groupByFolder),
     });
   }
 
@@ -233,9 +243,12 @@ export function formatSyncStatus(syncState: Pick<BranchInfo, 'aheadCount' | 'beh
 }
 
 export function buildBranchDescription(
-  branch: Pick<BranchInfo, 'aheadCount' | 'behindCount' | 'lastCommitDate'>
+  branch: Pick<BranchInfo, 'aheadCount' | 'behindCount' | 'lastCommit' | 'lastCommitDate' | 'scope'>
 ): string {
-  const descriptionParts = [formatSyncStatus(branch), branch.lastCommitDate ?? ''].filter(Boolean);
+  const descriptionParts =
+    branch.scope === 'stash'
+      ? [branch.lastCommit ?? '', branch.lastCommitDate ?? ''].filter(Boolean)
+      : [formatSyncStatus(branch), branch.lastCommitDate ?? ''].filter(Boolean);
 
   return descriptionParts.join(' • ');
 }

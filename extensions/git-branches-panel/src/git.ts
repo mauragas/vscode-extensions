@@ -19,6 +19,7 @@ const GIT_OUTPUT_FORMAT = [
   '%(upstream:short)',
   '%(upstream:track,nobracket)',
 ].join(`${GIT_FIELD_SEPARATOR}`) + GIT_RECORD_SEPARATOR;
+const STASH_OUTPUT_FORMAT = ['%gd', '%cr', '%ct', '%gs'].join(`${GIT_FIELD_SEPARATOR}`) + GIT_RECORD_SEPARATOR;
 
 export interface SyncBranchResult {
   branchName: string;
@@ -74,6 +75,30 @@ export async function getRemoteBranches(repoRoot: string): Promise<BranchInfo[]>
 
 export async function getTags(repoRoot: string): Promise<BranchInfo[]> {
   return listBranches(repoRoot, 'refs/tags', 'tag');
+}
+
+export async function getStashes(repoRoot: string): Promise<BranchInfo[]> {
+  const { stdout } = await runGit(repoRoot, ['stash', 'list', `--format=${STASH_OUTPUT_FORMAT}`]);
+
+  return stdout
+    .split(GIT_RECORD_SEPARATOR)
+    .map((record) => record.trim())
+    .filter(Boolean)
+    .map((record) => {
+      const [name = '', lastCommitDate = '', lastCommitTimestamp = '', lastCommit = ''] =
+        record.split(GIT_FIELD_SEPARATOR);
+
+      return {
+        name,
+        isCurrent: false,
+        scope: 'stash',
+        lastCommitDate,
+        lastCommitTimestamp: Number.isFinite(Number(lastCommitTimestamp))
+          ? Number(lastCommitTimestamp)
+          : undefined,
+        lastCommit,
+      } satisfies BranchInfo;
+    });
 }
 
 export async function getRemotes(repoRoot: string): Promise<string[]> {
@@ -134,6 +159,18 @@ export async function checkoutTag(repoRoot: string, tagName: string): Promise<vo
 
 export async function deleteTag(repoRoot: string, tagName: string): Promise<void> {
   await runGit(repoRoot, ['tag', '-d', tagName]);
+}
+
+export async function applyStash(repoRoot: string, stashName: string): Promise<void> {
+  await runGit(repoRoot, ['stash', 'apply', stashName]);
+}
+
+export async function popStash(repoRoot: string, stashName: string): Promise<void> {
+  await runGit(repoRoot, ['stash', 'pop', stashName]);
+}
+
+export async function dropStash(repoRoot: string, stashName: string): Promise<void> {
+  await runGit(repoRoot, ['stash', 'drop', stashName]);
 }
 
 export function parseRemoteBranchReference(remoteBranchName: string): RemoteBranchReference | null {
@@ -205,6 +242,17 @@ export async function fetchRemoteState(repoRoot: string): Promise<void> {
 
 export async function fetchAllRemotes(repoRoot: string): Promise<void> {
   await runGit(repoRoot, ['fetch', '--all']);
+}
+
+export async function stashSilently(repoRoot: string): Promise<boolean> {
+  const { stdout } = await runGit(repoRoot, ['status', '--porcelain', '--untracked-files=all']);
+
+  if (!stdout.trim()) {
+    return false;
+  }
+
+  await runGit(repoRoot, ['stash', 'push', '--include-untracked']);
+  return true;
 }
 
 export async function checkoutBranch(repoRoot: string, branchName: string): Promise<void> {

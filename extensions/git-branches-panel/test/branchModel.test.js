@@ -116,6 +116,25 @@ test('buildBranchSections shows local, remote, and tag groups in order', () => {
     ],
     'alphabetical'
   );
+  const stashBranches = sortBranches(
+    [
+      {
+        name: 'stash@{1}',
+        isCurrent: false,
+        scope: 'stash',
+        lastCommit: 'Older stash',
+        lastCommitTimestamp: 100,
+      },
+      {
+        name: 'stash@{0}',
+        isCurrent: false,
+        scope: 'stash',
+        lastCommit: 'Newest stash',
+        lastCommitTimestamp: 200,
+      },
+    ],
+    'alphabetical'
+  );
   const tagBranches = sortBranches(
     [
       { name: 'release/v1.0.0', isCurrent: false, scope: 'tag' },
@@ -124,15 +143,17 @@ test('buildBranchSections shows local, remote, and tag groups in order', () => {
     'alphabetical'
   );
 
-  const sections = buildBranchSections(localBranches, remoteBranches, tagBranches, true);
+  const sections = buildBranchSections(localBranches, remoteBranches, stashBranches, tagBranches, true);
 
-  assert.equal(sections.length, 3);
+  assert.equal(sections.length, 4);
   assert.equal(sections[0]?.kind, 'section');
   assert.equal(sections[0]?.label, 'Local');
   assert.equal(sections[1]?.kind, 'section');
   assert.equal(sections[1]?.label, 'Remote');
   assert.equal(sections[2]?.kind, 'section');
-  assert.equal(sections[2]?.label, 'Tags');
+  assert.equal(sections[2]?.label, 'Stash');
+  assert.equal(sections[3]?.kind, 'section');
+  assert.equal(sections[3]?.label, 'Tags');
 
   assert.deepEqual(
     sections[1].children.map((node) => (node.kind === 'folder' ? node.path : node.fullName)),
@@ -154,13 +175,19 @@ test('buildBranchSections shows local, remote, and tag groups in order', () => {
 
   assert.deepEqual(
     sections[2].children.map((node) => (node.kind === 'folder' ? node.path : node.fullName)),
+    ['stash@{0}', 'stash@{1}']
+  );
+
+  assert.deepEqual(
+    sections[3].children.map((node) => (node.kind === 'folder' ? node.path : node.fullName)),
     ['release', 'v0.9.0']
   );
 });
 
-test('buildBranchSections omits empty local, remote, or tag groups', () => {
+test('buildBranchSections omits empty local, remote, stash, or tag groups', () => {
   const localOnlySections = buildBranchSections(
     [{ name: 'main', isCurrent: true }],
+    [],
     [],
     [],
     true
@@ -169,9 +196,18 @@ test('buildBranchSections omits empty local, remote, or tag groups', () => {
     [],
     [{ name: 'origin/main', isCurrent: false, scope: 'remote', remoteName: 'origin' }],
     [],
+    [],
+    true
+  );
+  const stashOnlySections = buildBranchSections(
+    [],
+    [],
+    [{ name: 'stash@{0}', isCurrent: false, scope: 'stash' }],
+    [],
     true
   );
   const tagOnlySections = buildBranchSections(
+    [],
     [],
     [],
     [{ name: 'v1.0.0', isCurrent: false, scope: 'tag' }],
@@ -180,6 +216,7 @@ test('buildBranchSections omits empty local, remote, or tag groups', () => {
 
   assert.deepEqual(localOnlySections.map((section) => section.label), ['Local']);
   assert.deepEqual(remoteOnlySections.map((section) => section.label), ['Remote']);
+  assert.deepEqual(stashOnlySections.map((section) => section.label), ['Stash']);
   assert.deepEqual(tagOnlySections.map((section) => section.label), ['Tags']);
 });
 
@@ -223,6 +260,7 @@ test('findFolderNode can traverse through section roots', () => {
   const sections = buildBranchSections(
     [{ name: 'main', isCurrent: true }],
     [{ name: 'origin/feature/auth', isCurrent: false, scope: 'remote', remoteName: 'origin' }],
+    [],
     [],
     true
   );
@@ -287,5 +325,16 @@ test('buildBranchDescription combines sync badges with commit timing', () => {
       behindCount: 0,
     }),
     'just now'
+  );
+
+  assert.equal(
+    buildBranchDescription({
+      name: 'stash@{0}',
+      isCurrent: false,
+      scope: 'stash',
+      lastCommit: 'WIP on main: add stash support',
+      lastCommitDate: '5 minutes ago',
+    }),
+    'WIP on main: add stash support • 5 minutes ago'
   );
 });

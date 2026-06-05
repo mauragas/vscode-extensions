@@ -82,6 +82,11 @@
         "icon": "$(cloud-download)"
       },
       {
+        "command": "gitBranchesPanel.stashSilently",
+        "title": "Stash Silently",
+        "icon": "$(archive)"
+      },
+      {
         "command": "gitBranchesPanel.syncCurrentBranch",
         "title": "Sync Current Branch",
         "icon": "$(sync)"
@@ -145,6 +150,19 @@
         "command": "gitBranchesPanel.pushAllTags",
         "title": "Push All Tags",
         "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "gitBranchesPanel.applyStash",
+        "title": "Apply Stash"
+      },
+      {
+        "command": "gitBranchesPanel.popStash",
+        "title": "Pop Stash"
+      },
+      {
+        "command": "gitBranchesPanel.dropStash",
+        "title": "Drop Stash",
+        "icon": "$(trash)"
       }
     ],
     "menus": {
@@ -155,24 +173,29 @@
           "group": "navigation@1"
         },
         {
-          "command": "gitBranchesPanel.syncCurrentBranch",
+          "command": "gitBranchesPanel.stashSilently",
           "when": "view == gitBranchesPanel || view == gitBranchesSCM",
           "group": "navigation@2"
         },
         {
-          "command": "gitBranchesPanel.fetchAll",
+          "command": "gitBranchesPanel.syncCurrentBranch",
           "when": "view == gitBranchesPanel || view == gitBranchesSCM",
           "group": "navigation@3"
         },
         {
-          "command": "gitBranchesPanel.fetchAllPrune",
+          "command": "gitBranchesPanel.fetchAll",
           "when": "view == gitBranchesPanel || view == gitBranchesSCM",
           "group": "navigation@4"
         },
         {
-          "command": "gitBranchesPanel.refresh",
+          "command": "gitBranchesPanel.fetchAllPrune",
           "when": "view == gitBranchesPanel || view == gitBranchesSCM",
           "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "view == gitBranchesPanel || view == gitBranchesSCM",
+          "group": "navigation@6"
         }
       ],
       "view/item/context": [
@@ -235,6 +258,21 @@
           "command": "gitBranchesPanel.pushAllTags",
           "when": "viewItem == tagsSection",
           "group": "1_tagsSection@1"
+        },
+        {
+          "command": "gitBranchesPanel.applyStash",
+          "when": "viewItem == stash",
+          "group": "1_stash@1"
+        },
+        {
+          "command": "gitBranchesPanel.popStash",
+          "when": "viewItem == stash",
+          "group": "1_stash@2"
+        },
+        {
+          "command": "gitBranchesPanel.dropStash",
+          "when": "viewItem == stash",
+          "group": "2_stash@1"
         }
       ]
     },

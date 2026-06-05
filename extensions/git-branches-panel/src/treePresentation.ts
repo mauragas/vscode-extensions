@@ -6,7 +6,14 @@ import {
   type TreeBranch,
 } from './branchModel';
 
-export type NodeType = 'section' | 'folder' | 'branch' | 'currentBranch' | 'remoteBranch' | 'tag';
+export type NodeType =
+  | 'section'
+  | 'folder'
+  | 'branch'
+  | 'currentBranch'
+  | 'remoteBranch'
+  | 'tag'
+  | 'stash';
 export type TreeItemCollapsibleKind = 'expanded' | 'none';
 export type TreeContainerNode = Extract<BranchTreeNode, { kind: 'section' | 'folder' }>;
 
@@ -43,7 +50,12 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
       contextValue: node.path === 'section:tags' ? 'tagsSection' : 'section',
       collapsibleState: 'expanded',
       icon: {
-        id: node.path === 'section:remote' ? 'cloud' : 'source-control',
+        id:
+          node.path === 'section:remote'
+            ? 'cloud'
+            : node.path === 'section:stash'
+              ? 'archive'
+              : 'source-control',
       },
       containerPath: node.path,
     };
@@ -63,9 +75,12 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
 
   const isRemoteBranch = node.info.scope === 'remote';
   const isTag = node.info.scope === 'tag';
-  const isCurrentBranch = !isRemoteBranch && !isTag && node.info.isCurrent;
+  const isStash = node.info.scope === 'stash';
+  const isCurrentBranch = !isRemoteBranch && !isTag && !isStash && node.info.isCurrent;
   const nodeType: NodeType = isCurrentBranch
     ? 'currentBranch'
+    : isStash
+      ? 'stash'
     : isTag
       ? 'tag'
       : isRemoteBranch
@@ -84,6 +99,8 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
         id: 'git-branch',
         colorId: 'gitDecoration.addedResourceForeground',
       }
+      : isStash
+        ? { id: 'archive' }
       : isTag
         ? { id: 'tag' }
         : isRemoteBranch
@@ -92,7 +109,7 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
     description,
     tooltip: buildBranchTooltipContent(node),
     branchName: node.fullName,
-    command: !isCurrentBranch && !isRemoteBranch && !isTag
+    command: !isCurrentBranch && !isRemoteBranch && !isTag && !isStash
       ? {
         command: 'gitBranchesPanel.activateBranchItem',
         title: 'Activate Branch Item',
@@ -105,8 +122,11 @@ export function buildBranchTooltipContent(node: TreeBranch): string {
   const tooltipLines = [`**${node.fullName}**`];
   const isRemoteBranch = node.info.scope === 'remote';
   const isTag = node.info.scope === 'tag';
+  const isStash = node.info.scope === 'stash';
 
-  if (isTag) {
+  if (isStash) {
+    tooltipLines.push('', '_Stash_');
+  } else if (isTag) {
     tooltipLines.push('', '_Tag_');
   } else if (isRemoteBranch) {
     tooltipLines.push('', '_Remote branch_');
@@ -119,7 +139,19 @@ export function buildBranchTooltipContent(node: TreeBranch): string {
   }
 
   if (node.info.lastCommitDate) {
-    tooltipLines.push('', `Last commit: ${node.info.lastCommitDate}`);
+    if (isStash) {
+      tooltipLines.push('', `Saved: ${node.info.lastCommitDate}`);
+    } else {
+      tooltipLines.push('', `Last commit: ${node.info.lastCommitDate}`);
+    }
+  }
+
+  if (isStash) {
+    if (node.info.lastCommit) {
+      tooltipLines.push('', `Message: ${node.info.lastCommit}`);
+    }
+
+    return tooltipLines.join('\n');
   }
 
   if (!isRemoteBranch && !isTag) {

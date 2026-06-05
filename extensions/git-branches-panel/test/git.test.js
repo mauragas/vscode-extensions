@@ -6,18 +6,23 @@ const { join } = require('node:path');
 const test = require('node:test');
 
 const {
+  applyStash,
   checkoutRemoteBranch,
   checkoutTag,
   createTag,
   deleteTag,
+  dropStash,
   fetchAllRemotes,
   fetchRemoteState,
   getBranches,
   getRemotes,
   getRemoteBranches,
+  getStashes,
   getTags,
   parseRemoteBranchReference,
+  popStash,
   pushAllTags,
+  stashSilently,
   syncBranch,
 } = require('../out/git.js');
 
@@ -185,6 +190,71 @@ test('pushAllTags pushes local tags to the selected remote', async (t) => {
     runGit(remoteRoot, ['show-ref', '--tags', 'release/2026-06-05']),
     /refs\/tags\/release\/2026-06-05$/m
   );
+});
+
+test('stashSilently saves tracked and untracked changes and getStashes lists them', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  writeFileSync(join(repoRoot, 'README.md'), '# Test repo\nthird\n');
+  writeFileSync(join(repoRoot, 'scratch.txt'), 'untracked\n');
+
+  const didStash = await stashSilently(repoRoot);
+  const stashes = await getStashes(repoRoot);
+
+  assert.equal(didStash, true);
+  assert.equal(stashes.length, 1);
+  assert.equal(stashes[0].scope, 'stash');
+  assert.equal(stashes[0].name, 'stash@{0}');
+  assert.match(stashes[0].lastCommit, /(WIP on|On) main/);
+  assert.equal(readFileSync(join(repoRoot, 'README.md'), 'utf8'), '# Test repo\nsecond\n');
+  assert.equal(hasRef(repoRoot, 'refs/stash'), true);
+});
+
+test('stashSilently returns false when there is nothing to stash', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  const didStash = await stashSilently(repoRoot);
+
+  assert.equal(didStash, false);
+  assert.equal(hasRef(repoRoot, 'refs/stash'), false);
+});
+
+test('applyStash restores changes without removing the stash entry', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  writeFileSync(join(repoRoot, 'README.md'), '# Test repo\nthird\n');
+  await stashSilently(repoRoot);
+
+  await applyStash(repoRoot, 'stash@{0}');
+
+  assert.equal(readFileSync(join(repoRoot, 'README.md'), 'utf8'), '# Test repo\nthird\n');
+  assert.equal(hasRef(repoRoot, 'refs/stash'), true);
+  assert.equal((await getStashes(repoRoot)).length, 1);
+});
+
+test('popStash restores changes and removes the stash entry', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  writeFileSync(join(repoRoot, 'README.md'), '# Test repo\nthird\n');
+  await stashSilently(repoRoot);
+
+  await popStash(repoRoot, 'stash@{0}');
+
+  assert.equal(readFileSync(join(repoRoot, 'README.md'), 'utf8'), '# Test repo\nthird\n');
+  assert.equal(hasRef(repoRoot, 'refs/stash'), false);
+  assert.equal((await getStashes(repoRoot)).length, 0);
+});
+
+test('dropStash removes the selected stash entry', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  writeFileSync(join(repoRoot, 'README.md'), '# Test repo\nthird\n');
+  await stashSilently(repoRoot);
+
+  await dropStash(repoRoot, 'stash@{0}');
+
+  assert.equal(hasRef(repoRoot, 'refs/stash'), false);
+  assert.equal((await getStashes(repoRoot)).length, 0);
 });
 
 test('fetchAllRemotes keeps stale remote refs while fetchRemoteState prunes them', async (t) => {
