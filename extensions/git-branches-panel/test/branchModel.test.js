@@ -90,7 +90,7 @@ test('buildBranchTree groups slash-separated branches into nested folders and ke
   );
 });
 
-test('buildBranchSections shows local branches before remote branches', () => {
+test('buildBranchSections shows local, remote, and tag groups in order', () => {
   const localBranches = sortBranches(
     [
       { name: 'feature/auth', isCurrent: false },
@@ -116,14 +116,23 @@ test('buildBranchSections shows local branches before remote branches', () => {
     ],
     'alphabetical'
   );
+  const tagBranches = sortBranches(
+    [
+      { name: 'release/v1.0.0', isCurrent: false, scope: 'tag' },
+      { name: 'v0.9.0', isCurrent: false, scope: 'tag' },
+    ],
+    'alphabetical'
+  );
 
-  const sections = buildBranchSections(localBranches, remoteBranches, true);
+  const sections = buildBranchSections(localBranches, remoteBranches, tagBranches, true);
 
-  assert.equal(sections.length, 2);
+  assert.equal(sections.length, 3);
   assert.equal(sections[0]?.kind, 'section');
   assert.equal(sections[0]?.label, 'Local');
   assert.equal(sections[1]?.kind, 'section');
   assert.equal(sections[1]?.label, 'Remote');
+  assert.equal(sections[2]?.kind, 'section');
+  assert.equal(sections[2]?.label, 'Tags');
 
   assert.deepEqual(
     sections[1].children.map((node) => (node.kind === 'folder' ? node.path : node.fullName)),
@@ -142,22 +151,36 @@ test('buildBranchSections shows local branches before remote branches', () => {
     originFolder.children[1]?.kind === 'branch' ? originFolder.children[1].fullName : '',
     'origin/main'
   );
+
+  assert.deepEqual(
+    sections[2].children.map((node) => (node.kind === 'folder' ? node.path : node.fullName)),
+    ['release', 'v0.9.0']
+  );
 });
 
-test('buildBranchSections omits empty local or remote groups', () => {
+test('buildBranchSections omits empty local, remote, or tag groups', () => {
   const localOnlySections = buildBranchSections(
     [{ name: 'main', isCurrent: true }],
+    [],
     [],
     true
   );
   const remoteOnlySections = buildBranchSections(
     [],
     [{ name: 'origin/main', isCurrent: false, scope: 'remote', remoteName: 'origin' }],
+    [],
+    true
+  );
+  const tagOnlySections = buildBranchSections(
+    [],
+    [],
+    [{ name: 'v1.0.0', isCurrent: false, scope: 'tag' }],
     true
   );
 
   assert.deepEqual(localOnlySections.map((section) => section.label), ['Local']);
   assert.deepEqual(remoteOnlySections.map((section) => section.label), ['Remote']);
+  assert.deepEqual(tagOnlySections.map((section) => section.label), ['Tags']);
 });
 
 test('buildBranchTree keeps sorted order when folder grouping is disabled', () => {
@@ -200,6 +223,7 @@ test('findFolderNode can traverse through section roots', () => {
   const sections = buildBranchSections(
     [{ name: 'main', isCurrent: true }],
     [{ name: 'origin/feature/auth', isCurrent: false, scope: 'remote', remoteName: 'origin' }],
+    [],
     true
   );
 

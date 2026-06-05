@@ -10,9 +10,9 @@ import {
   type BranchTreeNode,
   type TreeBranch,
 } from './branchModel';
-import { fetchRemoteState, getBranches, getRemoteBranches, getRepoRoot } from './git';
+import { fetchRemoteState, getBranches, getRemoteBranches, getRepoRoot, getTags } from './git';
 
-export type NodeType = 'section' | 'folder' | 'branch' | 'currentBranch' | 'remoteBranch';
+export type NodeType = 'section' | 'folder' | 'branch' | 'currentBranch' | 'remoteBranch' | 'tag';
 const REMOTE_FETCH_INTERVAL_MS = 30_000;
 
 export class BranchTreeItem extends vscode.TreeItem {
@@ -46,10 +46,17 @@ export class BranchTreeItem extends vscode.TreeItem {
     }
 
     const isRemoteBranch = node.info.scope === 'remote';
+    const isTag = node.info.scope === 'tag';
     const isCurrentBranch = !isRemoteBranch && node.info.isCurrent;
     super(isCurrentBranch ? `● ${node.label}` : node.label, vscode.TreeItemCollapsibleState.None);
 
-    this.nodeType = isCurrentBranch ? 'currentBranch' : isRemoteBranch ? 'remoteBranch' : 'branch';
+    this.nodeType = isCurrentBranch
+      ? 'currentBranch'
+      : isTag
+        ? 'tag'
+        : isRemoteBranch
+          ? 'remoteBranch'
+          : 'branch';
     this.branchName = node.fullName;
     this.branchInfo = node.info;
     this.repoRoot = repoRoot;
@@ -63,6 +70,8 @@ export class BranchTreeItem extends vscode.TreeItem {
         'git-branch',
         new vscode.ThemeColor('gitDecoration.addedResourceForeground')
       );
+    } else if (isTag) {
+      this.iconPath = new vscode.ThemeIcon('tag');
     } else if (isRemoteBranch) {
       this.iconPath = new vscode.ThemeIcon('cloud');
     } else {
@@ -159,15 +168,22 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     const configuration = vscode.workspace.getConfiguration('gitBranchesPanel');
     const groupByFolder = configuration.get<boolean>('groupByFolder', true);
     const sortOrder = configuration.get<BranchSortOrder>('sortOrder', 'alphabetical');
-    const [localBranches, remoteBranches] = await Promise.all([
+    const [localBranches, remoteBranches, tagBranches] = await Promise.all([
       getBranches(this.repoRoot),
       getRemoteBranches(this.repoRoot),
+      getTags(this.repoRoot),
     ]);
     const sortedLocalBranches = sortBranches(localBranches, sortOrder);
     const sortedRemoteBranches = sortBranches(remoteBranches, sortOrder);
+    const sortedTagBranches = sortBranches(tagBranches, sortOrder);
 
     this.localBranches = sortedLocalBranches;
-    this.treeData = buildBranchSections(sortedLocalBranches, sortedRemoteBranches, groupByFolder);
+    this.treeData = buildBranchSections(
+      sortedLocalBranches,
+      sortedRemoteBranches,
+      sortedTagBranches,
+      groupByFolder
+    );
     this.updateStatusBar(sortedLocalBranches.find((branch) => branch.isCurrent));
   }
 
@@ -207,8 +223,11 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
 function createBranchTooltip(node: TreeBranch): vscode.MarkdownString {
   const tooltipLines = [`**${node.fullName}**`];
   const isRemoteBranch = node.info.scope === 'remote';
+  const isTag = node.info.scope === 'tag';
 
-  if (isRemoteBranch) {
+  if (isTag) {
+    tooltipLines.push('', '_Tag_');
+  } else if (isRemoteBranch) {
     tooltipLines.push('', '_Remote branch_');
 
     if (node.info.remoteName) {
@@ -222,7 +241,7 @@ function createBranchTooltip(node: TreeBranch): vscode.MarkdownString {
     tooltipLines.push('', `Last commit: ${node.info.lastCommitDate}`);
   }
 
-  if (!isRemoteBranch) {
+  if (!isRemoteBranch && !isTag) {
     if (node.info.upstreamName) {
       tooltipLines.push('', `Upstream: ${node.info.upstreamName}`);
     } else {

@@ -71,6 +71,10 @@ export async function getRemoteBranches(repoRoot: string): Promise<BranchInfo[]>
   );
 }
 
+export async function getTags(repoRoot: string): Promise<BranchInfo[]> {
+  return listBranches(repoRoot, 'refs/tags', 'tag');
+}
+
 export async function checkoutRemoteBranch(
   repoRoot: string,
   remoteBranchName: string
@@ -114,6 +118,14 @@ export async function deleteRemoteBranch(repoRoot: string, remoteBranchName: str
   await runGit(repoRoot, ['push', remoteBranchRef.remoteName, '--delete', remoteBranchRef.branchName]);
 }
 
+export async function checkoutTag(repoRoot: string, tagName: string): Promise<void> {
+  await runGit(repoRoot, ['checkout', `refs/tags/${tagName}`]);
+}
+
+export async function deleteTag(repoRoot: string, tagName: string): Promise<void> {
+  await runGit(repoRoot, ['tag', '-d', tagName]);
+}
+
 export function parseRemoteBranchReference(remoteBranchName: string): RemoteBranchReference | null {
   const [remoteName, ...branchSegments] = remoteBranchName.split('/');
   const branchName = branchSegments.join('/').trim();
@@ -132,7 +144,7 @@ export function parseRemoteBranchReference(remoteBranchName: string): RemoteBran
 async function listBranches(
   repoRoot: string,
   refPattern: string,
-  scope: 'local' | 'remote'
+  scope: 'local' | 'remote' | 'tag'
 ): Promise<BranchInfo[]> {
   const { stdout } = await runGit(repoRoot, [
     'for-each-ref',

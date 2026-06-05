@@ -1,7 +1,7 @@
 export interface BranchInfo {
   name: string;
   isCurrent: boolean;
-  scope?: 'local' | 'remote';
+  scope?: 'local' | 'remote' | 'tag';
   remoteName?: string;
   lastCommit?: string;
   lastCommitDate?: string;
@@ -131,6 +131,7 @@ export function buildBranchTree(
 export function buildBranchSections(
   localBranches: readonly BranchInfo[],
   remoteBranches: readonly BranchInfo[],
+  tagBranches: readonly BranchInfo[],
   groupByFolder: boolean
 ): TreeSection[] {
   const sections: TreeSection[] = [];
@@ -150,6 +151,15 @@ export function buildBranchSections(
       label: 'Remote',
       path: 'section:remote',
       children: buildBranchTree(remoteBranches, groupByFolder),
+    });
+  }
+
+  if (tagBranches.length > 0) {
+    sections.push({
+      kind: 'section',
+      label: 'Tags',
+      path: 'section:tags',
+      children: buildBranchTree(tagBranches, groupByFolder),
     });
   }
 

@@ -3,9 +3,11 @@ import * as vscode from 'vscode';
 import {
   checkoutBranch,
   checkoutRemoteBranch,
+  checkoutTag,
   createBranch,
   deleteRemoteBranch,
   deleteBranch,
+  deleteTag,
   fetchRemoteState,
   mergeBranchIntoCurrent,
   renameBranch,
@@ -113,6 +115,12 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('gitBranchesPanel.checkout', async (item: BranchTreeItem) => {
       await checkoutBranchItem(item, provider, activationTracker, true);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('gitBranchesPanel.checkoutTag', async (item: BranchTreeItem) => {
+      await checkoutTagItem(item, provider, activationTracker);
     })
   );
 
@@ -291,6 +299,45 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand('gitBranchesPanel.copyTagName', async (item: BranchTreeItem) => {
+      if (!item.branchName) {
+        return;
+      }
+
+      await vscode.env.clipboard.writeText(item.branchName);
+      vscode.window.showInformationMessage(`Copied tag '${item.branchName}' to the clipboard.`);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('gitBranchesPanel.deleteTag', async (item: BranchTreeItem) => {
+      if (!item.branchName || !item.repoRoot || item.nodeType !== 'tag') {
+        return;
+      }
+
+      const confirmation = await vscode.window.showWarningMessage(
+        `Delete tag '${item.branchName}'?`,
+        { modal: true },
+        'Delete'
+      );
+      if (confirmation !== 'Delete') {
+        return;
+      }
+
+      try {
+        await deleteTag(item.repoRoot, item.branchName);
+        vscode.window.showInformationMessage(`Deleted tag '${item.branchName}'.`);
+        activationTracker.reset();
+        await provider.refresh({ fetchRemoteState: false });
+      } catch (error) {
+        vscode.window.showErrorMessage(
+          `Failed to delete tag '${item.branchName}': ${getErrorMessage(error)}`
+        );
+      }
+    })
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand('gitBranchesPanel.mergeIntoCurrent', async (item: BranchTreeItem) => {
       if (!item.branchName || !item.repoRoot || item.nodeType === 'currentBranch') {
         return;
@@ -382,6 +429,29 @@ async function checkoutBranchItem(
   }
 }
 
+async function checkoutTagItem(
+  item: BranchTreeItem,
+  provider: BranchTreeProvider,
+  activationTracker: BranchItemActivationTracker
+): Promise<void> {
+  if (!item.branchName || !item.repoRoot || item.nodeType !== 'tag') {
+    return;
+  }
+
+  try {
+    await checkoutTag(item.repoRoot, item.branchName);
+    vscode.window.showInformationMessage(
+      `Checked out tag '${item.branchName}'. HEAD is now detached at that tag.`
+    );
+    activationTracker.reset();
+    await provider.refresh({ fetchRemoteState: false });
+  } catch (error) {
+    vscode.window.showErrorMessage(
+      `Failed to checkout tag '${item.branchName}': ${getErrorMessage(error)}`
+    );
+  }
+}
+
 function registerAutoRefresh(
   context: vscode.ExtensionContext,
   provider: BranchTreeProvider,
@@ -390,7 +460,9 @@ function registerAutoRefresh(
   const headWatcher = vscode.workspace.createFileSystemWatcher('**/.git/HEAD');
   const refsWatcher = vscode.workspace.createFileSystemWatcher('**/.git/refs/heads/**');
   const remoteRefsWatcher = vscode.workspace.createFileSystemWatcher('**/.git/refs/remotes/**');
+  const tagRefsWatcher = vscode.workspace.createFileSystemWatcher('**/.git/refs/tags/**');
   const fetchHeadWatcher = vscode.workspace.createFileSystemWatcher('**/.git/FETCH_HEAD');
+  const packedRefsWatcher = vscode.workspace.createFileSystemWatcher('**/.git/packed-refs');
 
   const refresh = (fetchRemoteState = false) => {
     activationTracker.reset();
@@ -409,14 +481,22 @@ function registerAutoRefresh(
   remoteRefsWatcher.onDidChange(refreshFromWatcher);
   remoteRefsWatcher.onDidCreate(refreshFromWatcher);
   remoteRefsWatcher.onDidDelete(refreshFromWatcher);
+  tagRefsWatcher.onDidChange(refreshFromWatcher);
+  tagRefsWatcher.onDidCreate(refreshFromWatcher);
+  tagRefsWatcher.onDidDelete(refreshFromWatcher);
   fetchHeadWatcher.onDidChange(refreshFromWatcher);
   fetchHeadWatcher.onDidCreate(refreshFromWatcher);
+  packedRefsWatcher.onDidChange(refreshFromWatcher);
+  packedRefsWatcher.onDidCreate(refreshFromWatcher);
+  packedRefsWatcher.onDidDelete(refreshFromWatcher);
 
   context.subscriptions.push(
     headWatcher,
     refsWatcher,
     remoteRefsWatcher,
+    tagRefsWatcher,
     fetchHeadWatcher,
+    packedRefsWatcher,
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration('gitBranchesPanel')) {
         refresh();

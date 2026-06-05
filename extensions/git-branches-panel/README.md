@@ -1,6 +1,8 @@
 # Git Branches Panel
 
-`Git Branches Panel` is a Visual Studio Code extension that shows local Git branches in a dedicated tree view with folder grouping, sync status, and quick branch actions.
+`Git Branches Panel` is a Visual Studio Code extension that shows local and
+remote Git branches plus tags in a dedicated tree view with folder grouping,
+sync status, and quick actions.
 
 This extension lives in the [`vscode-extensions`](../..) repository under `extensions/git-branches-panel/`.
 
@@ -8,6 +10,7 @@ This extension lives in the [`vscode-extensions`](../..) repository under `exten
 
 - 🌿 **Folder grouping** — branches like `feature/auth` or `feature/payments/stripe` are nested into folders automatically
 - 🧭 **Local and remote sections** — local branches are shown first, with remote branches listed in a separate group below them
+- 🏷️ **Tags section** — tags are shown in their own section below remote branches
 - 📁 **Folders first** — folders are listed before branch leaves inside each section
 - ✅ **Current branch first** — highlighted with a `●` prefix and a green icon
 - 🕐 **Last commit time** — shown as a relative description and in the tooltip
@@ -27,12 +30,15 @@ This extension lives in the [`vscode-extensions`](../..) repository under `exten
 | Refresh | Refresh the branch tree and remote sync state |
 | Fetch All | Fetch and prune all remotes, then refresh the tree |
 | Sync Current Branch | Sync the currently checked out branch with its upstream |
-| Checkout Branch | Switch to the selected branch |
+| Checkout Branch | Switch to the selected local or remote branch |
+| Checkout Tag | Check out the selected tag in detached HEAD state |
 | Sync Branch | Pull and/or push the branch with its remote, even when it is not checked out |
 | Rename Branch | Rename the selected branch |
 | Merge into Current Branch | Merge the selected branch into the current branch |
 | Copy Branch Name | Copy the branch name to the clipboard |
+| Copy Tag Name | Copy the selected tag name to the clipboard |
 | Delete Branch | Delete the selected branch with merge safety checks |
+| Delete Tag | Delete the selected local tag |
 
 ## Settings
 

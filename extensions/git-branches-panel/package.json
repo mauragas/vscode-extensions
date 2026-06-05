@@ -1,7 +1,7 @@
 {
   "name": "git-branches-panel",
   "displayName": "Git Branches Panel",
-  "description": "Tree view for local Git branches with folder grouping, sync state, and quick branch actions.",
+  "description": "Tree view for local and remote Git branches plus tags with grouping, sync state, and quick actions.",
   "version": "0.0.2",
   "publisher": "karolis-mauragas",
   "license": "MIT",
@@ -52,7 +52,7 @@
       "git-branches-container": [
         {
           "id": "gitBranchesPanel",
-          "name": "Local Branches",
+          "name": "Branches & Tags",
           "icon": "resources/branch.svg"
         }
       ],
@@ -87,6 +87,11 @@
         "icon": "$(arrow-right)"
       },
       {
+        "command": "gitBranchesPanel.checkoutTag",
+        "title": "Checkout Tag",
+        "icon": "$(arrow-right)"
+      },
+      {
         "command": "gitBranchesPanel.syncBranch",
         "title": "Sync Branch",
         "icon": "$(sync)"
@@ -112,9 +117,19 @@
         "icon": "$(copy)"
       },
       {
+        "command": "gitBranchesPanel.copyTagName",
+        "title": "Copy Tag Name",
+        "icon": "$(copy)"
+      },
+      {
         "command": "gitBranchesPanel.mergeIntoCurrent",
         "title": "Merge into Current Branch",
         "icon": "$(git-merge)"
+      },
+      {
+        "command": "gitBranchesPanel.deleteTag",
+        "title": "Delete Tag",
+        "icon": "$(trash)"
       }
     ],
     "menus": {
@@ -175,6 +190,21 @@
           "command": "gitBranchesPanel.deleteBranch",
           "when": "viewItem == branch || viewItem == remoteBranch",
           "group": "2_delete@1"
+        },
+        {
+          "command": "gitBranchesPanel.checkoutTag",
+          "when": "viewItem == tag",
+          "group": "1_tag@1"
+        },
+        {
+          "command": "gitBranchesPanel.copyTagName",
+          "when": "viewItem == tag",
+          "group": "1_tag@2"
+        },
+        {
+          "command": "gitBranchesPanel.deleteTag",
+          "when": "viewItem == tag",
+          "group": "2_tag@1"
         }
       ]
     },
