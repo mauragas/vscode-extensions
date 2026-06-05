@@ -36,7 +36,12 @@ function updateTreeViewMessages(
   treeViews: readonly vscode.TreeView<BranchTreeItem>[],
   provider: BranchTreeProvider
 ): void {
-  const message = buildCurrentBranchMessage(provider.getCurrentBranch());
+  const configuration = vscode.workspace.getConfiguration('gitBranchesPanel');
+  const showCurrentBranchInfo = configuration.get<boolean>('showCurrentBranchInfo', true);
+  const message = buildCurrentBranchMessage(
+    provider.getCurrentBranch(),
+    showCurrentBranchInfo
+  );
 
   for (const treeView of treeViews) {
     treeView.message = message;

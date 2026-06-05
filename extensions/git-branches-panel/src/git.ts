@@ -202,6 +202,14 @@ export async function createBranch(repoRoot: string, branchName: string): Promis
   await runGit(repoRoot, ['checkout', '-b', branchName]);
 }
 
+export async function createTag(
+  repoRoot: string,
+  tagName: string,
+  targetRef: string
+): Promise<void> {
+  await runGit(repoRoot, ['tag', tagName, targetRef]);
+}
+
 export async function renameBranch(
   repoRoot: string,
   branchName: string,

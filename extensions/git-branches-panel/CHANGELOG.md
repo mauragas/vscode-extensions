@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2026-06-05
+
+- Added a local-branch context menu action to create a tag on the selected branch
+- Added `gitBranchesPanel.showCurrentBranchInfo` to hide or show the current-branch summary above the tree view
+
 ## [1.0.0] - 2026-06-05
 
 - Added local, remote, and tags sections to the tree view

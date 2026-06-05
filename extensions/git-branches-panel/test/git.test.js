@@ -8,6 +8,7 @@ const test = require('node:test');
 const {
   checkoutRemoteBranch,
   checkoutTag,
+  createTag,
   deleteTag,
   getBranches,
   getRemoteBranches,
@@ -132,6 +133,22 @@ test('deleteTag removes the selected local tag', async (t) => {
 
   const tags = await getTags(repoRoot);
   assert.deepEqual(tags.map((tag) => tag.name), ['release/v1.1.0']);
+});
+
+test('createTag creates a tag for the selected branch ref without changing checkout', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['branch', 'feature/release-candidate', 'v1.0.0']);
+
+  await createTag(repoRoot, 'release-candidate', 'feature/release-candidate');
+
+  const tags = await getTags(repoRoot);
+  assert.ok(tags.some((tag) => tag.name === 'release-candidate'));
+  assert.equal(runGit(repoRoot, ['rev-parse', '--abbrev-ref', 'HEAD']), 'main');
+  assert.equal(
+    runGit(repoRoot, ['rev-parse', 'release-candidate']),
+    runGit(repoRoot, ['rev-parse', 'feature/release-candidate'])
+  );
 });
 
 test('getBranches includes upstream tracking details for local branches', async (t) => {

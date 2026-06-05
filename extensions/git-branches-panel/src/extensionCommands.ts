@@ -7,6 +7,7 @@ import {
   checkoutRemoteBranch,
   checkoutTag,
   createBranch,
+  createTag,
   deleteRemoteBranch,
   deleteBranch,
   deleteTag,
@@ -22,6 +23,7 @@ import {
   buildSyncResultMessage,
   looksLikeMergeSafetyError,
   validateBranchName,
+  validateTagName,
 } from './extensionHelpers';
 import { resetTrackerAndRefresh } from './providerRefresh';
 import { BranchTreeItem, BranchTreeProvider, type BranchLoadOptions } from './treeProvider';
@@ -80,6 +82,9 @@ export function registerBranchCommands(
         await handleCopyBranchName(item);
       }
     ),
+    vscode.commands.registerCommand('gitBranchesPanel.createTag', async (item: BranchTreeItem) => {
+      await handleCreateTag(item, provider, activationTracker);
+    }),
     vscode.commands.registerCommand('gitBranchesPanel.copyTagName', async (item: BranchTreeItem) => {
       await handleCopyTagName(item);
     }),
@@ -381,6 +386,43 @@ async function handleRenameBranch(
     );
   } catch (error) {
     showCommandError(`Failed to rename '${item.branchName}'`, error);
+  }
+}
+
+async function handleCreateTag(
+  item: BranchTreeItem,
+  provider: BranchTreeProvider,
+  activationTracker: BranchItemActivationTracker
+): Promise<void> {
+  if (
+    !item.branchName ||
+    !item.repoRoot ||
+    (item.nodeType !== 'branch' && item.nodeType !== 'currentBranch')
+  ) {
+    return;
+  }
+
+  const name = await vscode.window.showInputBox({
+    prompt: `Enter a name for the new tag on '${item.branchName}'`,
+    placeHolder: 'v1.2.3 or release/2026-06-05',
+    validateInput: (value) => validateTagName(value),
+  });
+  if (!name) {
+    return;
+  }
+
+  const tagName = name.trim();
+
+  try {
+    await createTag(item.repoRoot, tagName, item.branchName);
+    await showSuccessAndRefresh(
+      `Created tag '${tagName}' on '${item.branchName}'.`,
+      provider,
+      activationTracker,
+      { fetchRemoteState: false }
+    );
+  } catch (error) {
+    showCommandError(`Failed to create tag '${tagName}' on '${item.branchName}'`, error);
   }
 }
 

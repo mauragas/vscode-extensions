@@ -21,13 +21,14 @@ sections so common Git navigation feels fast and tidy.
 - 🏷️ **Tags section** — tags are shown in their own section below remote branches
 - 📁 **Folders first** — folders are listed before branch leaves inside each section
 - ✅ **Current branch first** — highlighted with a `●` prefix and a green icon
+- 🪄 **Optional current branch banner** — keep or hide the top `Current branch: ...` summary from settings
 - 🕐 **Last commit time** — shown as a relative description and in the tooltip
 - 🔄 **Sync state badges** — incoming and outgoing commits are shown as `↓` and `↑` counts in the branch description
 - ☁️ **Inline sync button** — every branch gets a small sync button, including branches that are not currently checked out
 - 🚀 **Non-current branch sync** — sync a branch with its upstream without checking it out first
 - ⚡ **Double-click checkout** — double-click a branch to switch instantly
 - 🔀 **Merge into current** — merge a selected branch into the current branch from the context menu
-- 🧰 **Context menu actions** — checkout, sync, rename, merge into current, copy branch name, and delete with merge-safety handling
+- 🧰 **Context menu actions** — checkout, sync, create tags, rename, merge into current, copy branch name, and delete with merge-safety handling
 - ➕ **Toolbar quick actions** — create a new branch, sync the current branch, fetch all remotes, and refresh from the panel title bar
 - 🔄 **Auto-refresh** — updates when `.git/HEAD`, `.git/FETCH_HEAD`, `.git/refs/heads/`, `.git/refs/remotes/`, workspace folders, or settings change
 
@@ -42,6 +43,7 @@ sections so common Git navigation feels fast and tidy.
 | Checkout Tag | Check out the selected tag in detached HEAD state |
 | Sync Branch | Pull and/or push the branch with its remote, even when it is not checked out |
 | Rename Branch | Rename the selected branch |
+| Create Tag | Create a local tag on the selected local branch |
 | Merge into Current Branch | Merge the selected branch into the current branch |
 | Copy Branch Name | Copy the branch name to the clipboard |
 | Copy Tag Name | Copy the selected tag name to the clipboard |
@@ -54,6 +56,7 @@ sections so common Git navigation feels fast and tidy.
 | --- | --- | --- |
 | `gitBranchesPanel.groupByFolder` | `true` | Group branches by `/`-separated prefix |
 | `gitBranchesPanel.sortOrder` | `alphabetical` | `alphabetical` or `recent` |
+| `gitBranchesPanel.showCurrentBranchInfo` | `true` | Show the current branch summary above the tree views |
 
 ## Development
 

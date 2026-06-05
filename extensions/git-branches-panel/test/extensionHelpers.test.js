@@ -8,6 +8,7 @@ const {
   buildSyncResultMessage,
   looksLikeMergeSafetyError,
   validateBranchName,
+  validateTagName,
 } = require('../out/extensionHelpers.js');
 
 test('buildSyncResultMessage covers sync outcomes', () => {
@@ -86,6 +87,27 @@ test('validateBranchName rejects invalid names and allows trimmed valid names', 
   assert.equal(validateBranchName(' feature/demo '), undefined);
 });
 
+test('validateTagName rejects invalid names and allows trimmed valid names', () => {
+  assert.equal(validateTagName('   '), 'Tag name cannot be empty.');
+  assert.equal(validateTagName('release candidate'), 'Tag name cannot contain spaces.');
+  assert.equal(validateTagName('-release/v1.0.0'), 'Tag name cannot start with a dash.');
+  assert.equal(
+    validateTagName('release/'),
+    'Tag name cannot start or end with a slash or contain empty path segments.'
+  );
+  assert.equal(
+    validateTagName('release//candidate'),
+    'Tag name cannot start or end with a slash or contain empty path segments.'
+  );
+  assert.equal(
+    validateTagName('release..candidate'),
+    'Tag name cannot end with a dot or contain consecutive dots.'
+  );
+  assert.equal(validateTagName('release^candidate'), 'Tag name contains invalid Git characters.');
+  assert.equal(validateTagName('release.lock'), "Tag name cannot end with '.lock'.");
+  assert.equal(validateTagName(' release/v1.0.0 '), undefined);
+});
+
 test('looksLikeMergeSafetyError only flags merge-safety failures', () => {
   assert.equal(looksLikeMergeSafetyError('branch is not fully merged'), true);
   assert.equal(looksLikeMergeSafetyError('fatal: refusing to delete branch'), false);
@@ -115,6 +137,16 @@ test('buildCurrentBranchMessage includes sync and timing details when available'
   );
 
   assert.equal(buildCurrentBranchMessage(undefined), '');
+  assert.equal(
+    buildCurrentBranchMessage(
+      {
+        name: 'main',
+        isCurrent: true,
+      },
+      false
+    ),
+    ''
+  );
 });
 
 test('BranchItemActivationTracker requires a double activation inside the time window', () => {

@@ -2,7 +2,7 @@
   "name": "git-branches-panel",
   "displayName": "Git Branches Panel",
   "description": "Tree view for local and remote Git branches plus tags with grouping, sync state, and quick actions.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "karolis-mauragas",
   "license": "MIT",
   "repository": {
@@ -112,6 +112,11 @@
         "icon": "$(edit)"
       },
       {
+        "command": "gitBranchesPanel.createTag",
+        "title": "Create Tag...",
+        "icon": "$(tag)"
+      },
+      {
         "command": "gitBranchesPanel.copyBranchName",
         "title": "Copy Branch Name",
         "icon": "$(copy)"
@@ -177,14 +182,19 @@
           "group": "1_branch@3"
         },
         {
+          "command": "gitBranchesPanel.createTag",
+          "when": "viewItem == branch || viewItem == currentBranch",
+          "group": "1_branch@4"
+        },
+        {
           "command": "gitBranchesPanel.copyBranchName",
           "when": "viewItem == branch || viewItem == currentBranch || viewItem == remoteBranch",
-          "group": "1_branch@4"
+          "group": "1_branch@5"
         },
         {
           "command": "gitBranchesPanel.mergeIntoCurrent",
           "when": "viewItem == branch || viewItem == remoteBranch",
-          "group": "1_branch@5"
+          "group": "1_branch@6"
         },
         {
           "command": "gitBranchesPanel.deleteBranch",
@@ -224,6 +234,11 @@
           ],
           "default": "alphabetical",
           "description": "Sort branches alphabetically or by most recently updated commit."
+        },
+        "gitBranchesPanel.showCurrentBranchInfo": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the current branch summary above the branches tree views."
         }
       }
     }
