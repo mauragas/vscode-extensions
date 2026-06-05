@@ -35,7 +35,7 @@ sections so common Git navigation feels fast and tidy.
 - 🔀 **Merge into current** — merge a selected branch into the current branch from the context menu
 - 🧰 **Context menu actions** — checkout, sync, create tags, rename, merge into current, push all tags from the Tags section, copy branch name, and delete with merge-safety handling
 - ➕ **Toolbar quick actions** — create a new branch, stash tracked and untracked changes silently, sync the current branch, fetch all remotes, fetch all with prune, and refresh from the panel title bar
-- 🔄 **Auto-refresh** — updates when `.git/HEAD`, `.git/FETCH_HEAD`, `.git/refs/heads/`, `.git/refs/remotes/`, `.git/refs/tags/`, `.git/refs/stash`, workspace folders, or settings change
+- 🔄 **Auto-refresh** — updates when `.git/HEAD`, `.git/FETCH_HEAD`, `.git/packed-refs`, `.git/refs/heads/`, `.git/refs/remotes/`, `.git/refs/tags/`, `.git/refs/stash`, `.git/logs/refs/stash`, `.git/worktrees/`, workspace folders, or settings change
 
 ## Commands
 

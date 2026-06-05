@@ -93,6 +93,7 @@ export function validateBranchName(value: string, currentName?: string): string 
 
 export function validateTagName(value: string): string | undefined {
   const trimmedValue = value.trim();
+  const invalidTagCharacters = ['~', '^', ':', '?', '*', '[', '\\'];
 
   if (!trimmedValue) {
     return 'Tag name cannot be empty.';
@@ -126,7 +127,10 @@ export function validateTagName(value: string): string | undefined {
     return "Tag name cannot end with '.lock'.";
   }
 
-  if (/[~^:?*[\\]/u.test(trimmedValue) || trimmedValue.includes('@{')) {
+  if (
+    invalidTagCharacters.some((character) => trimmedValue.includes(character)) ||
+    trimmedValue.includes('@{')
+  ) {
     return 'Tag name contains invalid Git characters.';
   }
 

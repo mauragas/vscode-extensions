@@ -103,7 +103,10 @@ test('validateTagName rejects invalid names and allows trimmed valid names', () 
     validateTagName('release..candidate'),
     'Tag name cannot end with a dot or contain consecutive dots.'
   );
+  assert.equal(validateTagName('release[candidate'), 'Tag name contains invalid Git characters.');
+  assert.equal(validateTagName('release\\candidate'), 'Tag name contains invalid Git characters.');
   assert.equal(validateTagName('release^candidate'), 'Tag name contains invalid Git characters.');
+  assert.equal(validateTagName('release@{candidate'), 'Tag name contains invalid Git characters.');
   assert.equal(validateTagName('release.lock'), "Tag name cannot end with '.lock'.");
   assert.equal(validateTagName(' release/v1.0.0 '), undefined);
 });
