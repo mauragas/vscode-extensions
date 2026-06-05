@@ -31,6 +31,16 @@ npm test
 
 Open the repository in VS Code and press `F5` to launch the Extension Development Host for `git-branches-panel`.
 
+### Create a `.vsix` package
+
+To create the Marketplace upload file for the current extension, run from the repository root:
+
+```bash
+npm run package:git-branches-panel
+```
+
+This creates a versioned `.vsix` file inside `extensions/git-branches-panel/`.
+
 ## Adding a new extension
 
 1. Create a new folder under `extensions/<extension-name>/`.

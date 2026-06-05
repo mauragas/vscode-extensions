@@ -61,6 +61,22 @@ Then press `F5` in VS Code to launch the Extension Development Host using the sh
 
 You can also run `npm run compile`, `npm run lint`, or `npm run test` from this folder; those scripts delegate to the repository root tooling.
 
+### Create a `.vsix` file
+
+Quickest option from the repository root:
+
+```bash
+npm run package:git-branches-panel
+```
+
+Or from this extension folder directly:
+
+```bash
+npm run package
+```
+
+The generated file is written to this folder as `git-branches-panel-<version>.vsix` and can then be uploaded to the Visual Studio Marketplace.
+
 ## Publishing preparation
 
 This repository is ready for open-source development and close to marketplace publishing. Before the first public release, the remaining publishing steps are:

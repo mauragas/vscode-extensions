@@ -20,7 +20,9 @@
     "lint": "npm run lint:git-branches-panel",
     "lint:git-branches-panel": "eslint extensions/git-branches-panel/src extensions/git-branches-panel/test",
     "test": "npm run test:git-branches-panel",
-    "test:git-branches-panel": "npm run build:git-branches-panel && node --test extensions/git-branches-panel/test"
+    "test:git-branches-panel": "npm run build:git-branches-panel && node --test extensions/git-branches-panel/test",
+    "package": "npm run package:git-branches-panel",
+    "package:git-branches-panel": "npm --prefix ./extensions/git-branches-panel run package"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
