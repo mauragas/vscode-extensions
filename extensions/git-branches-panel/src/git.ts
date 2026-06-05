@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 
 import { parseUpstreamTrack, type BranchInfo } from './branchModel';
+import { getErrorMessage } from './errorUtils';
 
 const execFileAsync = promisify(execFile);
 const GIT_RECORD_SEPARATOR = '\u001e';
@@ -294,6 +295,7 @@ async function syncNonCurrentBranch(
   const worktreePath = await mkdtemp(join(tmpdir(), 'git-branches-panel-'));
 
   try {
+    // Use a temporary worktree so syncing another branch never steals the user's checkout.
     await runGit(repoRoot, ['worktree', 'add', worktreePath, branchName]);
 
     if (syncPlan.shouldPull) {
@@ -441,15 +443,7 @@ async function runGit(workingDirectory: string, args: string[]): Promise<{ stdou
       maxBuffer: 10 * 1024 * 1024,
     });
   } catch (error) {
-    const message = getErrorMessage(error);
+    const message = getErrorMessage(error, 'Unknown git error');
     throw new Error(message);
   }
-}
-
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return 'Unknown git error';
 }
