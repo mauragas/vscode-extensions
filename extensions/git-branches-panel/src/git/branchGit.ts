@@ -163,7 +163,7 @@ async function syncNonCurrentBranch(
   const worktreePath = await mkdtemp(join(tmpdir(), 'git-branches-panel-'));
 
   try {
-    await runGit(repoRoot, ['worktree', 'add', worktreePath, branchName]);
+    await addTemporarySyncWorktree(repoRoot, worktreePath, branchName);
 
     if (syncPlan.shouldPull) {
       await pullBranch(worktreePath, syncTarget, syncPlan.hasOutgoingCommits, false);
@@ -178,6 +178,23 @@ async function syncNonCurrentBranch(
     } finally {
       await rm(worktreePath, { recursive: true, force: true });
     }
+  }
+}
+
+async function addTemporarySyncWorktree(
+  repoRoot: string,
+  worktreePath: string,
+  branchName: string
+): Promise<void> {
+  try {
+    await runGit(repoRoot, ['worktree', 'add', worktreePath, branchName]);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!looksLikeBranchAlreadyCheckedOutError(message)) {
+      throw error;
+    }
+
+    await runGit(repoRoot, ['worktree', 'add', '--force', worktreePath, branchName]);
   }
 }
 
@@ -247,6 +264,10 @@ async function resolveBranchSyncTarget(
     upstreamName: `origin/${branchName}`,
     hasConfiguredUpstream: false,
   };
+}
+
+function looksLikeBranchAlreadyCheckedOutError(message: string): boolean {
+  return /already used by worktree/i.test(message);
 }
 
 function parseRefComparison(stdout: string): RefComparisonChange[] {

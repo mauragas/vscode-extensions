@@ -431,6 +431,37 @@ test('syncBranch publishes a non-current branch without changing the active chec
   );
 });
 
+test('syncBranch publishes a non-current branch even when it is already checked out in another worktree', async (t) => {
+  const { repoRoot } = createRemoteBackedRepository(t);
+  const worktreeParent = mkdtempSync(join(tmpdir(), 'git-branches-panel-sync-worktree-'));
+  const worktreeRoot = join(worktreeParent, 'feature-worktree');
+
+  t.after(() => {
+    rmSync(worktreeParent, { recursive: true, force: true });
+  });
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/worktree-sync']);
+  commitFile(repoRoot, 'worktree.txt', 'sync me\n', 'Add worktree sync branch');
+  runGit(repoRoot, ['checkout', 'main']);
+  runGit(repoRoot, ['worktree', 'add', worktreeRoot, 'feature/worktree-sync']);
+
+  const syncResult = await syncBranch(repoRoot, 'feature/worktree-sync');
+
+  assert.deepEqual(syncResult, {
+    branchName: 'feature/worktree-sync',
+    upstreamName: 'origin/feature/worktree-sync',
+    didPull: false,
+    didPush: true,
+    publishedUpstream: true,
+  });
+  assert.equal(runGit(repoRoot, ['rev-parse', '--abbrev-ref', 'HEAD']), 'main');
+  assert.equal(runGit(worktreeRoot, ['rev-parse', '--abbrev-ref', 'HEAD']), 'feature/worktree-sync');
+  assert.match(
+    runGit(repoRoot, ['ls-remote', '--heads', 'origin', 'feature/worktree-sync']),
+    /refs\/heads\/feature\/worktree-sync/
+  );
+});
+
 test('syncBranch updates the current branch from remote changes', async (t) => {
   const { repoRoot, remoteRoot } = createRemoteBackedRepository(t);
   const collaboratorRoot = cloneRepository(t, remoteRoot);
