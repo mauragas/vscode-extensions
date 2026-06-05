@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.0.2] - 2026-06-05
+## [1.0.0] - 2026-06-05
 
 - Added local, remote, and tags sections to the tree view
 - Added folder-first ordering inside grouped tree sections

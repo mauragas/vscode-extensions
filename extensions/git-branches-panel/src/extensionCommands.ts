@@ -216,11 +216,13 @@ async function handleSyncCurrentBranch(
   provider: BranchTreeProvider,
   activationTracker: BranchItemActivationTracker
 ): Promise<void> {
-  const repoRoot = await resolveRepoRoot(provider);
-  const currentBranch = await resolveCurrentBranch(provider);
+  const repoRoot = await requireRepoRoot(provider);
+  if (!repoRoot) {
+    return;
+  }
 
-  if (!repoRoot || !currentBranch) {
-    vscode.window.showErrorMessage(NO_CURRENT_BRANCH_MESSAGE);
+  const currentBranch = await requireCurrentBranch(provider, NO_CURRENT_BRANCH_MESSAGE);
+  if (!currentBranch) {
     return;
   }
 
