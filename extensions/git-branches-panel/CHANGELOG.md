@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-06-05
+
+- Improved first-load performance by loading the Local section first instead of eagerly loading every section at startup
+- Added lazy loading for Remote, Stash, Worktree, and Tags so section contents are loaded only when expanded
+- Changed the default tree expansion state so Local starts expanded while other sections and folders start collapsed
+- Reduced unnecessary refresh work by targeting only already loaded sections during auto-refresh events
+- Removed the duplicate initial refresh path so the tree does less work during activation
+
 ## [1.1.0] - 2026-06-05
 
 - Added a local-branch context menu action to create a tag on the selected branch
