@@ -7,7 +7,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/mauragas/vscode-extensions.git",
+    "url": "https://github.com/mauragas/vscode-extensions",
     "directory": "extensions/git-branches-panel"
   },
   "bugs": {
@@ -28,6 +28,7 @@
     "sync",
     "merge"
   ],
+  "icon": "resources/icon.png",
   "files": [
     "out",
     "resources",
