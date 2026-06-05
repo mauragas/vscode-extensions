@@ -28,8 +28,8 @@ sections so common Git navigation feels fast and tidy.
 - 🚀 **Non-current branch sync** — sync a branch with its upstream without checking it out first
 - ⚡ **Double-click checkout** — double-click a branch to switch instantly
 - 🔀 **Merge into current** — merge a selected branch into the current branch from the context menu
-- 🧰 **Context menu actions** — checkout, sync, create tags, rename, merge into current, copy branch name, and delete with merge-safety handling
-- ➕ **Toolbar quick actions** — create a new branch, sync the current branch, fetch all remotes, and refresh from the panel title bar
+- 🧰 **Context menu actions** — checkout, sync, create tags, rename, merge into current, push all tags from the Tags section, copy branch name, and delete with merge-safety handling
+- ➕ **Toolbar quick actions** — create a new branch, sync the current branch, fetch all remotes, fetch all with prune, and refresh from the panel title bar
 - 🔄 **Auto-refresh** — updates when `.git/HEAD`, `.git/FETCH_HEAD`, `.git/refs/heads/`, `.git/refs/remotes/`, workspace folders, or settings change
 
 ## Commands
@@ -37,13 +37,15 @@ sections so common Git navigation feels fast and tidy.
 | Command | Description |
 | --- | --- |
 | Refresh | Refresh the branch tree and remote sync state |
-| Fetch All | Fetch and prune all remotes, then refresh the tree |
+| Fetch All | Fetch all remotes and refresh the tree without pruning stale refs |
+| Fetch All (Prune) | Fetch all remotes, prune deleted refs, and refresh the tree |
 | Sync Current Branch | Sync the currently checked out branch with its upstream |
 | Checkout Branch | Switch to the selected local or remote branch |
 | Checkout Tag | Check out the selected tag in detached HEAD state |
 | Sync Branch | Pull and/or push the branch with its remote, even when it is not checked out |
 | Rename Branch | Rename the selected branch |
 | Create Tag | Create a local tag on the selected local branch |
+| Push All Tags | Push all local tags to a selected remote from the Tags section context menu |
 | Merge into Current Branch | Merge the selected branch into the current branch |
 | Copy Branch Name | Copy the branch name to the clipboard |
 | Copy Tag Name | Copy the selected tag name to the clipboard |

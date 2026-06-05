@@ -10,10 +10,14 @@ const {
   checkoutTag,
   createTag,
   deleteTag,
+  fetchAllRemotes,
+  fetchRemoteState,
   getBranches,
+  getRemotes,
   getRemoteBranches,
   getTags,
   parseRemoteBranchReference,
+  pushAllTags,
   syncBranch,
 } = require('../out/git.js');
 
@@ -22,6 +26,15 @@ function runGit(cwd, args) {
     cwd,
     encoding: 'utf8',
   }).trim();
+}
+
+function hasRef(cwd, refName) {
+  try {
+    runGit(cwd, ['show-ref', '--verify', '--quiet', refName]);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function configureRepository(repoRoot) {
@@ -149,6 +162,48 @@ test('createTag creates a tag for the selected branch ref without changing check
     runGit(repoRoot, ['rev-parse', 'release-candidate']),
     runGit(repoRoot, ['rev-parse', 'feature/release-candidate'])
   );
+});
+
+test('getRemotes lists configured git remotes', async (t) => {
+  const { repoRoot } = createRemoteBackedRepository(t);
+
+  const remotes = await getRemotes(repoRoot);
+
+  assert.deepEqual(remotes, ['origin']);
+});
+
+test('pushAllTags pushes local tags to the selected remote', async (t) => {
+  const { repoRoot, remoteRoot } = createRemoteBackedRepository(t);
+
+  runGit(repoRoot, ['tag', 'v2.0.0']);
+  runGit(repoRoot, ['tag', 'release/2026-06-05']);
+
+  await pushAllTags(repoRoot, 'origin');
+
+  assert.match(runGit(remoteRoot, ['show-ref', '--tags', 'v2.0.0']), /refs\/tags\/v2\.0\.0$/m);
+  assert.match(
+    runGit(remoteRoot, ['show-ref', '--tags', 'release/2026-06-05']),
+    /refs\/tags\/release\/2026-06-05$/m
+  );
+});
+
+test('fetchAllRemotes keeps stale remote refs while fetchRemoteState prunes them', async (t) => {
+  const { repoRoot, remoteRoot } = createRemoteBackedRepository(t);
+  const collaboratorRoot = cloneRepository(t, remoteRoot);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/stale']);
+  commitFile(repoRoot, 'stale.txt', 'stale\n', 'Add stale branch');
+  runGit(repoRoot, ['push', '-u', 'origin', 'feature/stale']);
+  runGit(repoRoot, ['checkout', 'main']);
+
+  runGit(collaboratorRoot, ['fetch', 'origin']);
+  runGit(collaboratorRoot, ['push', 'origin', '--delete', 'feature/stale']);
+
+  await fetchAllRemotes(repoRoot);
+  assert.equal(hasRef(repoRoot, 'refs/remotes/origin/feature/stale'), true);
+
+  await fetchRemoteState(repoRoot);
+  assert.equal(hasRef(repoRoot, 'refs/remotes/origin/feature/stale'), false);
 });
 
 test('getBranches includes upstream tracking details for local branches', async (t) => {

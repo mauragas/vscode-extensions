@@ -40,7 +40,7 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
       nodeType: 'section',
       label: node.label,
       id: node.path,
-      contextValue: 'section',
+      contextValue: node.path === 'section:tags' ? 'tagsSection' : 'section',
       collapsibleState: 'expanded',
       icon: {
         id: node.path === 'section:remote' ? 'cloud' : 'source-control',

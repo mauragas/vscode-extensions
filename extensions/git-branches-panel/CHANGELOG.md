@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 - Added a local-branch context menu action to create a tag on the selected branch
 - Added `gitBranchesPanel.showCurrentBranchInfo` to hide or show the current-branch summary above the tree view
+- Added a Tags section context menu action to push all local tags to a remote
+- Split toolbar fetching into `Fetch All` and `Fetch All (Prune)` actions
 
 ## [1.0.0] - 2026-06-05
 

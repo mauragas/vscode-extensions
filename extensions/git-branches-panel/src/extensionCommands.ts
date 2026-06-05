@@ -11,8 +11,11 @@ import {
   deleteRemoteBranch,
   deleteBranch,
   deleteTag,
+  fetchAllRemotes,
   fetchRemoteState,
+  getRemotes,
   mergeBranchIntoCurrent,
+  pushAllTags,
   renameBranch,
   syncBranch,
 } from './git';
@@ -42,6 +45,9 @@ export function registerBranchCommands(
     }),
     vscode.commands.registerCommand('gitBranchesPanel.fetchAll', async () => {
       await handleFetchAll(provider, activationTracker);
+    }),
+    vscode.commands.registerCommand('gitBranchesPanel.fetchAllPrune', async () => {
+      await handleFetchAllPrune(provider, activationTracker);
     }),
     vscode.commands.registerCommand(
       'gitBranchesPanel.activateBranchItem',
@@ -91,6 +97,9 @@ export function registerBranchCommands(
     vscode.commands.registerCommand('gitBranchesPanel.deleteTag', async (item: BranchTreeItem) => {
       await handleDeleteTag(item, provider, activationTracker);
     }),
+    vscode.commands.registerCommand('gitBranchesPanel.pushAllTags', async (item?: BranchTreeItem) => {
+      await handlePushAllTags(item, provider, activationTracker);
+    }),
     vscode.commands.registerCommand(
       'gitBranchesPanel.mergeIntoCurrent',
       async (item: BranchTreeItem) => {
@@ -117,7 +126,7 @@ async function handleFetchAll(
   }
 
   try {
-    await fetchRemoteState(repoRoot);
+    await fetchAllRemotes(repoRoot);
     await showSuccessAndRefresh(
       'Fetched all remotes and refreshed branch status.',
       provider,
@@ -126,6 +135,28 @@ async function handleFetchAll(
     );
   } catch (error) {
     showCommandError('Failed to fetch remotes', error);
+  }
+}
+
+async function handleFetchAllPrune(
+  provider: BranchTreeProvider,
+  activationTracker: BranchItemActivationTracker
+): Promise<void> {
+  const repoRoot = await requireRepoRoot(provider);
+  if (!repoRoot) {
+    return;
+  }
+
+  try {
+    await fetchRemoteState(repoRoot);
+    await showSuccessAndRefresh(
+      'Fetched all remotes, pruned deleted refs, and refreshed branch status.',
+      provider,
+      activationTracker,
+      { fetchRemoteState: false }
+    );
+  } catch (error) {
+    showCommandError('Failed to fetch and prune remotes', error);
   }
 }
 
@@ -472,6 +503,50 @@ async function handleDeleteTag(
     );
   } catch (error) {
     showCommandError(`Failed to delete tag '${item.branchName}'`, error);
+  }
+}
+
+async function handlePushAllTags(
+  item: BranchTreeItem | undefined,
+  provider: BranchTreeProvider,
+  activationTracker: BranchItemActivationTracker
+): Promise<void> {
+  if (item && (item.nodeType !== 'section' || item.containerPath !== 'section:tags')) {
+    return;
+  }
+
+  const repoRoot = item?.repoRoot ?? (await requireRepoRoot(provider));
+  if (!repoRoot) {
+    return;
+  }
+
+  try {
+    const remotes = await getRemotes(repoRoot);
+    if (remotes.length === 0) {
+      vscode.window.showErrorMessage('No git remotes were found for this repository.');
+      return;
+    }
+
+    const remoteName =
+      remotes.length === 1
+        ? remotes[0]
+        : await vscode.window.showQuickPick(remotes, {
+            placeHolder: 'Select a remote to push all tags to',
+          });
+
+    if (!remoteName) {
+      return;
+    }
+
+    await pushAllTags(repoRoot, remoteName);
+    await showSuccessAndRefresh(
+      `Pushed all tags to '${remoteName}'.`,
+      provider,
+      activationTracker,
+      { fetchRemoteState: false }
+    );
+  } catch (error) {
+    showCommandError('Failed to push all tags', error);
   }
 }
 

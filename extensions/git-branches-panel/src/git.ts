@@ -76,6 +76,15 @@ export async function getTags(repoRoot: string): Promise<BranchInfo[]> {
   return listBranches(repoRoot, 'refs/tags', 'tag');
 }
 
+export async function getRemotes(repoRoot: string): Promise<string[]> {
+  const { stdout } = await runGit(repoRoot, ['remote']);
+
+  return stdout
+    .split(/\r?\n/u)
+    .map((remote) => remote.trim())
+    .filter(Boolean);
+}
+
 export async function checkoutRemoteBranch(
   repoRoot: string,
   remoteBranchName: string
@@ -194,6 +203,10 @@ export async function fetchRemoteState(repoRoot: string): Promise<void> {
   await runGit(repoRoot, ['fetch', '--all', '--prune']);
 }
 
+export async function fetchAllRemotes(repoRoot: string): Promise<void> {
+  await runGit(repoRoot, ['fetch', '--all']);
+}
+
 export async function checkoutBranch(repoRoot: string, branchName: string): Promise<void> {
   await runGit(repoRoot, ['checkout', branchName]);
 }
@@ -208,6 +221,11 @@ export async function createTag(
   targetRef: string
 ): Promise<void> {
   await runGit(repoRoot, ['tag', tagName, targetRef]);
+}
+
+export async function pushAllTags(repoRoot: string, remoteName: string): Promise<void> {
+  await ensureRemoteExists(repoRoot, remoteName);
+  await runGit(repoRoot, ['push', remoteName, '--tags']);
 }
 
 export async function renameBranch(

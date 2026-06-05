@@ -95,6 +95,12 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
     path: 'section:remote',
     children: [],
   });
+  const tagsSectionPresentation = buildTreeItemPresentation({
+    kind: 'section',
+    label: 'Tags',
+    path: 'section:tags',
+    children: [],
+  });
   const folderPresentation = buildTreeItemPresentation({
     kind: 'folder',
     label: 'feature',
@@ -150,6 +156,10 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(sectionPresentation.nodeType, 'section');
   assert.equal(sectionPresentation.icon.id, 'cloud');
   assert.equal(sectionPresentation.collapsibleState, 'expanded');
+  assert.equal(sectionPresentation.contextValue, 'section');
+
+  assert.equal(tagsSectionPresentation.nodeType, 'section');
+  assert.equal(tagsSectionPresentation.contextValue, 'tagsSection');
 
   assert.equal(folderPresentation.nodeType, 'folder');
   assert.equal(folderPresentation.id, 'folder:feature');

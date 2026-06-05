@@ -77,6 +77,11 @@
         "icon": "$(cloud-download)"
       },
       {
+        "command": "gitBranchesPanel.fetchAllPrune",
+        "title": "Fetch All (Prune)",
+        "icon": "$(cloud-download)"
+      },
+      {
         "command": "gitBranchesPanel.syncCurrentBranch",
         "title": "Sync Current Branch",
         "icon": "$(sync)"
@@ -135,6 +140,11 @@
         "command": "gitBranchesPanel.deleteTag",
         "title": "Delete Tag",
         "icon": "$(trash)"
+      },
+      {
+        "command": "gitBranchesPanel.pushAllTags",
+        "title": "Push All Tags",
+        "icon": "$(cloud-upload)"
       }
     ],
     "menus": {
@@ -155,9 +165,14 @@
           "group": "navigation@3"
         },
         {
-          "command": "gitBranchesPanel.refresh",
+          "command": "gitBranchesPanel.fetchAllPrune",
           "when": "view == gitBranchesPanel || view == gitBranchesSCM",
           "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "view == gitBranchesPanel || view == gitBranchesSCM",
+          "group": "navigation@5"
         }
       ],
       "view/item/context": [
@@ -215,6 +230,11 @@
           "command": "gitBranchesPanel.deleteTag",
           "when": "viewItem == tag",
           "group": "2_tag@1"
+        },
+        {
+          "command": "gitBranchesPanel.pushAllTags",
+          "when": "viewItem == tagsSection",
+          "group": "1_tagsSection@1"
         }
       ]
     },
