@@ -1,6 +1,8 @@
 export interface BranchInfo {
   name: string;
   isCurrent: boolean;
+  scope?: 'local' | 'remote' | 'tag';
+  remoteName?: string;
   lastCommit?: string;
   lastCommitDate?: string;
   lastCommitTimestamp?: number;
@@ -18,11 +20,18 @@ export interface BranchSyncState {
 
 export type BranchSortOrder = 'alphabetical' | 'recent';
 
+export interface TreeSection {
+  kind: 'section';
+  label: string;
+  path: string;
+  children: TreeChildNode[];
+}
+
 export interface TreeFolder {
   kind: 'folder';
   label: string;
   path: string;
-  children: BranchTreeNode[];
+  children: TreeChildNode[];
 }
 
 export interface TreeBranch {
@@ -33,7 +42,8 @@ export interface TreeBranch {
   path: string;
 }
 
-export type BranchTreeNode = TreeFolder | TreeBranch;
+export type TreeChildNode = TreeFolder | TreeBranch;
+export type BranchTreeNode = TreeSection | TreeFolder | TreeBranch;
 
 const branchNameCollator = new Intl.Collator(undefined, {
   numeric: true,
@@ -66,9 +76,11 @@ export function sortBranches(
 export function buildBranchTree(
   branches: readonly BranchInfo[],
   groupByFolder: boolean
-): BranchTreeNode[] {
+): TreeChildNode[] {
+  const branchOrder = new Map(branches.map((branch, index) => [getBranchKey(branch), index]));
+
   if (!groupByFolder) {
-    return branches.map((branch) => createBranchNode(branch));
+    return sortTreeNodes(branches.map((branch) => createBranchNode(branch)), branchOrder);
   }
 
   const root: TreeFolder = {
@@ -113,7 +125,45 @@ export function buildBranchTree(
     currentFolder.children.push(createBranchNode(branch));
   }
 
-  return root.children;
+  return sortTreeNodes(root.children, branchOrder);
+}
+
+export function buildBranchSections(
+  localBranches: readonly BranchInfo[],
+  remoteBranches: readonly BranchInfo[],
+  tagBranches: readonly BranchInfo[],
+  groupByFolder: boolean
+): TreeSection[] {
+  const sections: TreeSection[] = [];
+
+  if (localBranches.length > 0) {
+    sections.push({
+      kind: 'section',
+      label: 'Local',
+      path: 'section:local',
+      children: buildBranchTree(localBranches, groupByFolder),
+    });
+  }
+
+  if (remoteBranches.length > 0) {
+    sections.push({
+      kind: 'section',
+      label: 'Remote',
+      path: 'section:remote',
+      children: buildBranchTree(remoteBranches, groupByFolder),
+    });
+  }
+
+  if (tagBranches.length > 0) {
+    sections.push({
+      kind: 'section',
+      label: 'Tags',
+      path: 'section:tags',
+      children: buildBranchTree(tagBranches, groupByFolder),
+    });
+  }
+
+  return sections;
 }
 
 export function findFolderNode(
@@ -121,11 +171,11 @@ export function findFolderNode(
   folderPath: string
 ): TreeFolder | undefined {
   for (const node of nodes) {
-    if (node.kind !== 'folder') {
+    if (node.kind === 'branch') {
       continue;
     }
 
-    if (node.path === folderPath) {
+    if (node.kind === 'folder' && node.path === folderPath) {
       return node;
     }
 
@@ -201,4 +251,39 @@ function createBranchNode(branch: BranchInfo): TreeBranch {
     label,
     path: branch.name,
   };
+}
+
+function sortTreeNodes(
+  nodes: ReadonlyArray<TreeChildNode>,
+  branchOrder: ReadonlyMap<string, number>
+): TreeChildNode[] {
+  const sortedNodes = nodes.map((node) => {
+    if (node.kind !== 'folder') {
+      return node;
+    }
+
+    return {
+      ...node,
+      children: sortTreeNodes(node.children, branchOrder),
+    } satisfies TreeFolder;
+  });
+
+  return sortedNodes.sort((left, right) => {
+    if (left.kind !== right.kind) {
+      return left.kind === 'folder' ? -1 : 1;
+    }
+
+    if (left.kind === 'folder' && right.kind === 'folder') {
+      return branchNameCollator.compare(left.path, right.path);
+    }
+
+    return left.kind === 'branch' && right.kind === 'branch'
+      ? (branchOrder.get(getBranchKey(left.info)) ?? Number.MAX_SAFE_INTEGER) -
+        (branchOrder.get(getBranchKey(right.info)) ?? Number.MAX_SAFE_INTEGER)
+      : branchNameCollator.compare(left.path, right.path);
+  });
+}
+
+function getBranchKey(branch: Pick<BranchInfo, 'name' | 'scope'>): string {
+  return `${branch.scope ?? 'local'}:${branch.name}`;
 }

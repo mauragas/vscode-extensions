@@ -17,6 +17,7 @@ npm install
 npm run build
 npm run lint
 npm test
+npm run test:coverage
 ```
 
 Press `F5` in VS Code to launch the Extension Development Host for the current extension.
@@ -35,6 +36,7 @@ From the repository root:
 npm run build
 npm run lint
 npm test
+npm run test:coverage
 npm run package:git-branches-panel
 ```
 
@@ -44,6 +46,7 @@ From `extensions/git-branches-panel/`:
 npm run compile
 npm run lint
 npm run test
+npm run test:coverage
 npm run package
 ```
 
@@ -52,13 +55,15 @@ npm run package
 Before opening a pull request:
 
 1. Run build, lint, and test successfully.
-2. Update documentation for user-facing changes.
-3. Update `CHANGELOG.md` for notable extension changes.
-4. Avoid committing generated output unless it is intentionally required.
+2. Run `npm run test:coverage` when you add or change core logic.
+3. Update documentation for user-facing changes.
+4. Update `CHANGELOG.md` for notable extension changes.
+5. Avoid committing generated output unless it is intentionally required.
 
 ## Adding a new extension
 
 1. Create `extensions/<extension-name>/`.
-2. Add the extension's `package.json`, `README.md`, `CHANGELOG.md`, `LICENSE`, `src/`, `resources/`, `test/`, and `tsconfig.json`.
+2. Add the extension's `package.json`, `README.md`, `CHANGELOG.md`,
+   `LICENSE`, `src/`, `resources/`, `test/`, and `tsconfig.json`.
 3. Wire root scripts and `.vscode` launch/tasks to the new extension.
 4. Keep runtime assets and publishable metadata inside the extension folder.

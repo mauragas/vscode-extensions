@@ -3,4 +3,8 @@ out/
 extensions/*/out/
 extensions/*/node_modules/
 .vscode-test/
+coverage/
+extensions/*/coverage/
+.nyc_output/
+extensions/*/.nyc_output/
 *.vsix

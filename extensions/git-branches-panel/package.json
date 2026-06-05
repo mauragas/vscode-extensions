@@ -1,8 +1,8 @@
 {
   "name": "git-branches-panel",
   "displayName": "Git Branches Panel",
-  "description": "Tree view for local Git branches with folder grouping, sync state, and quick branch actions.",
-  "version": "0.0.1",
+  "description": "Tree view for local and remote Git branches plus tags with grouping, sync state, and quick actions.",
+  "version": "1.0.0",
   "publisher": "karolis-mauragas",
   "license": "MIT",
   "repository": {
@@ -52,13 +52,15 @@
       "git-branches-container": [
         {
           "id": "gitBranchesPanel",
-          "name": "Local Branches"
+          "name": "Branches & Tags",
+          "icon": "resources/branch.svg"
         }
       ],
       "scm": [
         {
           "id": "gitBranchesSCM",
           "name": "Branches",
+          "icon": "resources/branch.svg",
           "when": "gitOpenRepositoryCount != 0"
         }
       ]
@@ -82,6 +84,11 @@
       {
         "command": "gitBranchesPanel.checkout",
         "title": "Checkout Branch",
+        "icon": "$(arrow-right)"
+      },
+      {
+        "command": "gitBranchesPanel.checkoutTag",
+        "title": "Checkout Tag",
         "icon": "$(arrow-right)"
       },
       {
@@ -110,9 +117,19 @@
         "icon": "$(copy)"
       },
       {
+        "command": "gitBranchesPanel.copyTagName",
+        "title": "Copy Tag Name",
+        "icon": "$(copy)"
+      },
+      {
         "command": "gitBranchesPanel.mergeIntoCurrent",
         "title": "Merge into Current Branch",
         "icon": "$(git-merge)"
+      },
+      {
+        "command": "gitBranchesPanel.deleteTag",
+        "title": "Delete Tag",
+        "icon": "$(trash)"
       }
     ],
     "menus": {
@@ -151,7 +168,7 @@
         },
         {
           "command": "gitBranchesPanel.checkout",
-          "when": "viewItem == branch || viewItem == currentBranch",
+          "when": "viewItem == branch || viewItem == currentBranch || viewItem == remoteBranch",
           "group": "1_branch@2"
         },
         {
@@ -161,18 +178,33 @@
         },
         {
           "command": "gitBranchesPanel.copyBranchName",
-          "when": "viewItem == branch || viewItem == currentBranch",
+          "when": "viewItem == branch || viewItem == currentBranch || viewItem == remoteBranch",
           "group": "1_branch@4"
         },
         {
           "command": "gitBranchesPanel.mergeIntoCurrent",
-          "when": "viewItem == branch",
+          "when": "viewItem == branch || viewItem == remoteBranch",
           "group": "1_branch@5"
         },
         {
           "command": "gitBranchesPanel.deleteBranch",
-          "when": "viewItem == branch",
+          "when": "viewItem == branch || viewItem == remoteBranch",
           "group": "2_delete@1"
+        },
+        {
+          "command": "gitBranchesPanel.checkoutTag",
+          "when": "viewItem == tag",
+          "group": "1_tag@1"
+        },
+        {
+          "command": "gitBranchesPanel.copyTagName",
+          "when": "viewItem == tag",
+          "group": "1_tag@2"
+        },
+        {
+          "command": "gitBranchesPanel.deleteTag",
+          "when": "viewItem == tag",
+          "group": "2_tag@1"
         }
       ]
     },
@@ -202,6 +234,7 @@
     "watch": "npm --prefix ../.. run watch:git-branches-panel",
     "lint": "npm --prefix ../.. run lint:git-branches-panel",
     "test": "npm --prefix ../.. run test:git-branches-panel",
+    "test:coverage": "npm --prefix ../.. run test:coverage:git-branches-panel",
     "package": "npx -y -p node@20 -p @vscode/vsce vsce package"
   }
 }
