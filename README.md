@@ -26,6 +26,7 @@ This repository hosts multiple Visual Studio Code extensions in one place. Each 
 ```bash
 npm install
 npm run build
+npm run lint
 npm test
 ```
 
@@ -40,6 +41,14 @@ npm run package:git-branches-panel
 ```
 
 This creates a versioned `.vsix` file inside `extensions/git-branches-panel/`.
+
+## Contributing
+
+Contributions are welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for setup, workflow, and quality checks.
+
+## Support
+
+For bug reports, feature requests, and usage questions, see [`SUPPORT.md`](SUPPORT.md).
 
 ## Adding a new extension
 

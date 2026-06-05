@@ -2,11 +2,11 @@
   "name": "vscode-extensions",
   "private": true,
   "version": "0.0.1",
-  "description": "Monorepo for VS Code extensions maintained by Mauragas.",
+  "description": "Monorepo for VS Code extensions maintained by Karolis Mauragas.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/mauragas/vscode-extensions.git"
+    "url": "https://github.com/mauragas/vscode-extensions"
   },
   "bugs": {
     "url": "https://github.com/mauragas/vscode-extensions/issues"

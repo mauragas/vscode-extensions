@@ -44,7 +44,7 @@ This extension lives in the [`vscode-extensions`](../..) repository under `exten
 ### Requirements
 
 - Node.js 18+ for local development
-- Node.js 20+ recommended for packaging and future marketplace publishing
+- Node.js 20+ recommended for creating `.vsix` packages
 - Visual Studio Code 1.85+
 
 ### Run locally
@@ -77,14 +77,13 @@ npm run package
 
 The generated file is written to this folder as `git-branches-panel-<version>.vsix` and can then be uploaded to the Visual Studio Marketplace.
 
-## Publishing preparation
+## Contributing
 
-This repository is ready for open-source development and close to marketplace publishing. Before the first public release, the remaining publishing steps are:
+Contributions are welcome. See the repository-level [`CONTRIBUTING.md`](../../CONTRIBUTING.md) for development workflow and quality checks.
 
-1. Create or configure the `karolis-mauragas` VS Code Marketplace publisher
-2. Add a dedicated marketplace icon (PNG recommended)
-3. Run a package/publish flow from Node.js 20+
-4. Publish the extension to the Visual Studio Code Marketplace
+## Support
+
+For bug reports, feature requests, and usage questions, see [`SUPPORT.md`](../../SUPPORT.md).
 
 ## License
 
