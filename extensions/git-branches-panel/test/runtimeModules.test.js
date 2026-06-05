@@ -224,6 +224,7 @@ test('BranchTreeProvider refreshes status bar data and exposes tree items', asyn
       getRemoteBranches() {},
       getRepoRoot() {},
       getStashes() {},
+      getWorktrees() {},
       getTags() {},
     },
     './treeDataLoader': {
@@ -306,6 +307,7 @@ test('BranchTreeProvider loads nested container children and hides the status ba
       getRemoteBranches() {},
       getRepoRoot() {},
       getStashes() {},
+      getWorktrees() {},
       getTags() {},
     },
     './treeDataLoader': {

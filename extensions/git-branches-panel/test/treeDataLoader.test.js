@@ -13,6 +13,7 @@ function createDependencies(overrides = {}) {
     getBranches: 0,
     getRemoteBranches: 0,
     getStashes: 0,
+    getWorktrees: 0,
     getTags: 0,
   };
   const warnings = [];
@@ -50,6 +51,10 @@ function createDependencies(overrides = {}) {
         calls.getStashes += 1;
         return [];
       },
+      getWorktrees: async () => {
+        calls.getWorktrees += 1;
+        return [];
+      },
       getTags: async () => {
         calls.getTags += 1;
         return [];
@@ -82,6 +87,7 @@ test('BranchDataLoader refreshes and throttles remote fetches', async () => {
 
   assert.equal(calls.fetchRemoteState, 1);
   assert.equal(calls.getStashes, 1);
+  assert.equal(calls.getWorktrees, 1);
   assert.equal(loader.getRepoRoot(), '/repo');
   assert.equal(loader.getCurrentBranch().name, 'main');
   assert.deepEqual(loader.getTreeData().map((node) => node.label), ['Local', 'Remote']);
@@ -112,7 +118,7 @@ test('BranchDataLoader warns on refresh failures and still loads branch data', a
   assert.match(warnings[0], /network is grumpy/);
 });
 
-test('BranchDataLoader inserts stash section between remote and tags', async () => {
+test('BranchDataLoader inserts stash and worktree sections before tags', async () => {
   const { dependencies } = createDependencies({
     getStashes: async () => [
       {
@@ -123,13 +129,28 @@ test('BranchDataLoader inserts stash section between remote and tags', async () 
         lastCommitTimestamp: 30,
       },
     ],
+    getWorktrees: async () => [
+      {
+        name: '/tmp/git-branches-panel-feature-worktree',
+        isCurrent: false,
+        scope: 'worktree',
+        worktreePath: '/tmp/git-branches-panel-feature-worktree',
+        worktreeRef: 'feature/worktree',
+      },
+    ],
     getTags: async () => [{ name: 'v1.0.0', isCurrent: false, scope: 'tag' }],
   });
   const loader = new BranchDataLoader(dependencies, () => 1_000);
 
   await loader.refresh({ fetchRemoteState: false });
 
-  assert.deepEqual(loader.getTreeData().map((node) => node.label), ['Local', 'Remote', 'Stash', 'Tags']);
+  assert.deepEqual(loader.getTreeData().map((node) => node.label), [
+    'Local',
+    'Remote',
+    'Stash',
+    'Worktree',
+    'Tags',
+  ]);
 });
 
 test('BranchDataLoader clears data when no workspace folders are available', async () => {

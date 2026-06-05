@@ -1,7 +1,7 @@
 export interface BranchInfo {
   name: string;
   isCurrent: boolean;
-  scope?: 'local' | 'remote' | 'tag' | 'stash';
+  scope?: 'local' | 'remote' | 'tag' | 'stash' | 'worktree';
   remoteName?: string;
   lastCommit?: string;
   lastCommitDate?: string;
@@ -10,6 +10,11 @@ export interface BranchInfo {
   aheadCount?: number;
   behindCount?: number;
   upstreamMissing?: boolean;
+  worktreePath?: string;
+  worktreeRef?: string;
+  worktreeIsBare?: boolean;
+  worktreeLockedReason?: string;
+  worktreePrunableReason?: string;
 }
 
 export interface BranchSyncState {
@@ -132,6 +137,7 @@ export function buildBranchSections(
   localBranches: readonly BranchInfo[],
   remoteBranches: readonly BranchInfo[],
   stashBranches: readonly BranchInfo[],
+  worktreeBranches: readonly BranchInfo[],
   tagBranches: readonly BranchInfo[],
   groupByFolder: boolean
 ): TreeSection[] {
@@ -161,6 +167,15 @@ export function buildBranchSections(
       label: 'Stash',
       path: 'section:stash',
       children: buildBranchTree(stashBranches, groupByFolder),
+    });
+  }
+
+  if (worktreeBranches.length > 0) {
+    sections.push({
+      kind: 'section',
+      label: 'Worktree',
+      path: 'section:worktree',
+      children: buildBranchTree(worktreeBranches, false),
     });
   }
 
@@ -243,12 +258,30 @@ export function formatSyncStatus(syncState: Pick<BranchInfo, 'aheadCount' | 'beh
 }
 
 export function buildBranchDescription(
-  branch: Pick<BranchInfo, 'aheadCount' | 'behindCount' | 'lastCommit' | 'lastCommitDate' | 'scope'>
+  branch: Pick<
+    BranchInfo,
+    | 'aheadCount'
+    | 'behindCount'
+    | 'lastCommit'
+    | 'lastCommitDate'
+    | 'scope'
+    | 'worktreeRef'
+    | 'worktreeIsBare'
+    | 'worktreeLockedReason'
+    | 'worktreePrunableReason'
+  >
 ): string {
   const descriptionParts =
     branch.scope === 'stash'
       ? [branch.lastCommit ?? '', branch.lastCommitDate ?? ''].filter(Boolean)
-      : [formatSyncStatus(branch), branch.lastCommitDate ?? ''].filter(Boolean);
+      : branch.scope === 'worktree'
+        ? [
+            branch.worktreeRef ?? '',
+            branch.worktreeIsBare ? 'bare' : '',
+            branch.worktreeLockedReason ? 'locked' : '',
+            branch.worktreePrunableReason ? 'prunable' : '',
+          ].filter(Boolean)
+        : [formatSyncStatus(branch), branch.lastCommitDate ?? ''].filter(Boolean);
 
   return descriptionParts.join(' • ');
 }

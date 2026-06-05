@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 - Added a Stash section between Remote and Tags
 - Added stash context actions to apply, pop, and drop stashes
 - Added a `Stash Silently` toolbar action for tracked and untracked files
+- Added a Worktree section between Stash and Tags with common worktree actions
+- Prioritized incoming/outgoing sync badges so they stay visible for long branch names
 
 ## [1.1.0] - 2026-06-05
 

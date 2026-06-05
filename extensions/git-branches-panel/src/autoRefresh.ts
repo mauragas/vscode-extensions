@@ -15,6 +15,7 @@ export function registerAutoRefresh(
   const tagRefsWatcher = vscode.workspace.createFileSystemWatcher('**/.git/refs/tags/**');
   const stashRefWatcher = vscode.workspace.createFileSystemWatcher('**/.git/refs/stash');
   const stashLogWatcher = vscode.workspace.createFileSystemWatcher('**/.git/logs/refs/stash');
+  const worktreesWatcher = vscode.workspace.createFileSystemWatcher('**/.git/worktrees/**');
   const fetchHeadWatcher = vscode.workspace.createFileSystemWatcher('**/.git/FETCH_HEAD');
   const packedRefsWatcher = vscode.workspace.createFileSystemWatcher('**/.git/packed-refs');
 
@@ -43,6 +44,9 @@ export function registerAutoRefresh(
   stashLogWatcher.onDidChange(refreshFromWatcher);
   stashLogWatcher.onDidCreate(refreshFromWatcher);
   stashLogWatcher.onDidDelete(refreshFromWatcher);
+  worktreesWatcher.onDidChange(refreshFromWatcher);
+  worktreesWatcher.onDidCreate(refreshFromWatcher);
+  worktreesWatcher.onDidDelete(refreshFromWatcher);
   fetchHeadWatcher.onDidChange(refreshFromWatcher);
   fetchHeadWatcher.onDidCreate(refreshFromWatcher);
   packedRefsWatcher.onDidChange(refreshFromWatcher);
@@ -56,6 +60,7 @@ export function registerAutoRefresh(
     tagRefsWatcher,
     stashRefWatcher,
     stashLogWatcher,
+    worktreesWatcher,
     fetchHeadWatcher,
     packedRefsWatcher,
     vscode.workspace.onDidChangeConfiguration((event) => {

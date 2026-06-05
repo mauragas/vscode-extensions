@@ -22,6 +22,7 @@ export interface BranchDataLoaderDependencies {
   getBranches(repoRoot: string): Promise<BranchInfo[]>;
   getRemoteBranches(repoRoot: string): Promise<BranchInfo[]>;
   getStashes(repoRoot: string): Promise<BranchInfo[]>;
+  getWorktrees(repoRoot: string): Promise<BranchInfo[]>;
   getTags(repoRoot: string): Promise<BranchInfo[]>;
   fetchRemoteState(repoRoot: string): Promise<void>;
   warn(message: string): void;
@@ -85,15 +86,17 @@ export class BranchDataLoader {
     }
 
     const configuration = this.dependencies.getConfiguration();
-    const [localBranches, remoteBranches, stashBranches, tagBranches] = await Promise.all([
+    const [localBranches, remoteBranches, stashBranches, worktreeBranches, tagBranches] = await Promise.all([
       this.dependencies.getBranches(this.repoRoot),
       this.dependencies.getRemoteBranches(this.repoRoot),
       this.dependencies.getStashes(this.repoRoot),
+      this.dependencies.getWorktrees(this.repoRoot),
       this.dependencies.getTags(this.repoRoot),
     ]);
     const sortedLocalBranches = sortBranches(localBranches, configuration.sortOrder);
     const sortedRemoteBranches = sortBranches(remoteBranches, configuration.sortOrder);
     const sortedStashBranches = sortBranches(stashBranches, configuration.sortOrder);
+    const sortedWorktreeBranches = sortBranches(worktreeBranches, configuration.sortOrder);
     const sortedTagBranches = sortBranches(tagBranches, configuration.sortOrder);
 
     this.localBranches = sortedLocalBranches;
@@ -101,6 +104,7 @@ export class BranchDataLoader {
       sortedLocalBranches,
       sortedRemoteBranches,
       sortedStashBranches,
+      sortedWorktreeBranches,
       sortedTagBranches,
       configuration.groupByFolder
     );

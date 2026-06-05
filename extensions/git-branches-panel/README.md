@@ -1,7 +1,7 @@
 # Git Branches Panel
 
 `Git Branches Panel` is a Visual Studio Code extension that shows local and
-remote Git branches, stashes, and tags in a dedicated tree view with folder grouping,
+remote Git branches, stashes, worktrees, and tags in a dedicated tree view with folder grouping,
 sync status, current-branch context, and quick actions.
 
 This extension lives in the [`vscode-extensions`](../..) repository under `extensions/git-branches-panel/`.
@@ -9,7 +9,7 @@ This extension lives in the [`vscode-extensions`](../..) repository under `exten
 ## Overview
 
 The panel keeps the active branch visible at the top, groups slash-separated
-branch names into folders, and separates Local, Remote, Stash, and Tags into their own
+branch names into folders, and separates Local, Remote, Stash, Worktree, and Tags into their own
 sections so common Git navigation feels fast and tidy.
 
 ![Git Branches Panel overview showing the current branch summary plus Local, Remote, and Tags sections.](https://raw.githubusercontent.com/mauragas/vscode-extensions/main/extensions/git-branches-panel/resources/git-branches-panel-overview.png)
@@ -19,15 +19,17 @@ sections so common Git navigation feels fast and tidy.
 - 🌿 **Folder grouping** — branches like `feature/auth` or `feature/payments/stripe` are nested into folders automatically
 - 🧭 **Local and remote sections** — local branches are shown first, with remote branches listed in a separate group below them
 - 🧺 **Stash section** — stashes are shown between remote branches and tags so parked work stays close at hand
+- 🪵 **Worktree section** — worktrees are shown under stashes so additional checkouts are easy to find and manage
 - 🏷️ **Tags section** — tags are shown in their own section below remote branches
 - 📁 **Folders first** — folders are listed before branch leaves inside each section
 - ✅ **Current branch first** — highlighted with a `●` prefix and a green icon
 - 🪄 **Optional current branch banner** — keep or hide the top `Current branch: ...` summary from settings
 - 🕐 **Last commit time** — shown as a relative description and in the tooltip
-- 🔄 **Sync state badges** — incoming and outgoing commits are shown as `↓` and `↑` counts in the branch description
+- 🔄 **Sync state badges** — incoming and outgoing commits stay visible even when branch names are long
 - ☁️ **Inline sync button** — every branch gets a small sync button, including branches that are not currently checked out
 - 🚀 **Non-current branch sync** — sync a branch with its upstream without checking it out first
 - 📦 **Stash actions** — apply, pop, or drop a stash from the context menu
+- 🪟 **Worktree actions** — open, reveal, copy, or remove worktrees from the context menu
 - ⚡ **Double-click checkout** — double-click a branch to switch instantly
 - 🔀 **Merge into current** — merge a selected branch into the current branch from the context menu
 - 🧰 **Context menu actions** — checkout, sync, create tags, rename, merge into current, push all tags from the Tags section, copy branch name, and delete with merge-safety handling
@@ -51,6 +53,11 @@ sections so common Git navigation feels fast and tidy.
 | Apply Stash | Apply the selected stash without removing it |
 | Pop Stash | Apply the selected stash and remove it if successful |
 | Drop Stash | Delete the selected stash |
+| Open Worktree | Open the selected worktree in the current window |
+| Open Worktree in New Window | Open the selected worktree in a new window |
+| Reveal Worktree in File Explorer | Reveal the selected worktree in the OS file browser |
+| Copy Worktree Path | Copy the selected worktree path to the clipboard |
+| Remove Worktree | Remove the selected linked worktree |
 | Push All Tags | Push all local tags to a selected remote from the Tags section context menu |
 | Merge into Current Branch | Merge the selected branch into the current branch |
 | Copy Branch Name | Copy the branch name to the clipboard |

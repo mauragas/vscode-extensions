@@ -13,7 +13,8 @@ export type NodeType =
   | 'currentBranch'
   | 'remoteBranch'
   | 'tag'
-  | 'stash';
+  | 'stash'
+  | 'worktree';
 export type TreeItemCollapsibleKind = 'expanded' | 'none';
 export type TreeContainerNode = Extract<BranchTreeNode, { kind: 'section' | 'folder' }>;
 
@@ -55,6 +56,8 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
             ? 'cloud'
             : node.path === 'section:stash'
               ? 'archive'
+              : node.path === 'section:worktree'
+                ? 'folder'
               : 'source-control',
       },
       containerPath: node.path,
@@ -76,29 +79,41 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
   const isRemoteBranch = node.info.scope === 'remote';
   const isTag = node.info.scope === 'tag';
   const isStash = node.info.scope === 'stash';
-  const isCurrentBranch = !isRemoteBranch && !isTag && !isStash && node.info.isCurrent;
+  const isWorktree = node.info.scope === 'worktree';
+  const isCurrentBranch = !isRemoteBranch && !isTag && !isStash && !isWorktree && node.info.isCurrent;
   const nodeType: NodeType = isCurrentBranch
     ? 'currentBranch'
     : isStash
       ? 'stash'
+      : isWorktree
+        ? 'worktree'
     : isTag
       ? 'tag'
       : isRemoteBranch
         ? 'remoteBranch'
         : 'branch';
-  const description = buildBranchDescription(node.info) || undefined;
+  const syncStatus = !isRemoteBranch && !isTag && !isStash && !isWorktree
+    ? formatSyncStatus(node.info)
+    : '';
+  const description = buildTreeItemDescription(node.info, syncStatus);
+  const labelPrefix = isCurrentBranch || (isWorktree && node.info.isCurrent) ? '● ' : '';
+  const prioritizedLabel = syncStatus
+    ? `${labelPrefix}${syncStatus} ${node.label}`
+    : `${labelPrefix}${node.label}`;
 
   return {
     nodeType,
-    label: isCurrentBranch ? `● ${node.label}` : node.label,
+    label: prioritizedLabel,
     id: `${node.info.scope ?? 'local'}:branch:${node.fullName}`,
-    contextValue: nodeType,
+    contextValue: isWorktree ? (node.info.isCurrent ? 'currentWorktree' : 'worktree') : nodeType,
     collapsibleState: 'none',
     icon: isCurrentBranch
       ? {
         id: 'git-branch',
         colorId: 'gitDecoration.addedResourceForeground',
       }
+      : isWorktree
+        ? { id: 'folder' }
       : isStash
         ? { id: 'archive' }
       : isTag
@@ -109,7 +124,7 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
     description,
     tooltip: buildBranchTooltipContent(node),
     branchName: node.fullName,
-    command: !isCurrentBranch && !isRemoteBranch && !isTag && !isStash
+    command: !isCurrentBranch && !isRemoteBranch && !isTag && !isStash && !isWorktree
       ? {
         command: 'gitBranchesPanel.activateBranchItem',
         title: 'Activate Branch Item',
@@ -119,10 +134,37 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
 }
 
 export function buildBranchTooltipContent(node: TreeBranch): string {
-  const tooltipLines = [`**${node.fullName}**`];
   const isRemoteBranch = node.info.scope === 'remote';
   const isTag = node.info.scope === 'tag';
   const isStash = node.info.scope === 'stash';
+  const isWorktree = node.info.scope === 'worktree';
+  const tooltipLines = [`**${node.info.worktreePath ?? node.fullName}**`];
+
+  if (isWorktree) {
+    tooltipLines.push('', '_Worktree_');
+
+    if (node.info.isCurrent) {
+      tooltipLines.push('', '_Current worktree_');
+    }
+
+    if (node.info.worktreeRef) {
+      tooltipLines.push('', `Reference: ${node.info.worktreeRef}`);
+    }
+
+    if (node.info.worktreeIsBare) {
+      tooltipLines.push('', '_Bare worktree_');
+    }
+
+    if (node.info.worktreeLockedReason) {
+      tooltipLines.push('', `Locked: ${node.info.worktreeLockedReason}`);
+    }
+
+    if (node.info.worktreePrunableReason) {
+      tooltipLines.push('', `Prunable: ${node.info.worktreePrunableReason}`);
+    }
+
+    return tooltipLines.join('\n');
+  }
 
   if (isStash) {
     tooltipLines.push('', '_Stash_');
@@ -174,6 +216,14 @@ export function buildBranchTooltipContent(node: TreeBranch): string {
   }
 
   return tooltipLines.join('\n');
+}
+
+function buildTreeItemDescription(branch: BranchInfo, syncStatus: string): string | undefined {
+  if (branch.scope === 'stash' || branch.scope === 'worktree' || !syncStatus) {
+    return buildBranchDescription(branch) || undefined;
+  }
+
+  return branch.lastCommitDate || undefined;
 }
 
 export function buildStatusBarText(branch: BranchInfo | undefined): string {

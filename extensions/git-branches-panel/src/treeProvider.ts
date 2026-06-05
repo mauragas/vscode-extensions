@@ -1,7 +1,15 @@
 import * as vscode from 'vscode';
 
 import { type BranchInfo, type BranchSortOrder, type BranchTreeNode } from './branchModel';
-import { fetchRemoteState, getBranches, getRemoteBranches, getRepoRoot, getStashes, getTags } from './git';
+import {
+  fetchRemoteState,
+  getBranches,
+  getRemoteBranches,
+  getRepoRoot,
+  getStashes,
+  getTags,
+  getWorktrees,
+} from './git';
 import { BranchDataLoader, type BranchDataLoaderDependencies, type BranchLoadOptions } from './treeDataLoader';
 import { BranchTreeItem } from './treeItem';
 import { buildStatusBarText, buildStatusBarTooltipContent, findContainerNode } from './treePresentation';
@@ -103,6 +111,7 @@ function createBranchDataLoaderDependencies(): BranchDataLoaderDependencies {
     getBranches,
     getRemoteBranches,
     getStashes,
+    getWorktrees,
     getTags,
     fetchRemoteState,
     warn: (message) => {

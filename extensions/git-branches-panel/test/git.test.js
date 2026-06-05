@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
-const { mkdtempSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
+const { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join } = require('node:path');
 const test = require('node:test');
@@ -19,9 +19,11 @@ const {
   getRemoteBranches,
   getStashes,
   getTags,
+  getWorktrees,
   parseRemoteBranchReference,
   popStash,
   pushAllTags,
+  removeWorktree,
   stashSilently,
   syncBranch,
 } = require('../out/git.js');
@@ -107,6 +109,21 @@ function createTempRepository(t) {
   runGit(repoRoot, ['tag', 'release/v1.1.0']);
 
   return repoRoot;
+}
+
+function createRepositoryWithLinkedWorktree(t) {
+  const repoRoot = createTempRepository(t);
+  const worktreeParent = mkdtempSync(join(tmpdir(), 'git-branches-panel-worktree-'));
+  const worktreeRoot = join(worktreeParent, 'feature-worktree');
+
+  t.after(() => {
+    rmSync(worktreeParent, { recursive: true, force: true });
+  });
+
+  runGit(repoRoot, ['branch', 'feature/worktree']);
+  runGit(repoRoot, ['worktree', 'add', worktreeRoot, 'feature/worktree']);
+
+  return { repoRoot, worktreeRoot };
 }
 
 test('parseRemoteBranchReference parses nested remote branches', () => {
@@ -255,6 +272,33 @@ test('dropStash removes the selected stash entry', async (t) => {
 
   assert.equal(hasRef(repoRoot, 'refs/stash'), false);
   assert.equal((await getStashes(repoRoot)).length, 0);
+});
+
+test('getWorktrees lists the current and linked worktrees', async (t) => {
+  const { repoRoot, worktreeRoot } = createRepositoryWithLinkedWorktree(t);
+
+  const worktrees = await getWorktrees(repoRoot);
+
+  assert.equal(worktrees.length, 2);
+  assert.equal(worktrees[0].scope, 'worktree');
+  assert.equal(worktrees[0].isCurrent, true);
+  assert.equal(worktrees[0].worktreePath, repoRoot);
+  assert.equal(worktrees[0].worktreeRef, 'main');
+
+  const linkedWorktree = worktrees.find((worktree) => worktree.worktreePath === worktreeRoot);
+  assert.ok(linkedWorktree);
+  assert.equal(linkedWorktree.scope, 'worktree');
+  assert.equal(linkedWorktree.isCurrent, false);
+  assert.equal(linkedWorktree.worktreeRef, 'feature/worktree');
+});
+
+test('removeWorktree removes a linked worktree path', async (t) => {
+  const { repoRoot, worktreeRoot } = createRepositoryWithLinkedWorktree(t);
+
+  await removeWorktree(repoRoot, worktreeRoot);
+
+  assert.equal(existsSync(worktreeRoot), false);
+  assert.equal((await getWorktrees(repoRoot)).some((worktree) => worktree.worktreePath === worktreeRoot), false);
 });
 
 test('fetchAllRemotes keeps stale remote refs while fetchRemoteState prunes them', async (t) => {

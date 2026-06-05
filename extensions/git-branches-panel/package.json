@@ -1,7 +1,7 @@
 {
   "name": "git-branches-panel",
   "displayName": "Git Branches Panel",
-  "description": "Tree view for local and remote Git branches plus tags with grouping, sync state, and quick actions.",
+  "description": "Tree view for local and remote Git branches, stashes, worktrees, and tags with grouping, sync state, and quick actions.",
   "version": "1.1.0",
   "publisher": "karolis-mauragas",
   "license": "MIT",
@@ -163,6 +163,29 @@
         "command": "gitBranchesPanel.dropStash",
         "title": "Drop Stash",
         "icon": "$(trash)"
+      },
+      {
+        "command": "gitBranchesPanel.openWorktree",
+        "title": "Open Worktree",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "gitBranchesPanel.openWorktreeInNewWindow",
+        "title": "Open Worktree in New Window"
+      },
+      {
+        "command": "gitBranchesPanel.revealWorktree",
+        "title": "Reveal Worktree in File Explorer"
+      },
+      {
+        "command": "gitBranchesPanel.copyWorktreePath",
+        "title": "Copy Worktree Path",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "gitBranchesPanel.removeWorktree",
+        "title": "Remove Worktree",
+        "icon": "$(trash)"
       }
     ],
     "menus": {
@@ -273,6 +296,31 @@
           "command": "gitBranchesPanel.dropStash",
           "when": "viewItem == stash",
           "group": "2_stash@1"
+        },
+        {
+          "command": "gitBranchesPanel.openWorktree",
+          "when": "viewItem == worktree || viewItem == currentWorktree",
+          "group": "1_worktree@1"
+        },
+        {
+          "command": "gitBranchesPanel.openWorktreeInNewWindow",
+          "when": "viewItem == worktree || viewItem == currentWorktree",
+          "group": "1_worktree@2"
+        },
+        {
+          "command": "gitBranchesPanel.revealWorktree",
+          "when": "viewItem == worktree || viewItem == currentWorktree",
+          "group": "1_worktree@3"
+        },
+        {
+          "command": "gitBranchesPanel.copyWorktreePath",
+          "when": "viewItem == worktree || viewItem == currentWorktree",
+          "group": "1_worktree@4"
+        },
+        {
+          "command": "gitBranchesPanel.removeWorktree",
+          "when": "viewItem == worktree",
+          "group": "2_worktree@1"
         }
       ]
     },

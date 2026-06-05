@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { basename } from 'node:path';
 
 import { type BranchInfo } from './branchModel';
 import { formatErrorMessage, getErrorMessage } from './errorUtils';
@@ -19,6 +20,7 @@ import {
   mergeBranchIntoCurrent,
   popStash,
   pushAllTags,
+  removeWorktree,
   renameBranch,
   stashSilently,
   syncBranch,
@@ -116,6 +118,30 @@ export function registerBranchCommands(
     vscode.commands.registerCommand('gitBranchesPanel.dropStash', async (item: BranchTreeItem) => {
       await handleDropStash(item, provider, activationTracker);
     }),
+    vscode.commands.registerCommand('gitBranchesPanel.openWorktree', async (item: BranchTreeItem) => {
+      await handleOpenWorktree(item, false);
+    }),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.openWorktreeInNewWindow',
+      async (item: BranchTreeItem) => {
+        await handleOpenWorktree(item, true);
+      }
+    ),
+    vscode.commands.registerCommand('gitBranchesPanel.revealWorktree', async (item: BranchTreeItem) => {
+      await handleRevealWorktree(item);
+    }),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.copyWorktreePath',
+      async (item: BranchTreeItem) => {
+        await handleCopyWorktreePath(item);
+      }
+    ),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.removeWorktree',
+      async (item: BranchTreeItem) => {
+        await handleRemoveWorktree(item, provider, activationTracker);
+      }
+    ),
     vscode.commands.registerCommand(
       'gitBranchesPanel.mergeIntoCurrent',
       async (item: BranchTreeItem) => {
@@ -624,6 +650,96 @@ async function handleDropStash(
   }
 }
 
+async function handleOpenWorktree(
+  item: BranchTreeItem,
+  forceNewWindow: boolean
+): Promise<void> {
+  if (!item.branchName || item.nodeType !== 'worktree') {
+    return;
+  }
+
+  await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(item.branchName), forceNewWindow);
+}
+
+async function handleRevealWorktree(item: BranchTreeItem): Promise<void> {
+  if (!item.branchName || item.nodeType !== 'worktree') {
+    return;
+  }
+
+  await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(item.branchName));
+}
+
+async function handleCopyWorktreePath(item: BranchTreeItem): Promise<void> {
+  if (!item.branchName || item.nodeType !== 'worktree') {
+    return;
+  }
+
+  await vscode.env.clipboard.writeText(item.branchName);
+  vscode.window.showInformationMessage(`Copied worktree path '${item.branchName}' to the clipboard.`);
+}
+
+async function handleRemoveWorktree(
+  item: BranchTreeItem,
+  provider: BranchTreeProvider,
+  activationTracker: BranchItemActivationTracker
+): Promise<void> {
+  if (!item.branchName || !item.repoRoot || item.nodeType !== 'worktree') {
+    return;
+  }
+
+  if (item.branchInfo?.isCurrent) {
+    vscode.window.showInformationMessage('Cannot remove the current worktree.');
+    return;
+  }
+
+  const worktreeLabel = basename(item.branchName) || item.branchName;
+  const confirmation = await vscode.window.showWarningMessage(
+    `Remove worktree '${worktreeLabel}'?`,
+    { modal: true },
+    'Remove'
+  );
+  if (confirmation !== 'Remove') {
+    return;
+  }
+
+  try {
+    await removeWorktree(item.repoRoot, item.branchName, false);
+    await showSuccessAndRefresh(
+      `Removed worktree '${worktreeLabel}'.`,
+      provider,
+      activationTracker,
+      { fetchRemoteState: false }
+    );
+  } catch (error) {
+    const message = getErrorMessage(error);
+    if (!looksLikeDirtyWorktreeError(message)) {
+      showCommandError(`Failed to remove worktree '${worktreeLabel}'`, error);
+      return;
+    }
+
+    const forceRemove = await vscode.window.showWarningMessage(
+      `Worktree '${worktreeLabel}' has local changes or untracked files. Force remove it?`,
+      { modal: true },
+      'Force Remove'
+    );
+    if (forceRemove !== 'Force Remove') {
+      return;
+    }
+
+    try {
+      await removeWorktree(item.repoRoot, item.branchName, true);
+      await showSuccessAndRefresh(
+        `Force removed worktree '${worktreeLabel}'.`,
+        provider,
+        activationTracker,
+        { fetchRemoteState: false }
+      );
+    } catch (forceRemoveError) {
+      showCommandError(`Failed to force remove worktree '${worktreeLabel}'`, forceRemoveError);
+    }
+  }
+}
+
 async function handlePushAllTags(
   item: BranchTreeItem | undefined,
   provider: BranchTreeProvider,
@@ -784,4 +900,8 @@ async function showSuccessAndRefresh(
 
 function showCommandError(prefix: string, error: unknown): void {
   vscode.window.showErrorMessage(formatErrorMessage(prefix, error));
+}
+
+function looksLikeDirtyWorktreeError(message: string): boolean {
+  return /(not clean|contains modified or untracked files|use --force)/i.test(message);
 }
