@@ -4,6 +4,7 @@ import type {
   BranchTreeNode,
   TreeBranch,
   TreeChildNode,
+  TreeContainerScope,
   TreeFolder,
   TreeSection,
 } from './types';
@@ -38,7 +39,8 @@ export function sortBranches(
 
 export function buildBranchTree(
   branches: readonly BranchInfo[],
-  groupByFolder: boolean
+  groupByFolder: boolean,
+  scope: TreeContainerScope = 'local'
 ): TreeChildNode[] {
   const branchOrder = new Map(branches.map((branch, index) => [getBranchKey(branch), index]));
 
@@ -50,6 +52,7 @@ export function buildBranchTree(
     kind: 'folder',
     label: '__root__',
     path: '',
+    scope,
     children: [],
   };
 
@@ -77,6 +80,7 @@ export function buildBranchTree(
           kind: 'folder',
           label: segment,
           path: currentPath,
+          scope,
           children: [],
         };
         currentFolder.children.push(nextFolder);
@@ -106,7 +110,8 @@ export function buildBranchSections(
       kind: 'section',
       label: 'Local',
       path: 'section:local',
-      children: buildBranchTree(localBranches, groupByFolder),
+      scope: 'local',
+      children: buildBranchTree(localBranches, groupByFolder, 'local'),
     });
   }
 
@@ -115,7 +120,8 @@ export function buildBranchSections(
       kind: 'section',
       label: 'Remote',
       path: 'section:remote',
-      children: buildBranchTree(remoteBranches, groupByFolder),
+      scope: 'remote',
+      children: buildBranchTree(remoteBranches, groupByFolder, 'remote'),
     });
   }
 
@@ -124,7 +130,8 @@ export function buildBranchSections(
       kind: 'section',
       label: 'Stash',
       path: 'section:stash',
-      children: buildBranchTree(stashBranches, groupByFolder),
+      scope: 'stash',
+      children: buildBranchTree(stashBranches, groupByFolder, 'stash'),
     });
   }
 
@@ -133,7 +140,8 @@ export function buildBranchSections(
       kind: 'section',
       label: 'Worktree',
       path: 'section:worktree',
-      children: buildBranchTree(worktreeBranches, false),
+      scope: 'worktree',
+      children: buildBranchTree(worktreeBranches, false, 'worktree'),
     });
   }
 
@@ -142,7 +150,8 @@ export function buildBranchSections(
       kind: 'section',
       label: 'Tags',
       path: 'section:tags',
-      children: buildBranchTree(tagBranches, groupByFolder),
+      scope: 'tag',
+      children: buildBranchTree(tagBranches, groupByFolder, 'tag'),
     });
   }
 
@@ -151,18 +160,19 @@ export function buildBranchSections(
 
 export function findFolderNode(
   nodes: readonly BranchTreeNode[],
-  folderPath: string
+  folderPath: string,
+  scope?: TreeContainerScope
 ): TreeFolder | undefined {
   for (const node of nodes) {
     if (node.kind === 'branch') {
       continue;
     }
 
-    if (node.kind === 'folder' && node.path === folderPath) {
+    if (node.kind === 'folder' && node.path === folderPath && (!scope || node.scope === scope)) {
       return node;
     }
 
-    const nestedMatch = findFolderNode(node.children, folderPath);
+    const nestedMatch = findFolderNode(node.children, folderPath, scope);
     if (nestedMatch) {
       return nestedMatch;
     }

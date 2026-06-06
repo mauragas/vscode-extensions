@@ -17,4 +17,8 @@ export {
   buildStatusBarTooltipContent,
 } from './treePresentation/statusBarPresentation';
 
-export { findContainerNode } from './treePresentation/containerLookup';
+export {
+  findContainerNode,
+  findDescendantBranches,
+  getContainerNodeKey,
+} from './treePresentation/containerLookup';

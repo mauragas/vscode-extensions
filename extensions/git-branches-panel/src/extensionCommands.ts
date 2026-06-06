@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import { registerBranchDomainCommands } from './commands/branchCommands';
+import { registerBulkActionCommands } from './commands/bulkActions';
 import { registerRepositoryCommands } from './commands/repositoryCommands';
 import { createCommandContext } from './commands/shared';
 import { registerStashCommands } from './commands/stashCommands';
@@ -17,6 +18,7 @@ export function registerBranchCommands(
   const commandContext = createCommandContext(provider, activationTracker);
 
   registerRepositoryCommands(context, commandContext);
+  registerBulkActionCommands(context, commandContext);
   registerBranchDomainCommands(context, commandContext);
   registerTagCommands(context, commandContext);
   registerStashCommands(context, commandContext);

@@ -1,4 +1,9 @@
-import { buildBranchDescription, type BranchInfo } from './branchModel';
+import {
+  buildBranchDescription,
+  getPublishTargetName,
+  isPublishableBranch,
+  type BranchInfo,
+} from './branchModel';
 import type { CheckoutRemoteBranchResult, SyncBranchResult } from './git';
 
 export const DOUBLE_CLICK_WINDOW_MS = 500;
@@ -158,6 +163,16 @@ export function buildCurrentBranchMessage(
 
 export function buildCurrentBranchAlreadyCheckedOutMessage(branchName: string): string {
   return `Already on '${branchName}'.`;
+}
+
+export function buildPublishTargetMessage(branch: Pick<BranchInfo, 'name' | 'upstreamName'>): string {
+  return getPublishTargetName(branch);
+}
+
+export function branchNeedsPublish(
+  branch: Pick<BranchInfo, 'scope' | 'upstreamName' | 'upstreamMissing'>
+): boolean {
+  return isPublishableBranch(branch);
 }
 
 export function buildRemoteBranchCheckoutMessage(

@@ -1,6 +1,12 @@
 import * as vscode from 'vscode';
 
-import { type BranchInfo, type BranchSortOrder, type BranchTreeNode } from './branchModel';
+import {
+  type BranchInfo,
+  type BranchSortOrder,
+  type BranchTreeNode,
+  isPublishableBranch,
+  type TreeBranch,
+} from './branchModel';
 import {
   fetchRemoteState,
   getBranches,
@@ -17,7 +23,12 @@ import {
   type BranchLoadOptions,
 } from './treeDataLoader';
 import { BranchTreeItem } from './treeItem';
-import { buildStatusBarText, buildStatusBarTooltipContent, findContainerNode } from './treePresentation';
+import {
+  buildStatusBarText,
+  buildStatusBarTooltipContent,
+  findContainerNode,
+  findDescendantBranches,
+} from './treePresentation';
 
 export { BranchTreeItem, type NodeType } from './treeItem';
 export type { BranchLoadOptions } from './treeDataLoader';
@@ -60,19 +71,21 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
       return this.nodesToItems(this.dataLoader.getTreeData());
     }
 
-    if ((element.nodeType !== 'folder' && element.nodeType !== 'section') || !element.containerPath) {
+    const containerKey = element.containerKey ?? element.containerPath;
+
+    if ((element.nodeType !== 'folder' && element.nodeType !== 'section') || !containerKey) {
       return [];
     }
 
     if (element.nodeType === 'section') {
-      const section = getBranchSectionKey(element.containerPath);
+      const section = getBranchSectionKey(element.containerPath ?? containerKey);
 
       if (section && !this.dataLoader.isSectionLoaded(section)) {
         await this.refresh({ sections: [section], fetchRemoteState: false });
       }
     }
 
-    const container = findContainerNode(this.dataLoader.getTreeData(), element.containerPath);
+    const container = findContainerNode(this.dataLoader.getTreeData(), containerKey);
     return container ? this.nodesToItems(container.children) : [];
   }
 
@@ -84,19 +97,36 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     return this.dataLoader.getCurrentBranch();
   }
 
+  getDescendantBranches(containerKey: string): readonly TreeBranch[] {
+    return findDescendantBranches(this.dataLoader.getTreeData(), containerKey);
+  }
+
   private nodesToItems(nodes: readonly BranchTreeNode[]): BranchTreeItem[] {
     return nodes.map((node) => new BranchTreeItem(node, this.dataLoader.getRepoRoot() ?? undefined));
   }
 
   private updateStatusBar(currentBranch: BranchInfo | undefined): void {
-    const statusBarText = buildStatusBarText(currentBranch);
-    if (!currentBranch || !statusBarText) {
+    const currentBranchNeedsPublish = Boolean(currentBranch && isPublishableBranch(currentBranch));
+    void vscode.commands.executeCommand(
+      'setContext',
+      'gitBranchesPanel.currentBranchNeedsPublish',
+      currentBranchNeedsPublish
+    );
+
+    const showStatusBarBranchAction = vscode.workspace
+      .getConfiguration('gitBranchesPanel')
+      .get<boolean>('showStatusBarBranchAction', true);
+
+    const statusBarText = showStatusBarBranchAction ? buildStatusBarText(currentBranch) : '';
+    if (!showStatusBarBranchAction || !currentBranch || !statusBarText) {
       this.statusBarItem.hide();
       return;
     }
 
     this.statusBarItem.text = statusBarText;
-    this.statusBarItem.command = 'gitBranchesPanel.syncCurrentBranch';
+    this.statusBarItem.command = currentBranchNeedsPublish
+      ? 'gitBranchesPanel.publishCurrentBranch'
+      : 'gitBranchesPanel.syncCurrentBranch';
     this.statusBarItem.tooltip = new vscode.MarkdownString(
       buildStatusBarTooltipContent(currentBranch)
     );

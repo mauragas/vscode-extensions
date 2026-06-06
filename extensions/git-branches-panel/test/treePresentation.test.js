@@ -7,6 +7,7 @@ const {
   buildStatusBarText,
   buildStatusBarTooltipContent,
   buildTreeItemPresentation,
+  findDescendantBranches,
   findContainerNode,
 } = require('../out/treePresentation.js');
 
@@ -24,6 +25,17 @@ test('buildBranchTooltipContent describes local, remote, stash, tag, and worktre
       upstreamName: 'origin/feature/demo',
       aheadCount: 1,
       behindCount: 2,
+    },
+  });
+  const publishableTooltip = buildBranchTooltipContent({
+    kind: 'branch',
+    fullName: 'feature/offline',
+    label: 'offline',
+    path: 'feature/offline',
+    info: {
+      name: 'feature/offline',
+      isCurrent: false,
+      lastCommitDate: 'just now',
     },
   });
   const remoteTooltip = buildBranchTooltipContent({
@@ -84,6 +96,8 @@ test('buildBranchTooltipContent describes local, remote, stash, tag, and worktre
   assert.match(localTooltip, /Upstream: origin\/feature\/demo/);
   assert.match(localTooltip, /Sync state: 2↓ 1↑/);
   assert.match(localTooltip, /> Ship it/);
+  assert.match(publishableTooltip, /Publish target: origin\/feature\/offline/);
+  assert.match(publishableTooltip, /_Not published yet_/);
 
   assert.match(remoteTooltip, /_Remote branch_/);
   assert.match(remoteTooltip, /Remote: origin/);
@@ -96,7 +110,7 @@ test('buildBranchTooltipContent describes local, remote, stash, tag, and worktre
   assert.match(worktreeTooltip, /Locked: in use elsewhere/);
 });
 
-test('buildStatusBar helpers format sync state and guidance', () => {
+test('buildStatusBar helpers format sync and publish guidance', () => {
   assert.equal(
     buildStatusBarText({
       name: 'main',
@@ -108,17 +122,27 @@ test('buildStatusBar helpers format sync state and guidance', () => {
   );
   assert.equal(buildStatusBarText(undefined), '');
 
-  const tooltip = buildStatusBarTooltipContent({
+  const syncTooltip = buildStatusBarTooltipContent({
+    name: 'main',
+    isCurrent: true,
+    upstreamName: 'origin/main',
+    behindCount: 2,
+    aheadCount: 1,
+  });
+  const publishTooltip = buildStatusBarTooltipContent({
     name: 'main',
     isCurrent: true,
     upstreamName: 'origin/main',
     upstreamMissing: true,
   });
 
-  assert.match(tooltip, /\*\*Current branch:\*\* main/);
-  assert.match(tooltip, /Upstream: origin\/main/);
-  assert.match(tooltip, /_Tracked upstream no longer exists_/);
-  assert.match(tooltip, /Click to sync the current branch with its remote\./);
+  assert.match(syncTooltip, /\*\*Current branch:\*\* main/);
+  assert.match(syncTooltip, /Upstream: origin\/main/);
+  assert.match(syncTooltip, /Sync state: 2↓ 1↑/);
+  assert.match(syncTooltip, /Click to sync the current branch with its remote\./);
+  assert.match(publishTooltip, /Publish target: origin\/main/);
+  assert.match(publishTooltip, /_Tracked upstream no longer exists_/);
+  assert.match(publishTooltip, /Click to publish the current branch to its remote\./);
 });
 
 test('buildTreeItemPresentation maps sections, folders, and branch types consistently', () => {
@@ -126,36 +150,42 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
     kind: 'section',
     label: 'Local',
     path: 'section:local',
+    scope: 'local',
     children: [],
   });
   const sectionPresentation = buildTreeItemPresentation({
     kind: 'section',
     label: 'Remote',
     path: 'section:remote',
+    scope: 'remote',
     children: [],
   });
   const stashSectionPresentation = buildTreeItemPresentation({
     kind: 'section',
     label: 'Stash',
     path: 'section:stash',
+    scope: 'stash',
     children: [],
   });
   const worktreeSectionPresentation = buildTreeItemPresentation({
     kind: 'section',
     label: 'Worktree',
     path: 'section:worktree',
+    scope: 'worktree',
     children: [],
   });
   const tagsSectionPresentation = buildTreeItemPresentation({
     kind: 'section',
     label: 'Tags',
     path: 'section:tags',
+    scope: 'tag',
     children: [],
   });
   const folderPresentation = buildTreeItemPresentation({
     kind: 'folder',
     label: 'feature',
     path: 'feature',
+    scope: 'local',
     children: [],
   });
   const localBranchPresentation = buildTreeItemPresentation({
@@ -167,7 +197,19 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
       name: 'feature/demo',
       isCurrent: false,
       lastCommitDate: '1 hour ago',
+      upstreamName: 'origin/feature/demo',
       aheadCount: 1,
+    },
+  });
+  const publishableBranchPresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'feature/offline',
+    label: 'offline',
+    path: 'feature/offline',
+    info: {
+      name: 'feature/offline',
+      isCurrent: false,
+      lastCommitDate: 'just now',
     },
   });
   const currentBranchWithSyncPresentation = buildTreeItemPresentation({
@@ -179,6 +221,7 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
       name: 'main',
       isCurrent: true,
       lastCommitDate: '2 hours ago',
+      upstreamName: 'origin/main',
       aheadCount: 1,
       behindCount: 2,
     },
@@ -258,40 +301,51 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
 
   assert.equal(localSectionPresentation.nodeType, 'section');
   assert.equal(localSectionPresentation.collapsibleState, 'expanded');
+  assert.equal(localSectionPresentation.containerKey, 'section:local');
+  assert.equal(localSectionPresentation.contextValue, 'localSection');
 
   assert.equal(sectionPresentation.nodeType, 'section');
   assert.equal(sectionPresentation.icon.id, 'cloud');
   assert.equal(sectionPresentation.collapsibleState, 'collapsed');
-  assert.equal(sectionPresentation.contextValue, 'section');
+  assert.equal(sectionPresentation.contextValue, 'remoteSection');
+  assert.equal(sectionPresentation.containerKey, 'section:remote');
 
   assert.equal(stashSectionPresentation.nodeType, 'section');
   assert.equal(stashSectionPresentation.icon.id, 'archive');
-  assert.equal(stashSectionPresentation.contextValue, 'section');
+  assert.equal(stashSectionPresentation.contextValue, 'stashSection');
 
   assert.equal(worktreeSectionPresentation.nodeType, 'section');
   assert.equal(worktreeSectionPresentation.icon.id, 'folder');
-  assert.equal(worktreeSectionPresentation.contextValue, 'section');
+  assert.equal(worktreeSectionPresentation.contextValue, 'worktreeSection');
 
   assert.equal(tagsSectionPresentation.nodeType, 'section');
   assert.equal(tagsSectionPresentation.contextValue, 'tagsSection');
 
   assert.equal(folderPresentation.nodeType, 'folder');
-  assert.equal(folderPresentation.id, 'folder:feature');
+  assert.equal(folderPresentation.id, 'folder:local:feature');
+  assert.equal(folderPresentation.containerKey, 'folder:local:feature');
+  assert.equal(folderPresentation.contextValue, 'local-folder');
   assert.equal(folderPresentation.icon.id, 'folder');
   assert.equal(folderPresentation.collapsibleState, 'collapsed');
 
   assert.equal(localBranchPresentation.nodeType, 'branch');
   assert.equal(localBranchPresentation.id, 'local:branch:feature/demo');
   assert.equal(localBranchPresentation.label, '1↑ demo');
+  assert.equal(localBranchPresentation.contextValue, 'branch');
   assert.equal(localBranchPresentation.description, '1 hour ago');
   assert.equal(localBranchPresentation.command.command, 'gitBranchesPanel.activateBranchItem');
 
+  assert.equal(publishableBranchPresentation.nodeType, 'branch');
+  assert.equal(publishableBranchPresentation.contextValue, 'publishableBranch');
+
   assert.equal(currentBranchWithSyncPresentation.nodeType, 'currentBranch');
   assert.equal(currentBranchWithSyncPresentation.label, '● 2↓ 1↑ main');
+  assert.equal(currentBranchWithSyncPresentation.contextValue, 'currentBranch');
   assert.equal(currentBranchWithSyncPresentation.description, '2 hours ago');
 
   assert.equal(currentBranchPresentation.nodeType, 'currentBranch');
   assert.equal(currentBranchPresentation.label, '● main');
+  assert.equal(currentBranchPresentation.contextValue, 'publishableCurrentBranch');
   assert.equal(currentBranchPresentation.command, undefined);
   assert.equal(currentBranchPresentation.icon.colorId, 'gitDecoration.addedResourceForeground');
 
@@ -330,11 +384,28 @@ test('findContainerNode resolves section and nested folder paths', () => {
   );
 
   const remoteSection = findContainerNode(sections, 'section:remote');
-  const nestedFolder = findContainerNode(sections, 'origin/feature');
+  const nestedFolder = findContainerNode(sections, 'folder:remote:origin/feature');
 
   assert.ok(remoteSection);
   assert.equal(remoteSection.label, 'Remote');
   assert.ok(nestedFolder);
   assert.equal(nestedFolder.label, 'feature');
-  assert.equal(findContainerNode(sections, 'missing/path'), undefined);
+  assert.equal(findContainerNode(sections, 'folder:local:missing/path'), undefined);
+});
+
+test('findDescendantBranches uses unique folder keys so matching paths in different sections stay separate', () => {
+  const sections = buildBranchSections(
+    [{ name: 'release/1.0', isCurrent: false }],
+    [],
+    [],
+    [],
+    [{ name: 'release/v1.0.0', isCurrent: false, scope: 'tag' }],
+    true
+  );
+
+  const localReleaseBranches = findDescendantBranches(sections, 'folder:local:release');
+  const tagReleaseBranches = findDescendantBranches(sections, 'folder:tag:release');
+
+  assert.deepEqual(localReleaseBranches.map((branch) => branch.fullName), ['release/1.0']);
+  assert.deepEqual(tagReleaseBranches.map((branch) => branch.fullName), ['release/v1.0.0']);
 });

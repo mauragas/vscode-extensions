@@ -24,11 +24,13 @@ export interface BranchSyncState {
 }
 
 export type BranchSortOrder = 'alphabetical' | 'recent';
+export type TreeContainerScope = 'local' | 'remote' | 'tag' | 'stash' | 'worktree';
 
 export interface TreeSection {
   kind: 'section';
   label: string;
   path: string;
+  scope: TreeContainerScope;
   children: TreeChildNode[];
 }
 
@@ -36,6 +38,7 @@ export interface TreeFolder {
   kind: 'folder';
   label: string;
   path: string;
+  scope: TreeContainerScope;
   children: TreeChildNode[];
 }
 

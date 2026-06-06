@@ -1,6 +1,13 @@
 import * as vscode from 'vscode';
 
-import { applyStash, dropStash, popStash, stashSilently } from '../git';
+import {
+  applyStash,
+  dropAllStashes,
+  dropStash,
+  getStashes,
+  popStash,
+  stashSilently,
+} from '../git';
 import { BranchTreeItem } from '../treeProvider';
 import type { CommandContext } from './shared';
 
@@ -20,7 +27,13 @@ export function registerStashCommands(
     }),
     vscode.commands.registerCommand('gitBranchesPanel.dropStash', async (item: BranchTreeItem) => {
       await handleDropStash(item, commandContext);
-    })
+    }),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.dropAllStashes',
+      async (item?: BranchTreeItem) => {
+        await handleDropAllStashes(item, commandContext);
+      }
+    )
   );
 }
 
@@ -106,4 +119,49 @@ async function handleDropStash(
   } catch (error) {
     commandContext.showCommandError(`Failed to drop stash '${item.branchName}'`, error);
   }
+}
+
+async function handleDropAllStashes(
+  item: BranchTreeItem | undefined,
+  commandContext: CommandContext
+): Promise<void> {
+  if (item && (item.nodeType !== 'section' || item.containerScope !== 'stash')) {
+    return;
+  }
+
+  const repoRoot = item?.repoRoot ?? (await commandContext.requireRepoRoot());
+  if (!repoRoot) {
+    return;
+  }
+
+  try {
+    const stashes = await getStashes(repoRoot);
+    if (stashes.length === 0) {
+      vscode.window.showInformationMessage('No stashes were found to drop.');
+      return;
+    }
+
+    const confirmation = await vscode.window.showWarningMessage(
+      `Drop all ${stashes.length} ${pluralizeStash(stashes.length)}?`,
+      { modal: true },
+      'Drop All'
+    );
+    if (confirmation !== 'Drop All') {
+      return;
+    }
+
+    await dropAllStashes(repoRoot);
+    await commandContext.showSuccessAndRefresh(
+      `Dropped all ${stashes.length} ${pluralizeStash(stashes.length)}.`,
+      {
+        fetchRemoteState: false,
+      }
+    );
+  } catch (error) {
+    commandContext.showCommandError('Failed to drop all stashes', error);
+  }
+}
+
+function pluralizeStash(count: number): string {
+  return count === 1 ? 'stash' : 'stashes';
 }

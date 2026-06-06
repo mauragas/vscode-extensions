@@ -1,4 +1,8 @@
-import { formatSyncStatus } from '../branchModel/descriptions';
+import {
+  formatSyncStatus,
+  getPublishTargetName,
+  isPublishableBranch,
+} from '../branchModel/descriptions';
 import type { BranchInfo } from '../branchModel/types';
 
 export function buildStatusBarText(branch: BranchInfo | undefined): string {
@@ -13,6 +17,20 @@ export function buildStatusBarText(branch: BranchInfo | undefined): string {
 
 export function buildStatusBarTooltipContent(branch: BranchInfo): string {
   const tooltipLines = [`**Current branch:** ${branch.name}`];
+
+  if (isPublishableBranch(branch)) {
+    tooltipLines.push('', `Publish target: ${getPublishTargetName(branch)}`);
+
+    if (branch.upstreamMissing) {
+      tooltipLines.push('', '_Tracked upstream no longer exists_');
+    } else {
+      tooltipLines.push('', '_Not published yet_');
+    }
+
+    tooltipLines.push('', 'Click to publish the current branch to its remote.');
+    return tooltipLines.join('\n');
+  }
+
   const syncStatus = formatSyncStatus(branch);
 
   if (branch.upstreamName) {

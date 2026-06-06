@@ -1,16 +1,19 @@
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
-const { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
+const { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join } = require('node:path');
 const test = require('node:test');
 
 const {
   applyStash,
+  cleanRepository,
   checkoutRemoteBranch,
   checkoutTag,
+  createBranchFromRef,
   createTag,
   deleteTag,
+  dropAllStashes,
   dropStash,
   fetchAllRemotes,
   fetchRemoteState,
@@ -23,6 +26,7 @@ const {
   getWorktrees,
   parseRemoteBranchReference,
   popStash,
+  pushBranch,
   pushAllTags,
   removeWorktree,
   stashSilently,
@@ -187,6 +191,47 @@ test('createTag creates a tag for the selected branch ref without changing check
   );
 });
 
+test('createBranchFromRef creates a branch from a local ref without changing checkout', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/source']);
+  commitFile(repoRoot, 'source.txt', 'source\n', 'Add source branch');
+  runGit(repoRoot, ['checkout', 'main']);
+
+  await createBranchFromRef(repoRoot, 'feature/child', 'feature/source');
+
+  assert.equal(runGit(repoRoot, ['rev-parse', '--abbrev-ref', 'HEAD']), 'main');
+  assert.equal(
+    runGit(repoRoot, ['rev-parse', 'feature/child']),
+    runGit(repoRoot, ['rev-parse', 'feature/source'])
+  );
+});
+
+test('createBranchFromRef can create and checkout a local branch from a remote ref with tracking', async (t) => {
+  const { repoRoot } = createRemoteBackedRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/source']);
+  commitFile(repoRoot, 'source.txt', 'source\n', 'Add remote source branch');
+  runGit(repoRoot, ['push', '-u', 'origin', 'feature/source']);
+  runGit(repoRoot, ['checkout', 'main']);
+  runGit(repoRoot, ['branch', '-D', 'feature/source']);
+  runGit(repoRoot, ['fetch', 'origin']);
+
+  await createBranchFromRef(repoRoot, 'feature/from-remote', 'origin/feature/source', {
+    checkout: true,
+  });
+
+  assert.equal(runGit(repoRoot, ['rev-parse', '--abbrev-ref', 'HEAD']), 'feature/from-remote');
+  assert.equal(
+    runGit(repoRoot, ['config', '--get', 'branch.feature/from-remote.remote']),
+    'origin'
+  );
+  assert.equal(
+    runGit(repoRoot, ['config', '--get', 'branch.feature/from-remote.merge']),
+    'refs/heads/feature/source'
+  );
+});
+
 test('getRemotes lists configured git remotes', async (t) => {
   const { repoRoot } = createRemoteBackedRepository(t);
 
@@ -275,6 +320,20 @@ test('dropStash removes the selected stash entry', async (t) => {
   assert.equal((await getStashes(repoRoot)).length, 0);
 });
 
+test('dropAllStashes clears every stash entry', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  writeFileSync(join(repoRoot, 'README.md'), '# Test repo\nthird\n');
+  await stashSilently(repoRoot);
+  writeFileSync(join(repoRoot, 'README.md'), '# Test repo\nfourth\n');
+  await stashSilently(repoRoot);
+
+  await dropAllStashes(repoRoot);
+
+  assert.equal(hasRef(repoRoot, 'refs/stash'), false);
+  assert.equal((await getStashes(repoRoot)).length, 0);
+});
+
 test('getWorktrees lists the current and linked worktrees', async (t) => {
   const { repoRoot, worktreeRoot } = createRepositoryWithLinkedWorktree(t);
 
@@ -319,6 +378,25 @@ test('fetchAllRemotes keeps stale remote refs while fetchRemoteState prunes them
 
   await fetchRemoteState(repoRoot);
   assert.equal(hasRef(repoRoot, 'refs/remotes/origin/feature/stale'), false);
+});
+
+test('cleanRepository removes untracked and ignored files and directories', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  writeFileSync(join(repoRoot, '.gitignore'), 'cache.txt\nbuild/\n');
+  runGit(repoRoot, ['add', '.gitignore']);
+  runGit(repoRoot, ['commit', '-m', 'Add ignore rules']);
+
+  writeFileSync(join(repoRoot, 'scratch.txt'), 'scratch\n');
+  writeFileSync(join(repoRoot, 'cache.txt'), 'cache\n');
+  mkdirSync(join(repoRoot, 'build'), { recursive: true });
+  writeFileSync(join(repoRoot, 'build', 'artifact.txt'), 'artifact\n');
+
+  await cleanRepository(repoRoot);
+
+  assert.equal(existsSync(join(repoRoot, 'scratch.txt')), false);
+  assert.equal(existsSync(join(repoRoot, 'cache.txt')), false);
+  assert.equal(existsSync(join(repoRoot, 'build')), false);
 });
 
 test('getDiffFilesBetweenRefs reports added, modified, and deleted files between refs', async (t) => {
@@ -407,16 +485,16 @@ test('checkoutRemoteBranch creates and reuses a tracking local branch', async (t
   assert.equal(runGit(repoRoot, ['rev-parse', '--abbrev-ref', 'HEAD']), 'feature/demo');
 });
 
-test('syncBranch publishes a non-current branch without changing the active checkout', async (t) => {
+test('pushBranch publishes a non-current branch without changing the active checkout', async (t) => {
   const { repoRoot } = createRemoteBackedRepository(t);
 
   runGit(repoRoot, ['checkout', '-b', 'feature/offline']);
   commitFile(repoRoot, 'offline.txt', 'offline\n', 'Add offline work');
   runGit(repoRoot, ['checkout', 'main']);
 
-  const syncResult = await syncBranch(repoRoot, 'feature/offline');
+  const pushResult = await pushBranch(repoRoot, 'feature/offline');
 
-  assert.deepEqual(syncResult, {
+  assert.deepEqual(pushResult, {
     branchName: 'feature/offline',
     upstreamName: 'origin/feature/offline',
     didPull: false,
@@ -431,7 +509,7 @@ test('syncBranch publishes a non-current branch without changing the active chec
   );
 });
 
-test('syncBranch publishes a non-current branch even when it is already checked out in another worktree', async (t) => {
+test('pushBranch publishes a non-current branch even when it is already checked out in another worktree', async (t) => {
   const { repoRoot } = createRemoteBackedRepository(t);
   const worktreeParent = mkdtempSync(join(tmpdir(), 'git-branches-panel-sync-worktree-'));
   const worktreeRoot = join(worktreeParent, 'feature-worktree');
@@ -445,9 +523,9 @@ test('syncBranch publishes a non-current branch even when it is already checked 
   runGit(repoRoot, ['checkout', 'main']);
   runGit(repoRoot, ['worktree', 'add', worktreeRoot, 'feature/worktree-sync']);
 
-  const syncResult = await syncBranch(repoRoot, 'feature/worktree-sync');
+  const pushResult = await pushBranch(repoRoot, 'feature/worktree-sync');
 
-  assert.deepEqual(syncResult, {
+  assert.deepEqual(pushResult, {
     branchName: 'feature/worktree-sync',
     upstreamName: 'origin/feature/worktree-sync',
     didPull: false,
@@ -459,6 +537,42 @@ test('syncBranch publishes a non-current branch even when it is already checked 
   assert.match(
     runGit(repoRoot, ['ls-remote', '--heads', 'origin', 'feature/worktree-sync']),
     /refs\/heads\/feature\/worktree-sync/
+  );
+});
+
+test('pushBranch pushes a tracked non-current branch without pulling', async (t) => {
+  const { repoRoot } = createRemoteBackedRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/ahead']);
+  commitFile(repoRoot, 'ahead.txt', 'first\n', 'Add tracked branch');
+  runGit(repoRoot, ['push', '-u', 'origin', 'feature/ahead']);
+  commitFile(repoRoot, 'ahead.txt', 'first\nsecond\n', 'Add outgoing commit');
+  runGit(repoRoot, ['checkout', 'main']);
+
+  const pushResult = await pushBranch(repoRoot, 'feature/ahead');
+  const remoteSha = runGit(repoRoot, ['ls-remote', '--heads', 'origin', 'feature/ahead']).split(/\s+/u)[0];
+
+  assert.deepEqual(pushResult, {
+    branchName: 'feature/ahead',
+    upstreamName: 'origin/feature/ahead',
+    didPull: false,
+    didPush: true,
+    publishedUpstream: false,
+  });
+  assert.equal(runGit(repoRoot, ['rev-parse', '--abbrev-ref', 'HEAD']), 'main');
+  assert.equal(remoteSha, runGit(repoRoot, ['rev-parse', 'feature/ahead']));
+});
+
+test('syncBranch rejects branches that are not tracking a remote branch yet', async (t) => {
+  const { repoRoot } = createRemoteBackedRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/offline']);
+  commitFile(repoRoot, 'offline.txt', 'offline\n', 'Add offline work');
+  runGit(repoRoot, ['checkout', 'main']);
+
+  await assert.rejects(
+    syncBranch(repoRoot, 'feature/offline'),
+    /not tracking a remote branch yet\. Publish it first\./i
   );
 });
 

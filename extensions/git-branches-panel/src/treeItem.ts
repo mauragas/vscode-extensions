@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { type BranchInfo, type BranchTreeNode } from './branchModel';
+import { type BranchInfo, type BranchTreeNode, type TreeContainerScope } from './branchModel';
 import {
   buildTreeItemPresentation,
   type NodeType,
@@ -14,7 +14,9 @@ export class BranchTreeItem extends vscode.TreeItem {
   public readonly nodeType: NodeType;
   public readonly branchName?: string;
   public readonly branchInfo?: BranchInfo;
+  public readonly containerKey?: string;
   public readonly containerPath?: string;
+  public readonly containerScope?: TreeContainerScope;
   public readonly repoRoot?: string;
 
   constructor(node: BranchTreeNode, repoRoot?: string) {
@@ -25,7 +27,9 @@ export class BranchTreeItem extends vscode.TreeItem {
     this.nodeType = presentation.nodeType;
     this.branchName = presentation.branchName;
     this.branchInfo = node.kind === 'branch' ? node.info : undefined;
+    this.containerKey = presentation.containerKey;
     this.containerPath = presentation.containerPath;
+    this.containerScope = presentation.containerScope;
     this.repoRoot = repoRoot;
     this.id = presentation.id;
     this.contextValue = presentation.contextValue;

@@ -3,6 +3,7 @@ export type {
   BranchSortOrder,
   BranchSyncState,
   BranchTreeNode,
+  TreeContainerScope,
   TreeBranch,
   TreeChildNode,
   TreeFolder,
@@ -12,6 +13,9 @@ export type {
 export {
   buildBranchDescription,
   formatSyncStatus,
+  getPublishTargetName,
+  isPublishableBranch,
+  isTrackedBranch,
   parseUpstreamTrack,
 } from './branchModel/descriptions';
 
