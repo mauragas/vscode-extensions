@@ -21,6 +21,7 @@ import {
   buildSyncResultMessage,
   looksLikeMergeSafetyError,
   normalizeBranchName,
+  sanitizeNewBranchName,
   validateBranchName,
 } from '../extensionHelpers';
 import { BranchTreeItem } from '../treeProvider';
@@ -315,7 +316,10 @@ async function handleNewBranch(commandContext: CommandContext): Promise<void> {
     prompt: 'Enter a name for the new branch',
     placeHolder: 'feature/my-feature or hotfix/bug-123',
     validateInput: (value) =>
-      validateBranchName(value, undefined, { normalize: normalizeNewBranchNames }),
+      validateBranchName(value, undefined, {
+        allowWhitespace: true,
+        normalize: normalizeNewBranchNames,
+      }),
   });
   if (!name) {
     return;
@@ -360,7 +364,10 @@ async function handleCreateBranchFromSelected(
       validateBranchName(
         value,
         item.nodeType === 'remoteBranch' ? undefined : sourceBranchName,
-        { normalize: normalizeNewBranchNames }
+        {
+          allowWhitespace: true,
+          normalize: normalizeNewBranchNames,
+        }
       ),
   });
   if (!name) {
@@ -568,7 +575,7 @@ function shouldNormalizeNewBranchNames(): boolean {
 }
 
 function resolveNewBranchName(name: string, normalize: boolean): string {
-  return normalize ? normalizeBranchName(name) : name.trim();
+  return normalize ? normalizeBranchName(name) : sanitizeNewBranchName(name);
 }
 
 function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {

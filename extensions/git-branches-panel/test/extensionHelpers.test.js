@@ -8,6 +8,7 @@ const {
   buildSyncResultMessage,
   looksLikeMergeSafetyError,
   normalizeBranchName,
+  sanitizeNewBranchName,
   validateBranchName,
   validateTagName,
 } = require('../out/extensionHelpers.js');
@@ -88,12 +89,27 @@ test('validateBranchName rejects invalid names and allows trimmed valid names', 
   assert.equal(validateBranchName(' feature/demo '), undefined);
 });
 
+test('sanitizeNewBranchName rewrites spaces to dashes while preserving folders and case', () => {
+  assert.equal(sanitizeNewBranchName('Feature/make Fix'), 'Feature/make-Fix');
+  assert.equal(sanitizeNewBranchName('  Release/Hot Fix  '), 'Release/Hot-Fix');
+  assert.equal(sanitizeNewBranchName('Feature/Sub Feature/Next Step'), 'Feature/Sub-Feature/Next-Step');
+  assert.equal(sanitizeNewBranchName('Feature/make--Fix'), 'Feature/make--Fix');
+});
+
 test('normalizeBranchName converts mixed case names to lowercase kebab-case and preserves folders', () => {
   assert.equal(normalizeBranchName('Feature/make Fix'), 'feature/make-fix');
   assert.equal(normalizeBranchName('Feature/make-Fix'), 'feature/make-fix');
   assert.equal(normalizeBranchName('  Release/Hot Fix  '), 'release/hot-fix');
   assert.equal(normalizeBranchName('Feature/Sub Feature/Next Step'), 'feature/sub-feature/next-step');
   assert.equal(normalizeBranchName('Feature/make--Fix'), 'feature/make-fix');
+});
+
+test('validateBranchName allows spaces during branch creation when whitespace sanitizing is enabled', () => {
+  assert.equal(validateBranchName('Feature/make Fix', undefined, { allowWhitespace: true }), undefined);
+  assert.equal(
+    validateBranchName(' Feature/make Fix ', 'Feature/make-Fix', { allowWhitespace: true }),
+    'Please enter a different branch name.'
+  );
 });
 
 test('validateBranchName respects normalization when enabled', () => {
