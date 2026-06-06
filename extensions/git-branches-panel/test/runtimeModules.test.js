@@ -56,7 +56,7 @@ function createStatusBarItem() {
   };
 }
 
-function createVscodeMock(statusBarItem, commandCalls) {
+function createVscodeMock(statusBarItem, commandCalls, showStatusBarBranchAction = true) {
   return {
     EventEmitter: createEventEmitter(),
     MarkdownString: class MarkdownString {
@@ -71,6 +71,16 @@ function createVscodeMock(statusBarItem, commandCalls) {
       async executeCommand(command, ...args) {
         commandCalls.push({ command, args });
         return undefined;
+      },
+    },
+    workspace: {
+      getConfiguration: (section) => {
+        assert.equal(section, 'gitBranchesPanel');
+
+        return {
+          get: (key, defaultValue) =>
+            key === 'showStatusBarBranchAction' ? showStatusBarBranchAction : defaultValue,
+        };
       },
     },
     window: {
@@ -503,4 +513,65 @@ test('BranchTreeProvider loads nested container children and hides the status ba
     command: 'setContext',
     args: ['gitBranchesPanel.currentBranchNeedsPublish', false],
   });
+});
+
+test('BranchTreeProvider hides the status bar branch action when the setting is disabled', async () => {
+  const statusBarItem = createStatusBarItem();
+  const commandCalls = [];
+  const state = {
+    currentBranch: {
+      name: 'main',
+      isCurrent: true,
+      upstreamName: 'origin/main',
+    },
+    treeData: [
+      {
+        kind: 'section',
+        label: 'Local',
+        path: 'section:local',
+        scope: 'local',
+        children: [],
+      },
+    ],
+    repoRoot: '/repo',
+    loadedSections: new Set(['local']),
+  };
+  const dataLoader = createDataLoader(state);
+  const { BranchTreeProvider } = loadFresh('../out/treeProvider.js', {
+    vscode: createVscodeMock(statusBarItem, commandCalls, false),
+    './git': {
+      fetchRemoteState() {},
+      getBranches() {},
+      getRemoteBranches() {},
+      getRepoRoot() {},
+      getStashes() {},
+      getWorktrees() {},
+      getTags() {},
+    },
+    './treeDataLoader': {
+      BranchDataLoader: class BranchDataLoader {},
+      getBranchSectionKey: (sectionPath) =>
+        sectionPath === 'section:local' ? 'local' : undefined,
+    },
+    './treeItem': createTreeItemMock(),
+    './treePresentation': {
+      buildStatusBarText: (branch) => (branch ? `branch:${branch.name}` : ''),
+      buildStatusBarTooltipContent: (branch) => `tooltip:${branch.name}`,
+      findContainerNode,
+      findDescendantBranches,
+    },
+  });
+
+  const provider = new BranchTreeProvider({ subscriptions: [] }, dataLoader);
+
+  await provider.refresh({ fetchRemoteState: false });
+
+  assert.equal(statusBarItem.showCalls, 0);
+  assert.ok(statusBarItem.hideCalls >= 1);
+  assert.deepEqual(commandCalls, [
+    {
+      command: 'setContext',
+      args: ['gitBranchesPanel.currentBranchNeedsPublish', false],
+    },
+  ]);
 });

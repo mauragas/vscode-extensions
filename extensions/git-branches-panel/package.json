@@ -272,47 +272,47 @@
       "view/title": [
         {
           "command": "gitBranchesPanel.newBranch",
-          "when": "view == gitBranchesPanel || view == gitBranchesSCM",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showNewBranch",
           "group": "navigation@1"
         },
         {
           "command": "gitBranchesPanel.stashSilently",
-          "when": "view == gitBranchesPanel || view == gitBranchesSCM",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showStashSilently",
           "group": "navigation@2"
         },
         {
           "command": "gitBranchesPanel.syncCurrentBranch",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.currentBranchNeedsPublish",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showCurrentBranchAction && !gitBranchesPanel.currentBranchNeedsPublish",
           "group": "navigation@3"
         },
         {
           "command": "gitBranchesPanel.publishCurrentBranch",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.currentBranchNeedsPublish",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showCurrentBranchAction && gitBranchesPanel.currentBranchNeedsPublish",
           "group": "navigation@3"
         },
         {
           "command": "gitBranchesPanel.fetchAll",
-          "when": "view == gitBranchesPanel || view == gitBranchesSCM",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showFetchAll",
           "group": "navigation@4"
         },
         {
           "command": "gitBranchesPanel.fetchAllPrune",
-          "when": "view == gitBranchesPanel || view == gitBranchesSCM",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showFetchAllPrune",
           "group": "navigation@5"
         },
         {
           "command": "gitBranchesPanel.refresh",
-          "when": "view == gitBranchesPanel || view == gitBranchesSCM",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showRefresh",
           "group": "navigation@6"
         },
         {
           "command": "gitBranchesPanel.showAdvancedActions",
-          "when": "view == gitBranchesPanel || view == gitBranchesSCM",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showAdvancedActions",
           "group": "navigation@7"
         },
         {
           "command": "gitBranchesPanel.openSettings",
-          "when": "view == gitBranchesPanel || view == gitBranchesSCM",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showSettings",
           "group": "navigation@8"
         }
       ],
@@ -520,6 +520,51 @@
           "type": "boolean",
           "default": true,
           "description": "Show the current branch summary above the branches tree views."
+        },
+        "gitBranchesPanel.showStatusBarBranchAction": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the status bar branch action that syncs or publishes the current branch."
+        },
+        "gitBranchesPanel.toolbar.showNewBranch": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the New Branch quick action in the view toolbar."
+        },
+        "gitBranchesPanel.toolbar.showStashSilently": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the Stash Silently quick action in the view toolbar."
+        },
+        "gitBranchesPanel.toolbar.showCurrentBranchAction": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the Sync Current Branch or Publish Current Branch quick action in the view toolbar."
+        },
+        "gitBranchesPanel.toolbar.showFetchAll": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the Fetch All quick action in the view toolbar."
+        },
+        "gitBranchesPanel.toolbar.showFetchAllPrune": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the Fetch All (Prune) quick action in the view toolbar."
+        },
+        "gitBranchesPanel.toolbar.showRefresh": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the Refresh quick action in the view toolbar."
+        },
+        "gitBranchesPanel.toolbar.showAdvancedActions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the More Actions quick action in the view toolbar."
+        },
+        "gitBranchesPanel.toolbar.showSettings": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the Open Extension Settings quick action in the view toolbar."
         }
       }
     }

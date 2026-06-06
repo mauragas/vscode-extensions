@@ -113,8 +113,12 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
       currentBranchNeedsPublish
     );
 
-    const statusBarText = buildStatusBarText(currentBranch);
-    if (!currentBranch || !statusBarText) {
+    const showStatusBarBranchAction = vscode.workspace
+      .getConfiguration('gitBranchesPanel')
+      .get<boolean>('showStatusBarBranchAction', true);
+
+    const statusBarText = showStatusBarBranchAction ? buildStatusBarText(currentBranch) : '';
+    if (!showStatusBarBranchAction || !currentBranch || !statusBarText) {
       this.statusBarItem.hide();
       return;
     }
