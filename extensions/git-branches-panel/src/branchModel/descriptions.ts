@@ -46,6 +46,24 @@ export function formatSyncStatus(
   return statusParts.join(' ');
 }
 
+export function isTrackedBranch(
+  branch: Pick<BranchInfo, 'scope' | 'upstreamName' | 'upstreamMissing'>
+): boolean {
+  return (branch.scope ?? 'local') === 'local' && Boolean(branch.upstreamName) && !branch.upstreamMissing;
+}
+
+export function isPublishableBranch(
+  branch: Pick<BranchInfo, 'scope' | 'upstreamName' | 'upstreamMissing'>
+): boolean {
+  return (branch.scope ?? 'local') === 'local' && !isTrackedBranch(branch);
+}
+
+export function getPublishTargetName(
+  branch: Pick<BranchInfo, 'name' | 'upstreamName'>
+): string {
+  return branch.upstreamName ?? `origin/${branch.name}`;
+}
+
 export function buildBranchDescription(
   branch: Pick<
     BranchInfo,

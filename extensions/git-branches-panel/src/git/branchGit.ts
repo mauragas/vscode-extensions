@@ -2,6 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { isTrackedBranch } from '../branchModel';
 import { listRefs } from './refListing';
 import { fetchRemoteState } from './remoteGit';
 import {
@@ -39,6 +40,16 @@ interface BranchSyncTarget {
   remoteBranchName: string;
   upstreamName: string;
   hasConfiguredUpstream: boolean;
+}
+
+interface BranchRemoteState {
+  branch: Awaited<ReturnType<typeof getBranches>>[number];
+  syncTarget: BranchSyncTarget;
+  remoteBranchExists: boolean;
+  syncCounts: {
+    aheadCount: number;
+    behindCount: number;
+  };
 }
 
 export async function getBranches(repoRoot: string) {
@@ -92,36 +103,23 @@ export async function syncBranch(
     await fetchRemoteState(repoRoot);
   }
 
-  const branches = await getBranches(repoRoot);
-  const branch = branches.find((candidate) => candidate.name === branchName);
-  if (!branch) {
-    throw new Error(`Branch '${branchName}' was not found.`);
-  }
-
-  const syncTarget = await resolveBranchSyncTarget(repoRoot, branchName);
-  await ensureRemoteExists(repoRoot, syncTarget.remoteName);
-
-  const remoteBranchExists = await doesRemoteBranchExist(
+  const { branch, syncTarget, remoteBranchExists, syncCounts } = await resolveBranchRemoteState(
     repoRoot,
-    syncTarget.remoteName,
-    syncTarget.remoteBranchName
+    branchName
   );
 
-  const syncCounts = remoteBranchExists
-    ? await getAheadBehindCounts(
-        repoRoot,
-        branch.name,
-        `${syncTarget.remoteName}/${syncTarget.remoteBranchName}`
-      )
-    : {
-        aheadCount: branch.aheadCount ?? 0,
-        behindCount: branch.behindCount ?? 0,
-      };
+  if (!branch.upstreamName) {
+    throw new Error(`Branch '${branch.name}' is not tracking a remote branch yet. Publish it first.`);
+  }
 
-  const shouldSetUpstream =
-    !syncTarget.hasConfiguredUpstream || branch.upstreamMissing || !remoteBranchExists;
-  const shouldPull = remoteBranchExists && syncCounts.behindCount > 0;
-  const shouldPush = syncCounts.aheadCount > 0 || shouldSetUpstream;
+  if (!isTrackedBranch(branch) || !remoteBranchExists) {
+    throw new Error(
+      `Tracked upstream '${syncTarget.upstreamName}' for '${branch.name}' no longer exists. Publish the branch again to recreate it.`
+    );
+  }
+
+  const shouldPull = syncCounts.behindCount > 0;
+  const shouldPush = syncCounts.aheadCount > 0;
 
   if (branch.isCurrent) {
     if (shouldPull) {
@@ -129,11 +127,57 @@ export async function syncBranch(
     }
 
     if (shouldPush) {
-      await pushBranch(repoRoot, branch.name, syncTarget, shouldSetUpstream);
+      await pushBranchToRemote(repoRoot, branch.name, syncTarget, false);
     }
   } else {
     await syncNonCurrentBranch(repoRoot, branch.name, syncTarget, {
       shouldPull,
+      shouldPush,
+      hasOutgoingCommits: syncCounts.aheadCount > 0,
+      shouldSetUpstream: false,
+    });
+  }
+
+  return {
+    branchName: branch.name,
+    upstreamName: syncTarget.upstreamName,
+    didPull: shouldPull,
+    didPush: shouldPush,
+    publishedUpstream: false,
+  };
+}
+
+export async function pushBranch(
+  repoRoot: string,
+  branchName: string,
+  options: SyncBranchOptions = {}
+): Promise<SyncBranchResult> {
+  if (options.refreshRemoteState ?? true) {
+    await fetchRemoteState(repoRoot);
+  }
+
+  const { branch, syncTarget, remoteBranchExists, syncCounts } = await resolveBranchRemoteState(
+    repoRoot,
+    branchName
+  );
+
+  if (remoteBranchExists && syncCounts.behindCount > 0) {
+    throw new Error(
+      `Branch '${branch.name}' is behind '${syncTarget.upstreamName}'. Sync it before pushing.`
+    );
+  }
+
+  const shouldSetUpstream =
+    !syncTarget.hasConfiguredUpstream || branch.upstreamMissing || !remoteBranchExists;
+  const shouldPush = syncCounts.aheadCount > 0 || shouldSetUpstream;
+
+  if (branch.isCurrent) {
+    if (shouldPush) {
+      await pushBranchToRemote(repoRoot, branch.name, syncTarget, shouldSetUpstream);
+    }
+  } else {
+    await syncNonCurrentBranch(repoRoot, branch.name, syncTarget, {
+      shouldPull: false,
       shouldPush,
       hasOutgoingCommits: syncCounts.aheadCount > 0,
       shouldSetUpstream,
@@ -143,7 +187,7 @@ export async function syncBranch(
   return {
     branchName: branch.name,
     upstreamName: syncTarget.upstreamName,
-    didPull: shouldPull,
+    didPull: false,
     didPush: shouldPush,
     publishedUpstream: shouldSetUpstream,
   };
@@ -195,7 +239,7 @@ async function syncNonCurrentBranch(
     }
 
     if (syncPlan.shouldPush) {
-      await pushBranch(worktreePath, branchName, syncTarget, syncPlan.shouldSetUpstream);
+      await pushBranchToRemote(worktreePath, branchName, syncTarget, syncPlan.shouldSetUpstream);
     }
   } finally {
     try {
@@ -245,7 +289,7 @@ async function pullBranch(
   await runGit(workingDirectory, args);
 }
 
-async function pushBranch(
+async function pushBranchToRemote(
   workingDirectory: string,
   branchName: string,
   syncTarget: BranchSyncTarget,
@@ -263,6 +307,44 @@ async function pushBranch(
   );
 
   await runGit(workingDirectory, args);
+}
+
+async function resolveBranchRemoteState(
+  repoRoot: string,
+  branchName: string
+): Promise<BranchRemoteState> {
+  const branches = await getBranches(repoRoot);
+  const branch = branches.find((candidate) => candidate.name === branchName);
+  if (!branch) {
+    throw new Error(`Branch '${branchName}' was not found.`);
+  }
+
+  const syncTarget = await resolveBranchSyncTarget(repoRoot, branchName);
+  await ensureRemoteExists(repoRoot, syncTarget.remoteName);
+
+  const remoteBranchExists = await doesRemoteBranchExist(
+    repoRoot,
+    syncTarget.remoteName,
+    syncTarget.remoteBranchName
+  );
+
+  const syncCounts = remoteBranchExists
+    ? await getAheadBehindCounts(
+        repoRoot,
+        branch.name,
+        `${syncTarget.remoteName}/${syncTarget.remoteBranchName}`
+      )
+    : {
+        aheadCount: branch.aheadCount ?? 0,
+        behindCount: branch.behindCount ?? 0,
+      };
+
+  return {
+    branch,
+    syncTarget,
+    remoteBranchExists,
+    syncCounts,
+  };
 }
 
 async function resolveBranchSyncTarget(

@@ -150,6 +150,7 @@ test('showAdvancedActions routes the quick-pick selection to the prune command',
       async getBranches() {
         return [];
       },
+      async pushBranch() {},
       async syncBranch() {
         throw new Error('syncBranch should not be called in this test');
       },
@@ -182,6 +183,7 @@ test('showAdvancedActions routes the quick-pick selection to the clean repositor
       async getBranches() {
         return [];
       },
+      async pushBranch() {},
       async syncBranch() {
         throw new Error('syncBranch should not be called in this test');
       },
@@ -221,12 +223,13 @@ test('pruneMissingUpstreamBranches filters candidates, skips merge-protected bra
       },
       async getBranches() {
         return [
-          { name: 'main', isCurrent: true, upstreamMissing: true },
-          { name: 'feature/stale', isCurrent: false, upstreamMissing: true },
-          { name: 'feature/keep', isCurrent: false, upstreamMissing: false },
-          { name: 'feature/merge-protected', isCurrent: false, upstreamMissing: true },
+          { name: 'main', isCurrent: true, upstreamName: 'origin/main', upstreamMissing: true },
+          { name: 'feature/stale', isCurrent: false, upstreamName: 'origin/feature/stale', upstreamMissing: true },
+          { name: 'feature/keep', isCurrent: false, upstreamName: 'origin/feature/keep', upstreamMissing: false },
+          { name: 'feature/merge-protected', isCurrent: false, upstreamName: 'origin/feature/merge-protected', upstreamMissing: true },
         ];
       },
+      async pushBranch() {},
       async syncBranch() {
         throw new Error('syncBranch should not be called in this test');
       },
@@ -247,7 +250,7 @@ test('pruneMissingUpstreamBranches filters candidates, skips merge-protected bra
   assert.match(vscodeState.warningMessages.at(-1).message, /feature\/merge-protected/);
 });
 
-test('syncFolderBranches fetches once, syncs each descendant branch, and refreshes remote state after pushes', async () => {
+test('syncFolderBranches only syncs tracked descendants and reports branches that need publishing', async () => {
   const vscodeState = createVscodeState();
   const fetchRemoteStateCalls = [];
   const syncBranchCalls = [];
@@ -262,17 +265,37 @@ test('syncFolderBranches fetches once, syncs each descendant branch, and refresh
         fetchRemoteStateCalls.push(repoRoot);
       },
       async getBranches() {
-        return [];
+        return [
+          {
+            name: 'feature/refresh',
+            isCurrent: false,
+            upstreamName: 'origin/feature/refresh',
+            upstreamMissing: false,
+          },
+          {
+            name: 'feature/publish',
+            isCurrent: false,
+          },
+          {
+            name: 'feature/tracked-push',
+            isCurrent: false,
+            upstreamName: 'origin/feature/tracked-push',
+            upstreamMissing: false,
+          },
+        ];
+      },
+      async pushBranch() {
+        throw new Error('pushBranch should not be called in this test');
       },
       async syncBranch(repoRoot, branchName, options) {
         syncBranchCalls.push({ repoRoot, branchName, options });
-        return branchName === 'feature/publish'
+        return branchName === 'feature/tracked-push'
           ? {
               branchName,
               upstreamName: `origin/${branchName}`,
               didPull: false,
               didPush: true,
-              publishedUpstream: true,
+              publishedUpstream: false,
             }
           : {
               branchName,
@@ -306,6 +329,16 @@ test('syncFolderBranches fetches once, syncs each descendant branch, and refresh
         isCurrent: false,
       },
     },
+    {
+      kind: 'branch',
+      fullName: 'feature/tracked-push',
+      label: 'tracked-push',
+      path: 'feature/tracked-push',
+      info: {
+        name: 'feature/tracked-push',
+        isCurrent: false,
+      },
+    },
   ]);
 
   await vscodeState.registeredCommands['gitBranchesPanel.syncFolderBranches']({
@@ -326,15 +359,16 @@ test('syncFolderBranches fetches once, syncs each descendant branch, and refresh
     },
     {
       repoRoot: '/repo',
-      branchName: 'feature/publish',
+      branchName: 'feature/tracked-push',
       options: { refreshRemoteState: false },
     },
   ]);
   assert.deepEqual(commandContext.state.refreshCalls, [
     { fetchRemoteState: true, forceFetchRemoteState: true },
   ]);
-  assert.match(vscodeState.infoMessages.at(-1), /Processed 2 local branches under 'feature'/);
-  assert.match(vscodeState.infoMessages.at(-1), /published upstream/);
+  assert.match(vscodeState.warningMessages.at(-1).message, /Processed 2 tracked local branches under 'feature'/);
+  assert.match(vscodeState.warningMessages.at(-1).message, /need publishing/);
+  assert.match(vscodeState.warningMessages.at(-1).message, /feature\/publish/);
 });
 
 test('syncFolderBranches also accepts the local section item to sync all loaded local branches', async () => {
@@ -349,7 +383,23 @@ test('syncFolderBranches also accepts the local section item to sync all loaded 
       async deleteTag() {},
       async fetchRemoteState() {},
       async getBranches() {
-        return [];
+        return [
+          {
+            name: 'feature/one',
+            isCurrent: false,
+            upstreamName: 'origin/feature/one',
+            upstreamMissing: false,
+          },
+          {
+            name: 'feature/two',
+            isCurrent: false,
+            upstreamName: 'origin/feature/two',
+            upstreamMissing: false,
+          },
+        ];
+      },
+      async pushBranch() {
+        throw new Error('pushBranch should not be called in this test');
       },
       async syncBranch(repoRoot, branchName, options) {
         syncBranchCalls.push({ repoRoot, branchName, options });
@@ -411,6 +461,102 @@ test('syncFolderBranches also accepts the local section item to sync all loaded 
   assert.match(vscodeState.infoMessages.at(-1), /Local/);
 });
 
+test('pushFolderBranches pushes tracked branches and publishes unpublished descendants', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Push');
+  const fetchRemoteStateCalls = [];
+  const pushBranchCalls = [];
+
+  const { commandContext } = createBulkActionsModule({
+    vscodeState,
+    gitMock: {
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async deleteTag() {},
+      async fetchRemoteState(repoRoot) {
+        fetchRemoteStateCalls.push(repoRoot);
+      },
+      async getBranches() {
+        return [];
+      },
+      async pushBranch(repoRoot, branchName, options) {
+        pushBranchCalls.push({ repoRoot, branchName, options });
+        return branchName === 'feature/publish'
+          ? {
+              branchName,
+              upstreamName: `origin/${branchName}`,
+              didPull: false,
+              didPush: true,
+              publishedUpstream: true,
+            }
+          : {
+              branchName,
+              upstreamName: `origin/${branchName}`,
+              didPull: false,
+              didPush: true,
+              publishedUpstream: false,
+            };
+      },
+      async syncBranch() {
+        throw new Error('syncBranch should not be called in this test');
+      },
+    },
+  });
+
+  commandContext.state.descendantBranches.set('folder:local:feature', [
+    {
+      kind: 'branch',
+      fullName: 'feature/refresh',
+      label: 'refresh',
+      path: 'feature/refresh',
+      info: {
+        name: 'feature/refresh',
+        isCurrent: false,
+      },
+    },
+    {
+      kind: 'branch',
+      fullName: 'feature/publish',
+      label: 'publish',
+      path: 'feature/publish',
+      info: {
+        name: 'feature/publish',
+        isCurrent: false,
+      },
+    },
+  ]);
+
+  await vscodeState.registeredCommands['gitBranchesPanel.pushFolderBranches']({
+    nodeType: 'folder',
+    containerScope: 'local',
+    containerKey: 'folder:local:feature',
+    containerPath: 'feature',
+    repoRoot: '/repo',
+    label: 'feature',
+  });
+
+  assert.equal(vscodeState.warningMessages[0].options.modal, true);
+  assert.deepEqual(fetchRemoteStateCalls, ['/repo']);
+  assert.deepEqual(pushBranchCalls, [
+    {
+      repoRoot: '/repo',
+      branchName: 'feature/refresh',
+      options: { refreshRemoteState: false },
+    },
+    {
+      repoRoot: '/repo',
+      branchName: 'feature/publish',
+      options: { refreshRemoteState: false },
+    },
+  ]);
+  assert.deepEqual(commandContext.state.refreshCalls, [
+    { fetchRemoteState: true, forceFetchRemoteState: true },
+  ]);
+  assert.match(vscodeState.infoMessages.at(-1), /Processed 2 local branches under 'feature'/);
+  assert.match(vscodeState.infoMessages.at(-1), /pushed/);
+  assert.match(vscodeState.infoMessages.at(-1), /published/);
+});
+
 test('deleteFolderBranches confirms once, skips the current branch, and refreshes after deletions', async () => {
   const vscodeState = createVscodeState();
   vscodeState.warningResponses.push('Delete');
@@ -428,6 +574,9 @@ test('deleteFolderBranches confirms once, skips the current branch, and refreshe
       async fetchRemoteState() {},
       async getBranches() {
         return [];
+      },
+      async pushBranch() {
+        throw new Error('pushBranch should not be called in this test');
       },
       async syncBranch() {
         throw new Error('syncBranch should not be called in this test');
@@ -490,6 +639,9 @@ test('deleteFolderBranches reports current-only folders without claiming they ar
       async fetchRemoteState() {},
       async getBranches() {
         return [];
+      },
+      async pushBranch() {
+        throw new Error('pushBranch should not be called in this test');
       },
       async syncBranch() {
         throw new Error('syncBranch should not be called in this test');

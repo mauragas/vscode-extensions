@@ -26,6 +26,7 @@ const {
   getWorktrees,
   parseRemoteBranchReference,
   popStash,
+  pushBranch,
   pushAllTags,
   removeWorktree,
   stashSilently,
@@ -484,16 +485,16 @@ test('checkoutRemoteBranch creates and reuses a tracking local branch', async (t
   assert.equal(runGit(repoRoot, ['rev-parse', '--abbrev-ref', 'HEAD']), 'feature/demo');
 });
 
-test('syncBranch publishes a non-current branch without changing the active checkout', async (t) => {
+test('pushBranch publishes a non-current branch without changing the active checkout', async (t) => {
   const { repoRoot } = createRemoteBackedRepository(t);
 
   runGit(repoRoot, ['checkout', '-b', 'feature/offline']);
   commitFile(repoRoot, 'offline.txt', 'offline\n', 'Add offline work');
   runGit(repoRoot, ['checkout', 'main']);
 
-  const syncResult = await syncBranch(repoRoot, 'feature/offline');
+  const pushResult = await pushBranch(repoRoot, 'feature/offline');
 
-  assert.deepEqual(syncResult, {
+  assert.deepEqual(pushResult, {
     branchName: 'feature/offline',
     upstreamName: 'origin/feature/offline',
     didPull: false,
@@ -508,7 +509,7 @@ test('syncBranch publishes a non-current branch without changing the active chec
   );
 });
 
-test('syncBranch publishes a non-current branch even when it is already checked out in another worktree', async (t) => {
+test('pushBranch publishes a non-current branch even when it is already checked out in another worktree', async (t) => {
   const { repoRoot } = createRemoteBackedRepository(t);
   const worktreeParent = mkdtempSync(join(tmpdir(), 'git-branches-panel-sync-worktree-'));
   const worktreeRoot = join(worktreeParent, 'feature-worktree');
@@ -522,9 +523,9 @@ test('syncBranch publishes a non-current branch even when it is already checked 
   runGit(repoRoot, ['checkout', 'main']);
   runGit(repoRoot, ['worktree', 'add', worktreeRoot, 'feature/worktree-sync']);
 
-  const syncResult = await syncBranch(repoRoot, 'feature/worktree-sync');
+  const pushResult = await pushBranch(repoRoot, 'feature/worktree-sync');
 
-  assert.deepEqual(syncResult, {
+  assert.deepEqual(pushResult, {
     branchName: 'feature/worktree-sync',
     upstreamName: 'origin/feature/worktree-sync',
     didPull: false,
@@ -536,6 +537,42 @@ test('syncBranch publishes a non-current branch even when it is already checked 
   assert.match(
     runGit(repoRoot, ['ls-remote', '--heads', 'origin', 'feature/worktree-sync']),
     /refs\/heads\/feature\/worktree-sync/
+  );
+});
+
+test('pushBranch pushes a tracked non-current branch without pulling', async (t) => {
+  const { repoRoot } = createRemoteBackedRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/ahead']);
+  commitFile(repoRoot, 'ahead.txt', 'first\n', 'Add tracked branch');
+  runGit(repoRoot, ['push', '-u', 'origin', 'feature/ahead']);
+  commitFile(repoRoot, 'ahead.txt', 'first\nsecond\n', 'Add outgoing commit');
+  runGit(repoRoot, ['checkout', 'main']);
+
+  const pushResult = await pushBranch(repoRoot, 'feature/ahead');
+  const remoteSha = runGit(repoRoot, ['ls-remote', '--heads', 'origin', 'feature/ahead']).split(/\s+/u)[0];
+
+  assert.deepEqual(pushResult, {
+    branchName: 'feature/ahead',
+    upstreamName: 'origin/feature/ahead',
+    didPull: false,
+    didPush: true,
+    publishedUpstream: false,
+  });
+  assert.equal(runGit(repoRoot, ['rev-parse', '--abbrev-ref', 'HEAD']), 'main');
+  assert.equal(remoteSha, runGit(repoRoot, ['rev-parse', 'feature/ahead']));
+});
+
+test('syncBranch rejects branches that are not tracking a remote branch yet', async (t) => {
+  const { repoRoot } = createRemoteBackedRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/offline']);
+  commitFile(repoRoot, 'offline.txt', 'offline\n', 'Add offline work');
+  runGit(repoRoot, ['checkout', 'main']);
+
+  await assert.rejects(
+    syncBranch(repoRoot, 'feature/offline'),
+    /not tracking a remote branch yet\. Publish it first\./i
   );
 });
 

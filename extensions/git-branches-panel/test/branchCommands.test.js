@@ -85,6 +85,7 @@ function createVscodeMock(state) {
 
 function createCommandContext() {
   const state = {
+    currentBranch: undefined,
     successRefreshes: [],
     commandErrors: [],
   };
@@ -104,7 +105,7 @@ function createCommandContext() {
         return '/repo';
       },
       async requireCurrentBranch() {
-        return undefined;
+        return state.currentBranch;
       },
       async showSuccessAndRefresh(message, options = {}) {
         state.successRefreshes.push({ message, options });
@@ -184,6 +185,9 @@ test('newBranchFromSelected creates a branch from a local branch without checkou
         return [];
       },
       async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return { branchName: 'main', upstreamName: 'origin/main', didPull: false, didPush: false, publishedUpstream: false };
+      },
       async renameBranch() {},
       async syncBranch() {
         return { branchName: 'main', upstreamName: 'origin/main', didPull: false, didPush: false, publishedUpstream: false };
@@ -238,6 +242,9 @@ test('newBranchFromSelectedAndCheckout creates and checks out a branch from a re
         return [];
       },
       async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return { branchName: 'main', upstreamName: 'origin/main', didPull: false, didPush: false, publishedUpstream: false };
+      },
       async renameBranch() {},
       async syncBranch() {
         return { branchName: 'main', upstreamName: 'origin/main', didPull: false, didPush: false, publishedUpstream: false };
@@ -268,6 +275,58 @@ test('newBranchFromSelectedAndCheckout creates and checks out a branch from a re
     {
       message: "Created and switched to 'feature/from-remote' from 'origin/feature/source'.",
       options: { fetchRemoteState: false },
+    },
+  ]);
+});
+
+test('publishBranch pushes the selected branch and refreshes remote state', async () => {
+  const vscodeState = createVscodeState();
+  const validateSpy = [];
+  const pushBranchCalls = [];
+
+  const { commandContext } = createBranchCommandsModule({
+    vscodeState,
+    validateSpy,
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch(repoRoot, branchName) {
+        pushBranchCalls.push({ repoRoot, branchName });
+        return {
+          branchName,
+          upstreamName: `origin/${branchName}`,
+          didPull: false,
+          didPush: true,
+          publishedUpstream: true,
+        };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return { branchName: 'main', upstreamName: 'origin/main', didPull: false, didPush: false, publishedUpstream: false };
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.publishBranch']({
+    nodeType: 'branch',
+    branchName: 'feature/offline',
+    repoRoot: '/repo',
+  });
+
+  assert.deepEqual(validateSpy, []);
+  assert.deepEqual(pushBranchCalls, [{ repoRoot: '/repo', branchName: 'feature/offline' }]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: 'sync',
+      options: { fetchRemoteState: true, forceFetchRemoteState: true },
     },
   ]);
 });

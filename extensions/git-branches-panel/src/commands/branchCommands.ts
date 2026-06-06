@@ -11,6 +11,7 @@ import {
   deleteRemoteBranch,
   getDiffFilesBetweenRefs,
   mergeBranchIntoCurrent,
+  pushBranch as pushBranchToRemote,
   renameBranch,
   syncBranch,
 } from '../git';
@@ -41,8 +42,14 @@ export function registerBranchDomainCommands(
     vscode.commands.registerCommand('gitBranchesPanel.syncCurrentBranch', async () => {
       await handleSyncCurrentBranch(commandContext);
     }),
+    vscode.commands.registerCommand('gitBranchesPanel.publishCurrentBranch', async () => {
+      await handlePublishCurrentBranch(commandContext);
+    }),
     vscode.commands.registerCommand('gitBranchesPanel.syncBranch', async (item: BranchTreeItem) => {
       await handleSyncBranch(item, commandContext);
+    }),
+    vscode.commands.registerCommand('gitBranchesPanel.publishBranch', async (item: BranchTreeItem) => {
+      await handlePublishBranch(item, commandContext);
     }),
     vscode.commands.registerCommand('gitBranchesPanel.deleteBranch', async (item: BranchTreeItem) => {
       await handleDeleteBranch(item, commandContext);
@@ -156,6 +163,20 @@ async function handleSyncCurrentBranch(commandContext: CommandContext): Promise<
   await syncBranchByName(repoRoot, currentBranch.name, commandContext);
 }
 
+async function handlePublishCurrentBranch(commandContext: CommandContext): Promise<void> {
+  const repoRoot = await commandContext.requireRepoRoot();
+  if (!repoRoot) {
+    return;
+  }
+
+  const currentBranch = await commandContext.requireCurrentBranch(NO_CURRENT_BRANCH_MESSAGE);
+  if (!currentBranch) {
+    return;
+  }
+
+  await pushBranchByName(repoRoot, currentBranch.name, commandContext);
+}
+
 async function handleSyncBranch(
   item: BranchTreeItem,
   commandContext: CommandContext
@@ -165,6 +186,17 @@ async function handleSyncBranch(
   }
 
   await syncBranchByName(item.repoRoot, item.branchName, commandContext);
+}
+
+async function handlePublishBranch(
+  item: BranchTreeItem,
+  commandContext: CommandContext
+): Promise<void> {
+  if (!item.branchName || !item.repoRoot) {
+    return;
+  }
+
+  await pushBranchByName(item.repoRoot, item.branchName, commandContext);
 }
 
 async function handleDeleteBranch(
@@ -475,6 +507,22 @@ async function syncBranchByName(
     });
   } catch (error) {
     commandContext.showCommandError(`Failed to sync '${branchName}'`, error);
+  }
+}
+
+async function pushBranchByName(
+  repoRoot: string,
+  branchName: string,
+  commandContext: CommandContext
+): Promise<void> {
+  try {
+    const pushResult = await pushBranchToRemote(repoRoot, branchName);
+    await commandContext.showSuccessAndRefresh(buildSyncResultMessage(pushResult), {
+      fetchRemoteState: true,
+      forceFetchRemoteState: true,
+    });
+  } catch (error) {
+    commandContext.showCommandError(`Failed to publish '${branchName}'`, error);
   }
 }
 

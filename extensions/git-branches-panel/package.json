@@ -97,6 +97,11 @@
         "icon": "$(sync)"
       },
       {
+        "command": "gitBranchesPanel.publishCurrentBranch",
+        "title": "Publish Current Branch",
+        "icon": "$(cloud-upload)"
+      },
+      {
         "command": "gitBranchesPanel.checkout",
         "title": "Checkout Branch",
         "icon": "$(arrow-right)"
@@ -110,6 +115,11 @@
         "command": "gitBranchesPanel.syncBranch",
         "title": "Sync Branch",
         "icon": "$(sync)"
+      },
+      {
+        "command": "gitBranchesPanel.publishBranch",
+        "title": "Publish Branch",
+        "icon": "$(cloud-upload)"
       },
       {
         "command": "gitBranchesPanel.deleteBranch",
@@ -214,8 +224,13 @@
       },
       {
         "command": "gitBranchesPanel.syncFolderBranches",
-        "title": "Sync Descendant Branches",
+        "title": "Sync Descendant Tracked Branches",
         "icon": "$(sync)"
+      },
+      {
+        "command": "gitBranchesPanel.pushFolderBranches",
+        "title": "Push Descendant Branches",
+        "icon": "$(cloud-upload)"
       },
       {
         "command": "gitBranchesPanel.deleteFolderBranches",
@@ -257,7 +272,12 @@
         },
         {
           "command": "gitBranchesPanel.syncCurrentBranch",
-          "when": "view == gitBranchesPanel || view == gitBranchesSCM",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.currentBranchNeedsPublish",
           "group": "navigation@3"
         },
         {
@@ -288,53 +308,63 @@
           "group": "inline@1"
         },
         {
+          "command": "gitBranchesPanel.publishBranch",
+          "when": "viewItem == publishableBranch || viewItem == publishableCurrentBranch",
+          "group": "inline@1"
+        },
+        {
           "command": "gitBranchesPanel.syncBranch",
           "when": "viewItem == branch || viewItem == currentBranch",
           "group": "1_branch@1"
         },
         {
+          "command": "gitBranchesPanel.publishBranch",
+          "when": "viewItem == publishableBranch || viewItem == publishableCurrentBranch",
+          "group": "1_branch@1"
+        },
+        {
           "command": "gitBranchesPanel.checkout",
-          "when": "viewItem == branch || viewItem == currentBranch || viewItem == remoteBranch",
+          "when": "viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch",
           "group": "1_branch@2"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelected",
-          "when": "viewItem == branch || viewItem == currentBranch || viewItem == remoteBranch",
+          "when": "viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch",
           "group": "1_branch@2.1"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelectedAndCheckout",
-          "when": "viewItem == branch || viewItem == currentBranch || viewItem == remoteBranch",
+          "when": "viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch",
           "group": "1_branch@2.2"
         },
         {
           "command": "gitBranchesPanel.renameBranch",
-          "when": "viewItem == branch || viewItem == currentBranch",
+          "when": "viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch",
           "group": "1_branch@3"
         },
         {
           "command": "gitBranchesPanel.createTag",
-          "when": "viewItem == branch || viewItem == currentBranch",
+          "when": "viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch",
           "group": "1_branch@4"
         },
         {
           "command": "gitBranchesPanel.copyBranchName",
-          "when": "viewItem == branch || viewItem == currentBranch || viewItem == remoteBranch",
+          "when": "viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch",
           "group": "1_branch@5"
         },
         {
           "command": "gitBranchesPanel.compareBranchWithCurrent",
-          "when": "viewItem == branch || viewItem == remoteBranch",
+          "when": "viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch",
           "group": "1_branch@6"
         },
         {
           "command": "gitBranchesPanel.mergeIntoCurrent",
-          "when": "viewItem == branch || viewItem == remoteBranch",
+          "when": "viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch",
           "group": "1_branch@7"
         },
         {
           "command": "gitBranchesPanel.deleteBranch",
-          "when": "viewItem == branch || viewItem == remoteBranch",
+          "when": "viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch",
           "group": "2_delete@1"
         },
         {
@@ -396,6 +426,11 @@
           "command": "gitBranchesPanel.syncFolderBranches",
           "when": "viewItem == local-folder",
           "group": "1_folder@1"
+        },
+        {
+          "command": "gitBranchesPanel.pushFolderBranches",
+          "when": "viewItem == local-folder",
+          "group": "1_folder@2"
         },
         {
           "command": "gitBranchesPanel.deleteFolderBranches",

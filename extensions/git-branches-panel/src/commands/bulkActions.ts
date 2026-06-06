@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import type { BranchInfo, TreeBranch } from '../branchModel';
+import { isTrackedBranch, type BranchInfo, type TreeBranch } from '../branchModel';
 import { getErrorMessage } from '../errorUtils';
 import { looksLikeMergeSafetyError } from '../extensionHelpers';
 import {
@@ -9,6 +9,7 @@ import {
   deleteTag,
   fetchRemoteState,
   getBranches,
+  pushBranch,
   syncBranch,
   type SyncBranchResult,
 } from '../git';
@@ -34,6 +35,15 @@ interface BulkDeleteResult {
 }
 
 interface BulkSyncResult {
+  processed: SyncBranchResult[];
+  skippedNeedsPublish: string[];
+  failed: Array<{
+    name: string;
+    reason: string;
+  }>;
+}
+
+interface BulkPushResult {
   processed: SyncBranchResult[];
   failed: Array<{
     name: string;
@@ -64,6 +74,12 @@ export function registerBulkActionCommands(
       'gitBranchesPanel.syncFolderBranches',
       async (item: BranchTreeItem) => {
         await handleSyncFolderBranches(item, commandContext);
+      }
+    ),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.pushFolderBranches',
+      async (item: BranchTreeItem) => {
+        await handlePushFolderBranches(item, commandContext);
       }
     ),
     vscode.commands.registerCommand(
@@ -140,11 +156,68 @@ async function handleSyncFolderBranches(
     }
 
     showNotification(
-      result.failed.length > 0 ? 'warning' : 'info',
+      result.failed.length > 0 || result.skippedNeedsPublish.length > 0 ? 'warning' : 'info',
       buildFolderSyncResultMessage(folderLabel, result)
     );
   } catch (error) {
-    commandContext.showCommandError(`Failed to sync local branches under '${folderLabel}'`, error);
+    commandContext.showCommandError(`Failed to sync tracked local branches under '${folderLabel}'`, error);
+  }
+}
+
+async function handlePushFolderBranches(
+  item: BranchTreeItem,
+  commandContext: CommandContext
+): Promise<void> {
+  if (!isFolderActionItem(item, 'local')) {
+    return;
+  }
+
+  const repoRoot = item.repoRoot ?? (await commandContext.requireRepoRoot());
+  if (!repoRoot) {
+    return;
+  }
+
+  const folderLabel = getContainerLabel(item);
+  const branches = getFolderBranches(item, commandContext, 'local');
+  if (branches.length === 0) {
+    vscode.window.showInformationMessage(
+      `No local branches were found under '${folderLabel}'.`
+    );
+    return;
+  }
+
+  const confirmation = await vscode.window.showWarningMessage(
+    [
+      `Push local branches under '${folderLabel}'?`,
+      'Branches without a tracked upstream will be published.',
+      buildNamePreview(branches.map((branch) => branch.fullName)),
+    ]
+      .filter(Boolean)
+      .join(' '),
+    { modal: true },
+    'Push'
+  );
+  if (confirmation !== 'Push') {
+    return;
+  }
+
+  try {
+    await fetchRemoteState(repoRoot);
+
+    const result = await pushFolderBranches(repoRoot, branches);
+    if (result.processed.some((branch) => branch.didPush)) {
+      await commandContext.refresh({
+        fetchRemoteState: true,
+        forceFetchRemoteState: true,
+      });
+    }
+
+    showNotification(
+      result.failed.length > 0 ? 'warning' : 'info',
+      buildFolderPushResultMessage(folderLabel, result)
+    );
+  } catch (error) {
+    commandContext.showCommandError(`Failed to push local branches under '${folderLabel}'`, error);
   }
 }
 
@@ -355,7 +428,49 @@ async function syncFolderBranches(
   repoRoot: string,
   branches: readonly TreeBranch[]
 ): Promise<BulkSyncResult> {
+  const latestBranches = await getBranches(repoRoot);
+  const latestBranchesByName = new Map(latestBranches.map((branch) => [branch.name, branch]));
   const result: BulkSyncResult = {
+    processed: [],
+    skippedNeedsPublish: [],
+    failed: [],
+  };
+
+  for (const branch of branches) {
+    const latestBranch = latestBranchesByName.get(branch.fullName);
+    if (!latestBranch) {
+      result.failed.push({
+        name: branch.fullName,
+        reason: 'Branch was not found.',
+      });
+      continue;
+    }
+
+    if (!isTrackedBranch(latestBranch)) {
+      result.skippedNeedsPublish.push(branch.fullName);
+      continue;
+    }
+
+    try {
+      result.processed.push(
+        await syncBranch(repoRoot, branch.fullName, { refreshRemoteState: false })
+      );
+    } catch (error) {
+      result.failed.push({
+        name: branch.fullName,
+        reason: getErrorMessage(error),
+      });
+    }
+  }
+
+  return result;
+}
+
+async function pushFolderBranches(
+  repoRoot: string,
+  branches: readonly TreeBranch[]
+): Promise<BulkPushResult> {
+  const result: BulkPushResult = {
     processed: [],
     failed: [],
   };
@@ -363,7 +478,7 @@ async function syncFolderBranches(
   for (const branch of branches) {
     try {
       result.processed.push(
-        await syncBranch(repoRoot, branch.fullName, { refreshRemoteState: false })
+        await pushBranch(repoRoot, branch.fullName, { refreshRemoteState: false })
       );
     } catch (error) {
       result.failed.push({
@@ -557,19 +672,64 @@ function getContainerLabel(item: BranchTreeItem): string {
 }
 
 function buildFolderSyncResultMessage(folderLabel: string, result: BulkSyncResult): string {
-  const syncedCount = result.processed.length - countUpToDateSyncs(result.processed);
+  if (result.processed.length === 0 && result.skippedNeedsPublish.length > 0 && result.failed.length === 0) {
+    return [
+      `No tracked local branches were found under '${folderLabel}'.`,
+      `Needs publishing: ${formatNameList(result.skippedNeedsPublish)}.`,
+    ].join(' ');
+  }
+
+  const syncedCount = result.processed.filter((branch) => branch.didPull || branch.didPush).length;
   const upToDateCount = countUpToDateSyncs(result.processed);
-  const publishedCount = result.processed.filter((branch) => branch.publishedUpstream).length;
   const parts = [
-    `Processed ${result.processed.length} local ${pluralize('branch', result.processed.length)} under '${folderLabel}'.`,
+    `Processed ${result.processed.length} tracked local ${pluralize('branch', result.processed.length)} under '${folderLabel}'.`,
   ];
 
   const details: string[] = [];
   if (syncedCount > 0) {
     details.push(`${syncedCount} synced`);
   }
+  if (upToDateCount > 0) {
+    details.push(`${upToDateCount} already up to date`);
+  }
+  if (result.skippedNeedsPublish.length > 0) {
+    details.push(`${result.skippedNeedsPublish.length} need publishing`);
+  }
+  if (result.failed.length > 0) {
+    details.push(`${result.failed.length} failed`);
+  }
+
+  if (details.length > 0) {
+    parts.push(`Summary: ${details.join(', ')}.`);
+  }
+
+  if (result.failed.length > 0) {
+    parts.push(`Failures: ${formatFailureList(result.failed)}.`);
+  }
+
+  if (result.skippedNeedsPublish.length > 0) {
+    parts.push(`Needs publishing: ${formatNameList(result.skippedNeedsPublish)}.`);
+  }
+
+  return parts.join(' ');
+}
+
+function buildFolderPushResultMessage(folderLabel: string, result: BulkPushResult): string {
+  const publishedCount = result.processed.filter((branch) => branch.publishedUpstream).length;
+  const pushedCount = result.processed.filter(
+    (branch) => branch.didPush && !branch.publishedUpstream
+  ).length;
+  const upToDateCount = countUpToDateSyncs(result.processed);
+  const parts = [
+    `Processed ${result.processed.length} local ${pluralize('branch', result.processed.length)} under '${folderLabel}'.`,
+  ];
+
+  const details: string[] = [];
+  if (pushedCount > 0) {
+    details.push(`${pushedCount} pushed`);
+  }
   if (publishedCount > 0) {
-    details.push(`${publishedCount} published upstream`);
+    details.push(`${publishedCount} published`);
   }
   if (upToDateCount > 0) {
     details.push(`${upToDateCount} already up to date`);

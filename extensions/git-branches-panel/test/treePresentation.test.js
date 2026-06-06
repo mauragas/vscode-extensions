@@ -27,6 +27,17 @@ test('buildBranchTooltipContent describes local, remote, stash, tag, and worktre
       behindCount: 2,
     },
   });
+  const publishableTooltip = buildBranchTooltipContent({
+    kind: 'branch',
+    fullName: 'feature/offline',
+    label: 'offline',
+    path: 'feature/offline',
+    info: {
+      name: 'feature/offline',
+      isCurrent: false,
+      lastCommitDate: 'just now',
+    },
+  });
   const remoteTooltip = buildBranchTooltipContent({
     kind: 'branch',
     fullName: 'origin/feature/demo',
@@ -85,6 +96,8 @@ test('buildBranchTooltipContent describes local, remote, stash, tag, and worktre
   assert.match(localTooltip, /Upstream: origin\/feature\/demo/);
   assert.match(localTooltip, /Sync state: 2↓ 1↑/);
   assert.match(localTooltip, /> Ship it/);
+  assert.match(publishableTooltip, /Publish target: origin\/feature\/offline/);
+  assert.match(publishableTooltip, /_Not published yet_/);
 
   assert.match(remoteTooltip, /_Remote branch_/);
   assert.match(remoteTooltip, /Remote: origin/);
@@ -97,7 +110,7 @@ test('buildBranchTooltipContent describes local, remote, stash, tag, and worktre
   assert.match(worktreeTooltip, /Locked: in use elsewhere/);
 });
 
-test('buildStatusBar helpers format sync state and guidance', () => {
+test('buildStatusBar helpers format sync and publish guidance', () => {
   assert.equal(
     buildStatusBarText({
       name: 'main',
@@ -109,17 +122,27 @@ test('buildStatusBar helpers format sync state and guidance', () => {
   );
   assert.equal(buildStatusBarText(undefined), '');
 
-  const tooltip = buildStatusBarTooltipContent({
+  const syncTooltip = buildStatusBarTooltipContent({
+    name: 'main',
+    isCurrent: true,
+    upstreamName: 'origin/main',
+    behindCount: 2,
+    aheadCount: 1,
+  });
+  const publishTooltip = buildStatusBarTooltipContent({
     name: 'main',
     isCurrent: true,
     upstreamName: 'origin/main',
     upstreamMissing: true,
   });
 
-  assert.match(tooltip, /\*\*Current branch:\*\* main/);
-  assert.match(tooltip, /Upstream: origin\/main/);
-  assert.match(tooltip, /_Tracked upstream no longer exists_/);
-  assert.match(tooltip, /Click to sync the current branch with its remote\./);
+  assert.match(syncTooltip, /\*\*Current branch:\*\* main/);
+  assert.match(syncTooltip, /Upstream: origin\/main/);
+  assert.match(syncTooltip, /Sync state: 2↓ 1↑/);
+  assert.match(syncTooltip, /Click to sync the current branch with its remote\./);
+  assert.match(publishTooltip, /Publish target: origin\/main/);
+  assert.match(publishTooltip, /_Tracked upstream no longer exists_/);
+  assert.match(publishTooltip, /Click to publish the current branch to its remote\./);
 });
 
 test('buildTreeItemPresentation maps sections, folders, and branch types consistently', () => {
@@ -174,7 +197,19 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
       name: 'feature/demo',
       isCurrent: false,
       lastCommitDate: '1 hour ago',
+      upstreamName: 'origin/feature/demo',
       aheadCount: 1,
+    },
+  });
+  const publishableBranchPresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'feature/offline',
+    label: 'offline',
+    path: 'feature/offline',
+    info: {
+      name: 'feature/offline',
+      isCurrent: false,
+      lastCommitDate: 'just now',
     },
   });
   const currentBranchWithSyncPresentation = buildTreeItemPresentation({
@@ -186,6 +221,7 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
       name: 'main',
       isCurrent: true,
       lastCommitDate: '2 hours ago',
+      upstreamName: 'origin/main',
       aheadCount: 1,
       behindCount: 2,
     },
@@ -295,15 +331,21 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(localBranchPresentation.nodeType, 'branch');
   assert.equal(localBranchPresentation.id, 'local:branch:feature/demo');
   assert.equal(localBranchPresentation.label, '1↑ demo');
+  assert.equal(localBranchPresentation.contextValue, 'branch');
   assert.equal(localBranchPresentation.description, '1 hour ago');
   assert.equal(localBranchPresentation.command.command, 'gitBranchesPanel.activateBranchItem');
 
+  assert.equal(publishableBranchPresentation.nodeType, 'branch');
+  assert.equal(publishableBranchPresentation.contextValue, 'publishableBranch');
+
   assert.equal(currentBranchWithSyncPresentation.nodeType, 'currentBranch');
   assert.equal(currentBranchWithSyncPresentation.label, '● 2↓ 1↑ main');
+  assert.equal(currentBranchWithSyncPresentation.contextValue, 'currentBranch');
   assert.equal(currentBranchWithSyncPresentation.description, '2 hours ago');
 
   assert.equal(currentBranchPresentation.nodeType, 'currentBranch');
   assert.equal(currentBranchPresentation.label, '● main');
+  assert.equal(currentBranchPresentation.contextValue, 'publishableCurrentBranch');
   assert.equal(currentBranchPresentation.command, undefined);
   assert.equal(currentBranchPresentation.icon.colorId, 'gitDecoration.addedResourceForeground');
 

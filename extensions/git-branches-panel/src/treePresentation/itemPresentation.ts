@@ -1,6 +1,8 @@
 import {
   buildBranchDescription,
   formatSyncStatus,
+  getPublishTargetName,
+  isPublishableBranch,
 } from '../branchModel/descriptions';
 import type {
   BranchInfo,
@@ -62,7 +64,7 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
     nodeType,
     label: prioritizedLabel,
     id: `${node.info.scope ?? 'local'}:branch:${node.fullName}`,
-    contextValue: getItemContextValue(nodeType, node.info.isCurrent),
+    contextValue: getItemContextValue(nodeType, node.info),
     collapsibleState: 'none',
     icon: getItemIcon(nodeType),
     description,
@@ -143,12 +145,17 @@ export function buildBranchTooltipContent(node: TreeBranch): string {
   if (!isRemoteBranch && !isTag) {
     if (node.info.upstreamName) {
       tooltipLines.push('', `Upstream: ${node.info.upstreamName}`);
+    } else if (isPublishableBranch(node.info)) {
+      tooltipLines.push('', `Publish target: ${getPublishTargetName(node.info)}`);
     } else {
       tooltipLines.push('', '_No upstream configured yet_');
     }
 
-    if (node.info.upstreamMissing) {
-      tooltipLines.push('', '_Tracked upstream no longer exists_');
+    if (isPublishableBranch(node.info)) {
+      tooltipLines.push(
+        '',
+        node.info.upstreamMissing ? '_Tracked upstream no longer exists_' : '_Not published yet_'
+      );
     } else {
       const syncStatus = formatSyncStatus(node.info);
       tooltipLines.push('', syncStatus ? `Sync state: ${syncStatus}` : 'Sync state: up to date');
@@ -239,9 +246,13 @@ function buildTreeItemLabel(
   return syncStatus ? `${prefix}${syncStatus} ${label}` : `${prefix}${label}`;
 }
 
-function getItemContextValue(nodeType: NodeType, isCurrent: boolean): string {
+function getItemContextValue(nodeType: NodeType, branch: BranchInfo): string {
   if (nodeType === 'worktree') {
-    return isCurrent ? 'currentWorktree' : 'worktree';
+    return branch.isCurrent ? 'currentWorktree' : 'worktree';
+  }
+
+  if ((nodeType === 'branch' || nodeType === 'currentBranch') && isPublishableBranch(branch)) {
+    return branch.isCurrent ? 'publishableCurrentBranch' : 'publishableBranch';
   }
 
   return nodeType;

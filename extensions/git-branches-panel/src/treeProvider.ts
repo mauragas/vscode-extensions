@@ -4,6 +4,7 @@ import {
   type BranchInfo,
   type BranchSortOrder,
   type BranchTreeNode,
+  isPublishableBranch,
   type TreeBranch,
 } from './branchModel';
 import {
@@ -105,6 +106,13 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
   }
 
   private updateStatusBar(currentBranch: BranchInfo | undefined): void {
+    const currentBranchNeedsPublish = Boolean(currentBranch && isPublishableBranch(currentBranch));
+    void vscode.commands.executeCommand(
+      'setContext',
+      'gitBranchesPanel.currentBranchNeedsPublish',
+      currentBranchNeedsPublish
+    );
+
     const statusBarText = buildStatusBarText(currentBranch);
     if (!currentBranch || !statusBarText) {
       this.statusBarItem.hide();
@@ -112,7 +120,9 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     }
 
     this.statusBarItem.text = statusBarText;
-    this.statusBarItem.command = 'gitBranchesPanel.syncCurrentBranch';
+    this.statusBarItem.command = currentBranchNeedsPublish
+      ? 'gitBranchesPanel.publishCurrentBranch'
+      : 'gitBranchesPanel.syncCurrentBranch';
     this.statusBarItem.tooltip = new vscode.MarkdownString(
       buildStatusBarTooltipContent(currentBranch)
     );
