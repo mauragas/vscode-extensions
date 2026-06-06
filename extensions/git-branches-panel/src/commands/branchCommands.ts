@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { join } from 'node:path';
 
+import type { RemoteTrackingState } from '../branchModel';
 import { getErrorMessage } from '../errorUtils';
 import {
   checkoutBranch,
@@ -40,7 +41,7 @@ const RETRY_WITHOUT_HOOK_CONFIRM_ACTION = 'Retry Without Hook';
 const SHOW_DETAILS_ACTION = 'Show Details';
 const OPEN_GIT_OUTPUT_ACTION = 'Open Git Output';
 
-type RemoteBranchTrackingState = 'live' | 'stale';
+type RemoteBranchTrackingState = RemoteTrackingState;
 type RemoteBranchDeleteFailureKind =
   | 'LocalPrePushHookBlocked'
   | 'RemoteRejected'

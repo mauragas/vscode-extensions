@@ -32,6 +32,7 @@ function createVscodeState() {
     inputBoxRequests: [],
     inputBoxResponse: undefined,
     infoMessages: [],
+    infoSelector: undefined,
     quickPickRequests: [],
     quickPickSelector: undefined,
     warningMessages: [],
@@ -101,7 +102,9 @@ function createVscodeMock(state) {
       },
       async showInformationMessage(message, ...items) {
         state.infoMessages.push(message);
-        return items[0];
+        return typeof state.infoSelector === 'function'
+          ? state.infoSelector(message, items)
+          : undefined;
       },
       async showWarningMessage(message, options, ...items) {
         state.warningMessages.push({ message, options, items });
