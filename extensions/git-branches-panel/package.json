@@ -510,7 +510,7 @@
         "gitBranchesPanel.normalizeNewBranchNames": {
           "type": "boolean",
           "default": false,
-          "description": "Convert new branch names to lowercase kebab-case when creating branches. Folder separators (`/`) are preserved."
+          "description": "Apply extra lowercase kebab-case normalization to new branch names after the extension first sanitizes them into valid Git branch names. Folder separators (`/`) are preserved."
         },
         "gitBranchesPanel.sortOrder": {
           "type": "string",

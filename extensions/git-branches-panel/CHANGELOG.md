@@ -4,9 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [1.4.0] - 2026-06-06
 
-- Added `gitBranchesPanel.normalizeNewBranchNames` to optionally normalize new branch names to lowercase kebab-case while preserving `/` folder separators
+- Branch creation now quietly sanitizes entered names into valid Git branch names instead of warning on spaces or passing invalid names through to Git
+- Added `gitBranchesPanel.normalizeNewBranchNames` to optionally apply extra lowercase kebab-case normalization on top of the default sanitization while preserving `/` folder separators
 - Applied normalization only to branch creation flows (`New Branch`, `New Branch from Selected`, and `New Branch from Selected and Checkout`), leaving rename and tag naming behavior unchanged
-- Updated branch-name validation so normalized input is accepted when the setting is enabled and same-name checks compare against the final created branch name
+- Added cleanup for common invalid Git ref patterns such as spaces, duplicate separators, invalid punctuation, leading/trailing dashes, and `.lock` suffixes during branch creation
 
 ## [1.3.0] - 2026-06-06
 

@@ -21,6 +21,7 @@ import {
   buildSyncResultMessage,
   looksLikeMergeSafetyError,
   normalizeBranchName,
+  sanitizeNewBranchName,
   validateBranchName,
 } from '../extensionHelpers';
 import { BranchTreeItem } from '../treeProvider';
@@ -314,23 +315,16 @@ async function handleNewBranch(commandContext: CommandContext): Promise<void> {
   const name = await vscode.window.showInputBox({
     prompt: 'Enter a name for the new branch',
     placeHolder: 'feature/my-feature or hotfix/bug-123',
-    validateInput: (value) => validateBranchNameDuringInput(value, undefined, normalizeNewBranchNames),
+    validateInput: () => undefined,
   });
-  if (!name) {
-    return;
-  }
-
-  const validationMessage = validateBranchNameAfterInput(
-    name,
-    undefined,
-    normalizeNewBranchNames
-  );
-  if (validationMessage) {
-    vscode.window.showErrorMessage(validationMessage);
+  if (name === undefined) {
     return;
   }
 
   const branchName = resolveNewBranchName(name, normalizeNewBranchNames);
+  if (!branchName) {
+    return;
+  }
 
   try {
     await createBranch(repoRoot, branchName);
@@ -365,28 +359,16 @@ async function handleCreateBranchFromSelected(
       ? `Enter a name for the new branch to create from '${sourceBranchDisplayName}' and switch to`
       : `Enter a name for the new branch to create from '${sourceBranchDisplayName}'`,
     placeHolder: 'feature/my-feature or hotfix/bug-123',
-    validateInput: (value) =>
-      validateBranchNameDuringInput(
-        value,
-        item.nodeType === 'remoteBranch' ? undefined : sourceBranchName,
-        normalizeNewBranchNames
-      ),
+    validateInput: () => undefined,
   });
-  if (!name) {
-    return;
-  }
-
-  const validationMessage = validateBranchNameAfterInput(
-    name,
-    item.nodeType === 'remoteBranch' ? undefined : sourceBranchName,
-    normalizeNewBranchNames
-  );
-  if (validationMessage) {
-    vscode.window.showErrorMessage(validationMessage);
+  if (name === undefined) {
     return;
   }
 
   const branchName = resolveNewBranchName(name, normalizeNewBranchNames);
+  if (!branchName) {
+    return;
+  }
 
   try {
     await createBranchFromRef(item.repoRoot, branchName, sourceBranchName, {
@@ -587,23 +569,7 @@ function shouldNormalizeNewBranchNames(): boolean {
 }
 
 function resolveNewBranchName(name: string, normalize: boolean): string {
-  return normalize ? normalizeBranchName(name) : name.trim();
-}
-
-function validateBranchNameDuringInput(
-  value: string,
-  currentName: string | undefined,
-  normalize: boolean
-): string | undefined {
-  return validateBranchName(value, currentName, normalize ? { normalize: true } : { allowWhitespace: true });
-}
-
-function validateBranchNameAfterInput(
-  value: string,
-  currentName: string | undefined,
-  normalize: boolean
-): string | undefined {
-  return validateBranchName(value, currentName, normalize ? { normalize: true } : undefined);
+  return normalize ? normalizeBranchName(name) : sanitizeNewBranchName(name);
 }
 
 function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {

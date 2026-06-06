@@ -75,13 +75,53 @@ interface BranchNameValidationOptions {
   normalize?: boolean;
 }
 
-export function normalizeBranchName(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
+export function sanitizeNewBranchName(value: string, options?: { normalize?: boolean }): string {
+  const trimmedValue = value.trim();
+  if (!trimmedValue) {
+    return '';
+  }
+
+  const segments = trimmedValue
+    .replace(/\\/g, '/')
     .split('/')
-    .map((segment) => segment.trim().replace(/\s+/g, '-').replace(/-+/g, '-'))
-    .join('/');
+    .map((segment) => sanitizeNewBranchSegment(segment, options?.normalize ?? false))
+    .filter(Boolean);
+
+  const branchName = segments.join('/');
+
+  if (!branchName) {
+    return 'new-branch';
+  }
+
+  return branchName === '@' ? 'new-branch' : branchName;
+}
+
+export function normalizeBranchName(value: string): string {
+  return sanitizeNewBranchName(value, { normalize: true });
+}
+
+function sanitizeNewBranchSegment(segment: string, normalize: boolean): string {
+  let sanitizedSegment = segment.trim();
+
+  sanitizedSegment = sanitizedSegment.replace(/@\{/g, '-');
+  sanitizedSegment = sanitizedSegment.replace(/[\u0000-\u001F\u007F~^:?*\[]+/g, '');
+  sanitizedSegment = sanitizedSegment.replace(/\s*-\s*/g, '-');
+  sanitizedSegment = sanitizedSegment.replace(/\s+/g, '-');
+  sanitizedSegment = sanitizedSegment.replace(/\.\.+/g, '.');
+
+  if (normalize) {
+    sanitizedSegment = sanitizedSegment.toLowerCase();
+    sanitizedSegment = sanitizedSegment.replace(/-+/g, '-');
+  }
+
+  sanitizedSegment = sanitizedSegment
+    .replace(/^\.+/g, '')
+    .replace(/\.+$/g, '')
+    .replace(/^-+/g, '')
+    .replace(/-+$/g, '')
+    .replace(/\.lock$/gi, '');
+
+  return sanitizedSegment === '@' ? '' : sanitizedSegment;
 }
 
 function resolveBranchNameValue(value: string, options?: BranchNameValidationOptions): string {
