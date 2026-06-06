@@ -7,7 +7,10 @@ const {
   buildCurrentBranchMessage,
   buildSyncResultMessage,
   looksLikeMergeSafetyError,
+  normalizeBranchName,
+  sanitizeNewBranchName,
   validateBranchName,
+  validateNewBranchNameInput,
   validateTagName,
 } = require('../out/extensionHelpers.js');
 
@@ -85,6 +88,48 @@ test('validateBranchName rejects invalid names and allows trimmed valid names', 
     'Please enter a different branch name.'
   );
   assert.equal(validateBranchName(' feature/demo '), undefined);
+});
+
+test('sanitizeNewBranchName keeps minimum cleanup while preserving case and folders', () => {
+  assert.equal(sanitizeNewBranchName(' - Feature / Hello--- World - '), 'Feature/Hello---World');
+  assert.equal(sanitizeNewBranchName('release?? / patch[*'), 'release/patch');
+  assert.equal(sanitizeNewBranchName('Feature\\Sub Branch'), 'Feature/Sub-Branch');
+  assert.equal(sanitizeNewBranchName('  ???  '), '');
+});
+
+test('normalizeBranchName converts mixed case names to lowercase kebab-case, strips extra special characters, and preserves folders', () => {
+  assert.equal(normalizeBranchName('Feature/make Fix'), 'feature/make-fix');
+  assert.equal(normalizeBranchName('Feature/make-Fix'), 'feature/make-fix');
+  assert.equal(normalizeBranchName('  Release/Hot Fix  '), 'release/hot-fix');
+  assert.equal(normalizeBranchName('Feature/Sub Feature/Next Step'), 'feature/sub-feature/next-step');
+  assert.equal(normalizeBranchName('Feature/make--Fix'), 'feature/make-fix');
+  assert.equal(normalizeBranchName(' - Feature / Hello--- World - '), 'feature/hello-world');
+  assert.equal(normalizeBranchName('Feature/API_Client'), 'feature/apiclient');
+  assert.equal(normalizeBranchName('Release/v1.2.3_beta!'), 'release/v123beta');
+});
+
+test('validateNewBranchNameInput accepts names that sanitize cleanly and rejects empty results', () => {
+  assert.equal(validateNewBranchNameInput('Feature/make Fix'), undefined);
+  assert.equal(
+    validateNewBranchNameInput(' ??? '),
+    'Branch name must include at least one valid character.'
+  );
+  assert.equal(
+    validateNewBranchNameInput(' feature/demo ', 'feature/demo'),
+    'Please enter a different branch name.'
+  );
+});
+
+test('validateNewBranchNameInput respects normalization when enabled', () => {
+  assert.equal(validateNewBranchNameInput('Feature/make Fix', undefined, { normalize: true }), undefined);
+  assert.equal(
+    validateNewBranchNameInput(' feature/demo ', 'Feature/Demo', { normalize: true }),
+    'Please enter a different branch name.'
+  );
+  assert.equal(
+    validateNewBranchNameInput('Feature/API_Client', 'feature/apiclient', { normalize: true }),
+    'Please enter a different branch name.'
+  );
 });
 
 test('validateTagName rejects invalid names and allows trimmed valid names', () => {
