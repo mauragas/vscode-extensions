@@ -153,6 +153,7 @@ function createBranchCommandsModule({
   vscodeState,
   gitMock,
   validateSpy,
+  validateImpl = () => undefined,
   normalizeSpy = [],
   normalizeImpl = (value) => value.trim(),
 }) {
@@ -183,7 +184,7 @@ function createBranchCommandsModule({
       },
       validateBranchName(value, currentName, options) {
         validateSpy.push({ value, currentName, options });
-        return undefined;
+        return validateImpl(value, currentName, options);
       },
     },
     '../git': gitMock,
@@ -202,16 +203,27 @@ function createBranchCommandsModule({
   };
 }
 
-test('newBranch keeps the entered branch name unchanged when normalization is disabled', async () => {
+test('newBranch allows spaces during input but rejects them after submit when normalization is disabled', async () => {
   const vscodeState = createVscodeState();
-  vscodeState.inputBoxResponse = ' Feature/make-Fix ';
+  vscodeState.inputBoxResponse = ' Feature/make Fix ';
   const validateSpy = [];
   const normalizeSpy = [];
   const createBranchCalls = [];
 
-  const { commandContext } = createBranchCommandsModule({
+  createBranchCommandsModule({
     vscodeState,
     validateSpy,
+    validateImpl(value, currentName, options) {
+      if (options?.normalize) {
+        return undefined;
+      }
+
+      if (options?.allowWhitespace) {
+        return value.trim() === currentName ? 'Please enter a different branch name.' : undefined;
+      }
+
+      return /\s/.test(value.trim()) ? 'Branch name cannot contain spaces.' : undefined;
+    },
     normalizeSpy,
     gitMock: {
       async checkoutBranch() {},
@@ -250,22 +262,25 @@ test('newBranch keeps the entered branch name unchanged when normalization is di
 
   await vscodeState.registeredCommands['gitBranchesPanel.newBranch']();
 
-  assert.equal(await vscodeState.inputBoxRequests[0].validateInput(' Feature/make-Fix '), undefined);
-  assert.deepEqual(validateSpy, [
-    {
-      value: ' Feature/make-Fix ',
-      currentName: undefined,
-      options: { normalize: false },
-    },
-  ]);
+  assert.equal(await vscodeState.inputBoxRequests[0].validateInput(' Feature/make Fix '), undefined);
+  assert.deepEqual(
+    validateSpy,
+    [
+      {
+        value: ' Feature/make Fix ',
+        currentName: undefined,
+        options: undefined,
+      },
+      {
+        value: ' Feature/make Fix ',
+        currentName: undefined,
+        options: { allowWhitespace: true },
+      },
+    ]
+  );
   assert.deepEqual(normalizeSpy, []);
-  assert.deepEqual(createBranchCalls, [{ repoRoot: '/repo', branchName: 'Feature/make-Fix' }]);
-  assert.deepEqual(commandContext.state.successRefreshes, [
-    {
-      message: "Created and switched to 'Feature/make-Fix'.",
-      options: {},
-    },
-  ]);
+  assert.deepEqual(createBranchCalls, []);
+  assert.deepEqual(vscodeState.errorMessages, ['Branch name cannot contain spaces.']);
 });
 
 test('newBranch normalizes the created branch name when the setting is enabled', async () => {
@@ -279,6 +294,9 @@ test('newBranch normalizes the created branch name when the setting is enabled',
   const { commandContext } = createBranchCommandsModule({
     vscodeState,
     validateSpy,
+    validateImpl() {
+      return undefined;
+    },
     normalizeSpy,
     normalizeImpl() {
       return 'feature/make-fix';
@@ -327,6 +345,11 @@ test('newBranch normalizes the created branch name when the setting is enabled',
       currentName: undefined,
       options: { normalize: true },
     },
+    {
+      value: ' Feature/make Fix ',
+      currentName: undefined,
+      options: { normalize: true },
+    },
   ]);
   assert.deepEqual(normalizeSpy, [' Feature/make Fix ']);
   assert.deepEqual(createBranchCalls, [{ repoRoot: '/repo', branchName: 'feature/make-fix' }]);
@@ -348,6 +371,9 @@ test('newBranchFromSelected creates a branch from a local branch without checkou
   const { commandContext } = createBranchCommandsModule({
     vscodeState,
     validateSpy,
+    validateImpl() {
+      return undefined;
+    },
     normalizeSpy,
     gitMock: {
       async checkoutBranch() {},
@@ -384,7 +410,12 @@ test('newBranchFromSelected creates a branch from a local branch without checkou
     {
       value: ' feature/child ',
       currentName: 'feature/source',
-      options: { normalize: false },
+      options: undefined,
+    },
+    {
+      value: ' feature/child ',
+      currentName: 'feature/source',
+      options: { allowWhitespace: true },
     },
   ]);
   assert.deepEqual(normalizeSpy, []);
@@ -415,6 +446,9 @@ test('newBranchFromSelectedAndCheckout creates and checks out a branch from a re
   const { commandContext } = createBranchCommandsModule({
     vscodeState,
     validateSpy,
+    validateImpl() {
+      return undefined;
+    },
     normalizeSpy,
     normalizeImpl() {
       return 'feature/from-remote';
@@ -453,6 +487,11 @@ test('newBranchFromSelectedAndCheckout creates and checks out a branch from a re
     undefined
   );
   assert.deepEqual(validateSpy, [
+    {
+      value: ' Feature/from Remote ',
+      currentName: undefined,
+      options: { normalize: true },
+    },
     {
       value: ' Feature/from Remote ',
       currentName: undefined,

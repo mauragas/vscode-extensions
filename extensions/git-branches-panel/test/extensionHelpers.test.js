@@ -96,6 +96,15 @@ test('normalizeBranchName converts mixed case names to lowercase kebab-case and 
   assert.equal(normalizeBranchName('Feature/make--Fix'), 'feature/make-fix');
 });
 
+test('validateBranchName can allow whitespace during entry without changing final validation rules', () => {
+  assert.equal(validateBranchName('Feature/make Fix', undefined, { allowWhitespace: true }), undefined);
+  assert.equal(
+    validateBranchName(' feature/demo ', 'feature/demo', { allowWhitespace: true }),
+    'Please enter a different branch name.'
+  );
+  assert.equal(validateBranchName('Feature/make Fix'), 'Branch name cannot contain spaces.');
+});
+
 test('validateBranchName respects normalization when enabled', () => {
   assert.equal(validateBranchName('Feature/make Fix', undefined, { normalize: true }), undefined);
   assert.equal(

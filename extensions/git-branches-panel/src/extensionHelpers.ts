@@ -71,6 +71,7 @@ export function buildSyncResultMessage(syncResult: SyncBranchResult): string {
 }
 
 interface BranchNameValidationOptions {
+  allowWhitespace?: boolean;
   normalize?: boolean;
 }
 
@@ -98,7 +99,7 @@ export function validateBranchName(
     return 'Branch name cannot be empty.';
   }
 
-  if (/\s/.test(trimmedValue)) {
+  if (!options?.allowWhitespace && /\s/.test(trimmedValue)) {
     return 'Branch name cannot contain spaces.';
   }
 

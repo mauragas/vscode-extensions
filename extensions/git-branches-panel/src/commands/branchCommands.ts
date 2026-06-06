@@ -314,9 +314,19 @@ async function handleNewBranch(commandContext: CommandContext): Promise<void> {
   const name = await vscode.window.showInputBox({
     prompt: 'Enter a name for the new branch',
     placeHolder: 'feature/my-feature or hotfix/bug-123',
-    validateInput: (value) => validateBranchName(value, undefined, { normalize: normalizeNewBranchNames }),
+    validateInput: (value) => validateBranchNameDuringInput(value, undefined, normalizeNewBranchNames),
   });
   if (!name) {
+    return;
+  }
+
+  const validationMessage = validateBranchNameAfterInput(
+    name,
+    undefined,
+    normalizeNewBranchNames
+  );
+  if (validationMessage) {
+    vscode.window.showErrorMessage(validationMessage);
     return;
   }
 
@@ -356,13 +366,23 @@ async function handleCreateBranchFromSelected(
       : `Enter a name for the new branch to create from '${sourceBranchDisplayName}'`,
     placeHolder: 'feature/my-feature or hotfix/bug-123',
     validateInput: (value) =>
-      validateBranchName(
+      validateBranchNameDuringInput(
         value,
         item.nodeType === 'remoteBranch' ? undefined : sourceBranchName,
-        { normalize: normalizeNewBranchNames }
+        normalizeNewBranchNames
       ),
   });
   if (!name) {
+    return;
+  }
+
+  const validationMessage = validateBranchNameAfterInput(
+    name,
+    item.nodeType === 'remoteBranch' ? undefined : sourceBranchName,
+    normalizeNewBranchNames
+  );
+  if (validationMessage) {
+    vscode.window.showErrorMessage(validationMessage);
     return;
   }
 
@@ -568,6 +588,22 @@ function shouldNormalizeNewBranchNames(): boolean {
 
 function resolveNewBranchName(name: string, normalize: boolean): string {
   return normalize ? normalizeBranchName(name) : name.trim();
+}
+
+function validateBranchNameDuringInput(
+  value: string,
+  currentName: string | undefined,
+  normalize: boolean
+): string | undefined {
+  return validateBranchName(value, currentName, normalize ? { normalize: true } : { allowWhitespace: true });
+}
+
+function validateBranchNameAfterInput(
+  value: string,
+  currentName: string | undefined,
+  normalize: boolean
+): string | undefined {
+  return validateBranchName(value, currentName, normalize ? { normalize: true } : undefined);
 }
 
 function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
