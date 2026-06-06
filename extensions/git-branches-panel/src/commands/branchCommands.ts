@@ -20,10 +20,13 @@ import {
   buildRemoteBranchCheckoutMessage,
   buildSyncResultMessage,
   looksLikeMergeSafetyError,
+  normalizeBranchName,
   validateBranchName,
 } from '../extensionHelpers';
 import { BranchTreeItem } from '../treeProvider';
 import { NO_CURRENT_BRANCH_MESSAGE, type CommandContext } from './shared';
+
+const NORMALIZE_NEW_BRANCH_NAMES_SETTING = 'normalizeNewBranchNames';
 
 interface BranchActionItem extends vscode.QuickPickItem {
   readonly actionId: string;
@@ -306,16 +309,19 @@ async function handleNewBranch(commandContext: CommandContext): Promise<void> {
     return;
   }
 
+  const normalizeNewBranchNames = shouldNormalizeNewBranchNames();
+
   const name = await vscode.window.showInputBox({
     prompt: 'Enter a name for the new branch',
     placeHolder: 'feature/my-feature or hotfix/bug-123',
-    validateInput: (value) => validateBranchName(value),
+    validateInput: (value) =>
+      validateBranchName(value, undefined, { normalize: normalizeNewBranchNames }),
   });
   if (!name) {
     return;
   }
 
-  const branchName = name.trim();
+  const branchName = resolveNewBranchName(name, normalizeNewBranchNames);
 
   try {
     await createBranch(repoRoot, branchName);
@@ -342,6 +348,7 @@ async function handleCreateBranchFromSelected(
     return;
   }
 
+  const normalizeNewBranchNames = shouldNormalizeNewBranchNames();
   const sourceBranchName = item.branchName;
   const sourceBranchDisplayName = sourceBranchName;
   const name = await vscode.window.showInputBox({
@@ -352,14 +359,15 @@ async function handleCreateBranchFromSelected(
     validateInput: (value) =>
       validateBranchName(
         value,
-        item.nodeType === 'remoteBranch' ? undefined : sourceBranchName
+        item.nodeType === 'remoteBranch' ? undefined : sourceBranchName,
+        { normalize: normalizeNewBranchNames }
       ),
   });
   if (!name) {
     return;
   }
 
-  const branchName = name.trim();
+  const branchName = resolveNewBranchName(name, normalizeNewBranchNames);
 
   try {
     await createBranchFromRef(item.repoRoot, branchName, sourceBranchName, {
@@ -551,6 +559,16 @@ async function pushBranchByName(
   } catch (error) {
     commandContext.showCommandError(`Failed to publish '${branchName}'`, error);
   }
+}
+
+function shouldNormalizeNewBranchNames(): boolean {
+  return vscode.workspace
+    .getConfiguration('gitBranchesPanel')
+    .get<boolean>(NORMALIZE_NEW_BRANCH_NAMES_SETTING, false);
+}
+
+function resolveNewBranchName(name: string, normalize: boolean): string {
+  return normalize ? normalizeBranchName(name) : name.trim();
 }
 
 function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {

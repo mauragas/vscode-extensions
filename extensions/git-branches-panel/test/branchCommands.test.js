@@ -24,6 +24,9 @@ function loadFresh(modulePath, mocks) {
 
 function createVscodeState() {
   return {
+    configurationValues: {
+      normalizeNewBranchNames: false,
+    },
     registeredCommands: {},
     executedCommands: [],
     inputBoxRequests: [],
@@ -56,6 +59,22 @@ function createVscodeMock(state) {
     extensions: {
       getExtension() {
         return undefined;
+      },
+    },
+    workspace: {
+      getConfiguration(section) {
+        return {
+          get(key, defaultValue) {
+            if (
+              section === 'gitBranchesPanel' &&
+              Object.prototype.hasOwnProperty.call(state.configurationValues, key)
+            ) {
+              return state.configurationValues[key];
+            }
+
+            return defaultValue;
+          },
+        };
       },
     },
     Uri: {
@@ -130,7 +149,13 @@ function createCommandContext() {
   };
 }
 
-function createBranchCommandsModule({ vscodeState, gitMock, validateSpy }) {
+function createBranchCommandsModule({
+  vscodeState,
+  gitMock,
+  validateSpy,
+  normalizeSpy = [],
+  normalizeImpl = (value) => value.trim(),
+}) {
   const commandContext = createCommandContext();
   const branchCommands = loadFresh('../out/commands/branchCommands.js', {
     vscode: createVscodeMock(vscodeState),
@@ -152,8 +177,12 @@ function createBranchCommandsModule({ vscodeState, gitMock, validateSpy }) {
       looksLikeMergeSafetyError() {
         return false;
       },
-      validateBranchName(value, currentName) {
-        validateSpy.push({ value, currentName });
+      normalizeBranchName(value) {
+        normalizeSpy.push(value);
+        return normalizeImpl(value);
+      },
+      validateBranchName(value, currentName, options) {
+        validateSpy.push({ value, currentName, options });
         return undefined;
       },
     },
@@ -173,15 +202,87 @@ function createBranchCommandsModule({ vscodeState, gitMock, validateSpy }) {
   };
 }
 
+test('newBranch normalizes the created branch name when the setting is enabled', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.configurationValues.normalizeNewBranchNames = true;
+  vscodeState.inputBoxResponse = ' Feature/make Fix ';
+  const validateSpy = [];
+  const normalizeSpy = [];
+  const createBranchCalls = [];
+
+  const { commandContext } = createBranchCommandsModule({
+    vscodeState,
+    validateSpy,
+    normalizeSpy,
+    normalizeImpl() {
+      return 'feature/make-fix';
+    },
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch(repoRoot, branchName) {
+        createBranchCalls.push({ repoRoot, branchName });
+      },
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.newBranch']();
+
+  assert.equal(await vscodeState.inputBoxRequests[0].validateInput(' Feature/make Fix '), undefined);
+  assert.deepEqual(validateSpy, [
+    {
+      value: ' Feature/make Fix ',
+      currentName: undefined,
+      options: { normalize: true },
+    },
+  ]);
+  assert.deepEqual(normalizeSpy, [' Feature/make Fix ']);
+  assert.deepEqual(createBranchCalls, [{ repoRoot: '/repo', branchName: 'feature/make-fix' }]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: "Created and switched to 'feature/make-fix'.",
+      options: {},
+    },
+  ]);
+});
+
 test('newBranchFromSelected creates a branch from a local branch without checkout', async () => {
   const vscodeState = createVscodeState();
-  vscodeState.inputBoxResponse = 'feature/child';
+  vscodeState.inputBoxResponse = ' feature/child ';
   const validateSpy = [];
+  const normalizeSpy = [];
   const createBranchFromRefCalls = [];
 
   const { commandContext } = createBranchCommandsModule({
     vscodeState,
     validateSpy,
+    normalizeSpy,
     gitMock: {
       async checkoutBranch() {},
       async checkoutRemoteBranch() {},
@@ -212,8 +313,15 @@ test('newBranchFromSelected creates a branch from a local branch without checkou
   });
 
   assert.match(vscodeState.inputBoxRequests[0].prompt, /feature\/source/);
-  assert.equal(await vscodeState.inputBoxRequests[0].validateInput('feature/child'), undefined);
-  assert.deepEqual(validateSpy, [{ value: 'feature/child', currentName: 'feature/source' }]);
+  assert.equal(await vscodeState.inputBoxRequests[0].validateInput(' feature/child '), undefined);
+  assert.deepEqual(validateSpy, [
+    {
+      value: ' feature/child ',
+      currentName: 'feature/source',
+      options: { normalize: false },
+    },
+  ]);
+  assert.deepEqual(normalizeSpy, []);
   assert.deepEqual(createBranchFromRefCalls, [
     {
       repoRoot: '/repo',
@@ -232,13 +340,19 @@ test('newBranchFromSelected creates a branch from a local branch without checkou
 
 test('newBranchFromSelectedAndCheckout creates and checks out a branch from a remote branch', async () => {
   const vscodeState = createVscodeState();
-  vscodeState.inputBoxResponse = 'feature/from-remote';
+  vscodeState.configurationValues.normalizeNewBranchNames = true;
+  vscodeState.inputBoxResponse = ' Feature/from Remote ';
   const validateSpy = [];
+  const normalizeSpy = [];
   const createBranchFromRefCalls = [];
 
   const { commandContext } = createBranchCommandsModule({
     vscodeState,
     validateSpy,
+    normalizeSpy,
+    normalizeImpl() {
+      return 'feature/from-remote';
+    },
     gitMock: {
       async checkoutBranch() {},
       async checkoutRemoteBranch() {},
@@ -269,10 +383,17 @@ test('newBranchFromSelectedAndCheckout creates and checks out a branch from a re
   });
 
   assert.equal(
-    await vscodeState.inputBoxRequests[0].validateInput('feature/from-remote'),
+    await vscodeState.inputBoxRequests[0].validateInput(' Feature/from Remote '),
     undefined
   );
-  assert.deepEqual(validateSpy, [{ value: 'feature/from-remote', currentName: undefined }]);
+  assert.deepEqual(validateSpy, [
+    {
+      value: ' Feature/from Remote ',
+      currentName: undefined,
+      options: { normalize: true },
+    },
+  ]);
+  assert.deepEqual(normalizeSpy, [' Feature/from Remote ']);
   assert.deepEqual(createBranchFromRefCalls, [
     {
       repoRoot: '/repo',

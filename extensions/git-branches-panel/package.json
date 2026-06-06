@@ -2,7 +2,7 @@
   "name": "git-branches-panel",
   "displayName": "Git Branches Panel",
   "description": "Tree view for local and remote Git branches, stashes, worktrees, and tags with grouping, sync state, and quick actions.",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "publisher": "karolis-mauragas",
   "license": "MIT",
   "repository": {
@@ -506,6 +506,11 @@
           "type": "boolean",
           "default": true,
           "description": "Group branches by folder prefix (for example, feature/my-branch goes into the feature folder)."
+        },
+        "gitBranchesPanel.normalizeNewBranchNames": {
+          "type": "boolean",
+          "default": false,
+          "description": "Convert new branch names to lowercase kebab-case when creating branches. Folder separators (`/`) are preserved."
         },
         "gitBranchesPanel.sortOrder": {
           "type": "string",

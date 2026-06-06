@@ -70,8 +70,29 @@ export function buildSyncResultMessage(syncResult: SyncBranchResult): string {
   return `Pushed '${syncResult.branchName}' to '${syncResult.upstreamName}'.`;
 }
 
-export function validateBranchName(value: string, currentName?: string): string | undefined {
-  const trimmedValue = value.trim();
+interface BranchNameValidationOptions {
+  normalize?: boolean;
+}
+
+export function normalizeBranchName(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .split('/')
+    .map((segment) => segment.trim().replace(/\s+/g, '-').replace(/-+/g, '-'))
+    .join('/');
+}
+
+function resolveBranchNameValue(value: string, options?: BranchNameValidationOptions): string {
+  return options?.normalize ? normalizeBranchName(value) : value.trim();
+}
+
+export function validateBranchName(
+  value: string,
+  currentName?: string,
+  options?: BranchNameValidationOptions
+): string | undefined {
+  const trimmedValue = resolveBranchNameValue(value, options);
 
   if (!trimmedValue) {
     return 'Branch name cannot be empty.';
@@ -89,7 +110,7 @@ export function validateBranchName(value: string, currentName?: string): string 
     return 'Branch name cannot end with a slash or contain empty path segments.';
   }
 
-  if (currentName && trimmedValue === currentName) {
+  if (currentName && trimmedValue === resolveBranchNameValue(currentName, options)) {
     return 'Please enter a different branch name.';
   }
 

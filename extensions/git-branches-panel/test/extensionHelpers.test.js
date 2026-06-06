@@ -7,6 +7,7 @@ const {
   buildCurrentBranchMessage,
   buildSyncResultMessage,
   looksLikeMergeSafetyError,
+  normalizeBranchName,
   validateBranchName,
   validateTagName,
 } = require('../out/extensionHelpers.js');
@@ -85,6 +86,22 @@ test('validateBranchName rejects invalid names and allows trimmed valid names', 
     'Please enter a different branch name.'
   );
   assert.equal(validateBranchName(' feature/demo '), undefined);
+});
+
+test('normalizeBranchName converts mixed case names to lowercase kebab-case and preserves folders', () => {
+  assert.equal(normalizeBranchName('Feature/make Fix'), 'feature/make-fix');
+  assert.equal(normalizeBranchName('Feature/make-Fix'), 'feature/make-fix');
+  assert.equal(normalizeBranchName('  Release/Hot Fix  '), 'release/hot-fix');
+  assert.equal(normalizeBranchName('Feature/Sub Feature/Next Step'), 'feature/sub-feature/next-step');
+  assert.equal(normalizeBranchName('Feature/make--Fix'), 'feature/make-fix');
+});
+
+test('validateBranchName respects normalization when enabled', () => {
+  assert.equal(validateBranchName('Feature/make Fix', undefined, { normalize: true }), undefined);
+  assert.equal(
+    validateBranchName(' feature/demo ', 'Feature/Demo', { normalize: true }),
+    'Please enter a different branch name.'
+  );
 });
 
 test('validateTagName rejects invalid names and allows trimmed valid names', () => {
