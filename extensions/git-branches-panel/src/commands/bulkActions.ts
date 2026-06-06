@@ -386,8 +386,15 @@ async function handleBulkLocalDelete(options: {
   commandContext: CommandContext;
   successMessageBuilder(result: BulkDeleteResult): string;
 }): Promise<void> {
-  const { repoRoot, targets, confirmationLabel, confirmationPrompt, emptyMessage, commandContext } =
-    options;
+  const {
+    repoRoot,
+    folderLabel,
+    targets,
+    confirmationLabel,
+    confirmationPrompt,
+    emptyMessage,
+    commandContext,
+  } = options;
 
   if (targets.length === 0) {
     vscode.window.showInformationMessage(emptyMessage);
@@ -398,12 +405,11 @@ async function handleBulkLocalDelete(options: {
   const skippedCurrentTargets = targets.filter((target) => target.isCurrent);
 
   if (deletableTargets.length === 0) {
-    const skippedMessage = skippedCurrentTargets.length > 0
-      ? `Skipped current ${pluralize('branch', skippedCurrentTargets.length)}: ${formatNameList(
-          skippedCurrentTargets.map((target) => target.name)
-        )}.`
-      : '';
-    vscode.window.showInformationMessage([emptyMessage, skippedMessage].filter(Boolean).join(' '));
+    vscode.window.showInformationMessage(
+      skippedCurrentTargets.length > 0
+        ? buildNoDeletableLocalBranchesMessage(folderLabel, skippedCurrentTargets)
+        : emptyMessage
+    );
     return;
   }
 
@@ -602,6 +608,23 @@ function buildPruneResultMessage(result: BulkDeleteResult): string {
 
   if (result.failed.length > 0) {
     parts.push(`Failures: ${formatFailureList(result.failed)}.`);
+  }
+
+  return parts.join(' ');
+}
+
+function buildNoDeletableLocalBranchesMessage(
+  folderLabel: string,
+  skippedCurrentTargets: readonly LocalBranchTarget[]
+): string {
+  const parts = [`No non-current local branches were found under '${folderLabel}'.`];
+
+  if (skippedCurrentTargets.length > 0) {
+    parts.push(
+      `Skipped current ${pluralize('branch', skippedCurrentTargets.length)}: ${formatNameList(
+        skippedCurrentTargets.map((target) => target.name)
+      )}.`
+    );
   }
 
   return parts.join(' ');

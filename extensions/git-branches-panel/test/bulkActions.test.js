@@ -474,3 +474,54 @@ test('deleteFolderBranches confirms once, skips the current branch, and refreshe
   assert.match(vscodeState.infoMessages.at(-1), /Deleted 1 local branch under 'feature'/);
   assert.match(vscodeState.infoMessages.at(-1), /Skipped current branch: feature\/current/);
 });
+
+test('deleteFolderBranches reports current-only folders without claiming they are empty', async () => {
+  const vscodeState = createVscodeState();
+  const deleteBranchCalls = [];
+
+  const { commandContext } = createBulkActionsModule({
+    vscodeState,
+    gitMock: {
+      async deleteBranch(repoRoot, branchName) {
+        deleteBranchCalls.push({ repoRoot, branchName });
+      },
+      async deleteRemoteBranch() {},
+      async deleteTag() {},
+      async fetchRemoteState() {},
+      async getBranches() {
+        return [];
+      },
+      async syncBranch() {
+        throw new Error('syncBranch should not be called in this test');
+      },
+    },
+  });
+
+  commandContext.state.descendantBranches.set('folder:local:feature', [
+    {
+      kind: 'branch',
+      fullName: 'feature/current',
+      label: 'current',
+      path: 'feature/current',
+      info: {
+        name: 'feature/current',
+        isCurrent: true,
+      },
+    },
+  ]);
+
+  await vscodeState.registeredCommands['gitBranchesPanel.deleteFolderBranches']({
+    nodeType: 'folder',
+    containerScope: 'local',
+    containerKey: 'folder:local:feature',
+    containerPath: 'feature',
+    repoRoot: '/repo',
+    label: 'feature',
+  });
+
+  assert.deepEqual(deleteBranchCalls, []);
+  assert.deepEqual(commandContext.state.refreshCalls, []);
+  assert.equal(vscodeState.warningMessages.length, 0);
+  assert.match(vscodeState.infoMessages.at(-1), /No non-current local branches were found under 'feature'/);
+  assert.match(vscodeState.infoMessages.at(-1), /Skipped current branch: feature\/current/);
+});
