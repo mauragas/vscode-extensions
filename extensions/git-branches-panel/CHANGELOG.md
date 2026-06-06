@@ -4,10 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [1.4.0] - 2026-06-06
 
-- Branch creation now always accepts spaces by rewriting them to dashes before validation and Git execution
-- Added `gitBranchesPanel.normalizeNewBranchNames` to optionally further normalize new branch names to lowercase kebab-case while preserving `/` folder separators
+- Added `gitBranchesPanel.normalizeNewBranchNames` to optionally normalize new branch names to lowercase kebab-case while preserving `/` folder separators
 - Applied normalization only to branch creation flows (`New Branch`, `New Branch from Selected`, and `New Branch from Selected and Checkout`), leaving rename and tag naming behavior unchanged
-- Updated branch-name validation so creation flows compare against the final created branch name, whether only whitespace rewriting is applied or full normalization is enabled
+- Updated branch-name validation so normalized input is accepted when the setting is enabled and same-name checks compare against the final created branch name
 
 ## [1.3.0] - 2026-06-06
 

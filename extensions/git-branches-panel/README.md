@@ -30,7 +30,7 @@ Remote, Stash, Worktree, and Tags stay collapsed until you expand them.
 - 🪄 **Optional current branch banner** — keep or hide the top `Current branch: ...` summary from settings
 - 🎛️ **Configurable toolbar quick actions** — show or hide each toolbar button independently from settings
 - 📍 **Optional status bar branch action** — keep or hide the status bar sync/publish action for the current branch
-- 🧹 **Space-friendly branch creation** — spaces entered while creating branches are rewritten as `-`, with optional lowercase kebab-case normalization on top
+- 🧹 **Optional new-branch normalization** — convert new branch names to lowercase kebab-case while preserving `/` folder separators
 - 🕐 **Last commit time** — shown as a relative description and in the tooltip
 - 🔄 **Sync state badges** — incoming and outgoing commits stay visible even when branch names are long
 - ☁️ **Inline sync button** — every branch gets a small sync button, including branches that are not currently checked out
@@ -89,7 +89,7 @@ Remote, Stash, Worktree, and Tags stay collapsed until you expand them.
 | Setting | Default | Description |
 | --- | --- | --- |
 | `gitBranchesPanel.groupByFolder` | `true` | Group branches by `/`-separated prefix |
-| `gitBranchesPanel.normalizeNewBranchNames` | `false` | Additionally convert new branch names to lowercase kebab-case during branch creation; spaces are always rewritten to `-` and `/` folder separators are preserved |
+| `gitBranchesPanel.normalizeNewBranchNames` | `false` | Convert new branch names to lowercase kebab-case during branch creation while preserving `/` folder separators |
 | `gitBranchesPanel.sortOrder` | `alphabetical` | `alphabetical` or `recent` |
 | `gitBranchesPanel.showCurrentBranchInfo` | `true` | Show the current branch summary above the tree views |
 | `gitBranchesPanel.showStatusBarBranchAction` | `true` | Show the status bar action that syncs or publishes the current branch |
@@ -104,8 +104,7 @@ Remote, Stash, Worktree, and Tags stay collapsed until you expand them.
 
 ### Useful configuration ideas already supported
 
-- Spaces entered while creating branches are always rewritten to `-`, so `Feature/make Fix` becomes `Feature/make-Fix`
-- Turn on `normalizeNewBranchNames` if you also want created branch names lowercased and repeated hyphens collapsed, so `Feature/make Fix` becomes `feature/make-fix`
+- Turn on `normalizeNewBranchNames` if you want `Feature/make Fix` to become `feature/make-fix` automatically when creating new branches
 - Hide any toolbar quick action you never use to keep the title bar compact
 - Hide the status bar branch action if you prefer less workbench chrome
 - Keep the current branch banner visible in the tree while hiding the status bar action, or vice versa

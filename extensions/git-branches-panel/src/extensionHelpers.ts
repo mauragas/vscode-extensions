@@ -71,36 +71,20 @@ export function buildSyncResultMessage(syncResult: SyncBranchResult): string {
 }
 
 interface BranchNameValidationOptions {
-  allowWhitespace?: boolean;
   normalize?: boolean;
 }
 
-export function sanitizeNewBranchName(value: string): string {
+export function normalizeBranchName(value: string): string {
   return value
     .trim()
-    .split('/')
-    .map((segment) => segment.trim().replace(/\s+/g, '-'))
-    .join('/');
-}
-
-export function normalizeBranchName(value: string): string {
-  return sanitizeNewBranchName(value)
     .toLowerCase()
     .split('/')
-    .map((segment) => segment.replace(/-+/g, '-'))
+    .map((segment) => segment.trim().replace(/\s+/g, '-').replace(/-+/g, '-'))
     .join('/');
 }
 
 function resolveBranchNameValue(value: string, options?: BranchNameValidationOptions): string {
-  if (options?.normalize) {
-    return normalizeBranchName(value);
-  }
-
-  if (options?.allowWhitespace) {
-    return sanitizeNewBranchName(value);
-  }
-
-  return value.trim();
+  return options?.normalize ? normalizeBranchName(value) : value.trim();
 }
 
 export function validateBranchName(
