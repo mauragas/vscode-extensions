@@ -266,20 +266,21 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(localSectionPresentation.nodeType, 'section');
   assert.equal(localSectionPresentation.collapsibleState, 'expanded');
   assert.equal(localSectionPresentation.containerKey, 'section:local');
+  assert.equal(localSectionPresentation.contextValue, 'localSection');
 
   assert.equal(sectionPresentation.nodeType, 'section');
   assert.equal(sectionPresentation.icon.id, 'cloud');
   assert.equal(sectionPresentation.collapsibleState, 'collapsed');
-  assert.equal(sectionPresentation.contextValue, 'section');
+  assert.equal(sectionPresentation.contextValue, 'remoteSection');
   assert.equal(sectionPresentation.containerKey, 'section:remote');
 
   assert.equal(stashSectionPresentation.nodeType, 'section');
   assert.equal(stashSectionPresentation.icon.id, 'archive');
-  assert.equal(stashSectionPresentation.contextValue, 'section');
+  assert.equal(stashSectionPresentation.contextValue, 'stashSection');
 
   assert.equal(worktreeSectionPresentation.nodeType, 'section');
   assert.equal(worktreeSectionPresentation.icon.id, 'folder');
-  assert.equal(worktreeSectionPresentation.contextValue, 'section');
+  assert.equal(worktreeSectionPresentation.contextValue, 'worktreeSection');
 
   assert.equal(tagsSectionPresentation.nodeType, 'section');
   assert.equal(tagsSectionPresentation.contextValue, 'tagsSection');

@@ -306,6 +306,80 @@ test('syncFolderBranches fetches once, syncs each descendant branch, and refresh
   assert.match(vscodeState.infoMessages.at(-1), /published upstream/);
 });
 
+test('syncFolderBranches also accepts the local section item to sync all loaded local branches', async () => {
+  const vscodeState = createVscodeState();
+  const syncBranchCalls = [];
+
+  const { commandContext } = createBulkActionsModule({
+    vscodeState,
+    gitMock: {
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async deleteTag() {},
+      async fetchRemoteState() {},
+      async getBranches() {
+        return [];
+      },
+      async syncBranch(repoRoot, branchName, options) {
+        syncBranchCalls.push({ repoRoot, branchName, options });
+        return {
+          branchName,
+          upstreamName: `origin/${branchName}`,
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  commandContext.state.descendantBranches.set('section:local', [
+    {
+      kind: 'branch',
+      fullName: 'feature/one',
+      label: 'one',
+      path: 'feature/one',
+      info: {
+        name: 'feature/one',
+        isCurrent: false,
+      },
+    },
+    {
+      kind: 'branch',
+      fullName: 'feature/two',
+      label: 'two',
+      path: 'feature/two',
+      info: {
+        name: 'feature/two',
+        isCurrent: false,
+      },
+    },
+  ]);
+
+  await vscodeState.registeredCommands['gitBranchesPanel.syncFolderBranches']({
+    nodeType: 'section',
+    containerScope: 'local',
+    containerKey: 'section:local',
+    containerPath: 'section:local',
+    repoRoot: '/repo',
+    label: 'Local',
+  });
+
+  assert.deepEqual(syncBranchCalls, [
+    {
+      repoRoot: '/repo',
+      branchName: 'feature/one',
+      options: { refreshRemoteState: false },
+    },
+    {
+      repoRoot: '/repo',
+      branchName: 'feature/two',
+      options: { refreshRemoteState: false },
+    },
+  ]);
+  assert.match(vscodeState.infoMessages.at(-1), /Local/);
+});
+
 test('deleteFolderBranches confirms once, skips the current branch, and refreshes after deletions', async () => {
   const vscodeState = createVscodeState();
   vscodeState.warningResponses.push('Delete');

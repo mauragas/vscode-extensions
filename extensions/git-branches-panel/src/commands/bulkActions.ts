@@ -109,7 +109,7 @@ async function handleSyncFolderBranches(
   item: BranchTreeItem,
   commandContext: CommandContext
 ): Promise<void> {
-  if (!isFolderActionItem(item, 'local')) {
+  if (!isLocalSyncContainerItem(item)) {
     return;
   }
 
@@ -119,7 +119,7 @@ async function handleSyncFolderBranches(
   }
 
   const folderLabel = getContainerLabel(item);
-  const branches = getFolderBranches(item, commandContext, 'local');
+  const branches = getContainerBranches(item, commandContext, 'local');
   if (branches.length === 0) {
     vscode.window.showInformationMessage(
       `No local branches were found under '${folderLabel}'.`
@@ -504,6 +504,14 @@ function getFolderBranches(
     .filter((branch) => resolveBranchScope(branch.info) === scope);
 }
 
+function getContainerBranches(
+  item: BranchTreeItem,
+  commandContext: CommandContext,
+  scope: FolderActionScope
+): TreeBranch[] {
+  return getFolderBranches(item, commandContext, scope);
+}
+
 function isFolderActionItem(
   item: BranchTreeItem | undefined,
   scope: FolderActionScope
@@ -513,11 +521,24 @@ function isFolderActionItem(
   );
 }
 
+function isLocalSyncContainerItem(item: BranchTreeItem | undefined): item is BranchTreeItem {
+  return Boolean(
+    item &&
+      item.containerScope === 'local' &&
+      item.containerKey &&
+      (item.nodeType === 'folder' || item.nodeType === 'section')
+  );
+}
+
 function resolveBranchScope(branch: Pick<BranchInfo, 'scope'>): FolderActionScope | 'stash' | 'worktree' {
   return branch.scope ?? 'local';
 }
 
 function getContainerLabel(item: BranchTreeItem): string {
+  if (item.nodeType === 'section' && typeof item.label === 'string') {
+    return item.label;
+  }
+
   return item.containerPath ?? (typeof item.label === 'string' ? item.label : 'folder');
 }
 

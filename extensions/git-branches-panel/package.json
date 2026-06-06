@@ -223,6 +223,12 @@
         "icon": "$(trash)"
       }
     ],
+    "submenus": [
+      {
+        "id": "gitBranchesPanel.sectionAdvanced",
+        "label": "Advanced"
+      }
+    ],
     "menus": {
       "view/title": [
         {
@@ -323,11 +329,6 @@
           "group": "2_tag@1"
         },
         {
-          "command": "gitBranchesPanel.pushAllTags",
-          "when": "viewItem == tagsSection",
-          "group": "1_tagsSection@1"
-        },
-        {
           "command": "gitBranchesPanel.applyStash",
           "when": "viewItem == stash",
           "group": "1_stash@1"
@@ -386,6 +387,43 @@
           "command": "gitBranchesPanel.deleteFolderTags",
           "when": "viewItem == tag-folder",
           "group": "2_folder@3"
+        },
+        {
+          "submenu": "gitBranchesPanel.sectionAdvanced",
+          "when": "viewItem == localSection || viewItem == remoteSection || viewItem == stashSection || viewItem == tagsSection",
+          "group": "1_section@1"
+        }
+      ],
+      "gitBranchesPanel.sectionAdvanced": [
+        {
+          "command": "gitBranchesPanel.syncFolderBranches",
+          "when": "viewItem == localSection",
+          "group": "1_local@1"
+        },
+        {
+          "command": "gitBranchesPanel.pruneMissingUpstreamBranches",
+          "when": "viewItem == localSection",
+          "group": "1_local@2"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "viewItem == remoteSection",
+          "group": "1_remote@1"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "viewItem == remoteSection",
+          "group": "1_remote@2"
+        },
+        {
+          "command": "gitBranchesPanel.stashSilently",
+          "when": "viewItem == stashSection",
+          "group": "1_stash@1"
+        },
+        {
+          "command": "gitBranchesPanel.pushAllTags",
+          "when": "viewItem == tagsSection",
+          "group": "1_tags@1"
         }
       ]
     },

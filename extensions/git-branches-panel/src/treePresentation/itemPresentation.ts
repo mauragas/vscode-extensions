@@ -171,7 +171,20 @@ function buildTreeItemDescription(branch: BranchInfo, syncStatus: string): strin
 }
 
 function getSectionContextValue(scope: TreeContainerScope): string {
-  return scope === 'tag' ? 'tagsSection' : 'section';
+  switch (scope) {
+    case 'local':
+      return 'localSection';
+    case 'remote':
+      return 'remoteSection';
+    case 'stash':
+      return 'stashSection';
+    case 'worktree':
+      return 'worktreeSection';
+    case 'tag':
+      return 'tagsSection';
+    default:
+      return 'section';
+  }
 }
 
 function getSectionCollapsibleState(scope: TreeContainerScope): 'expanded' | 'collapsed' {
