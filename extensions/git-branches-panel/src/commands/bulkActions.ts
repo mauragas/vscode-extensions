@@ -679,10 +679,11 @@ function buildFolderSyncResultMessage(folderLabel: string, result: BulkSyncResul
     ].join(' ');
   }
 
+  const attemptedCount = result.processed.length + result.failed.length;
   const syncedCount = result.processed.filter((branch) => branch.didPull || branch.didPush).length;
   const upToDateCount = countUpToDateSyncs(result.processed);
   const parts = [
-    `Processed ${result.processed.length} tracked local ${pluralize('branch', result.processed.length)} under '${folderLabel}'.`,
+    `Processed ${attemptedCount} tracked local ${pluralize('branch', attemptedCount)} under '${folderLabel}'.`,
   ];
 
   const details: string[] = [];
@@ -715,13 +716,14 @@ function buildFolderSyncResultMessage(folderLabel: string, result: BulkSyncResul
 }
 
 function buildFolderPushResultMessage(folderLabel: string, result: BulkPushResult): string {
+  const attemptedCount = result.processed.length + result.failed.length;
   const publishedCount = result.processed.filter((branch) => branch.publishedUpstream).length;
   const pushedCount = result.processed.filter(
     (branch) => branch.didPush && !branch.publishedUpstream
   ).length;
   const upToDateCount = countUpToDateSyncs(result.processed);
   const parts = [
-    `Processed ${result.processed.length} local ${pluralize('branch', result.processed.length)} under '${folderLabel}'.`,
+    `Processed ${attemptedCount} local ${pluralize('branch', attemptedCount)} under '${folderLabel}'.`,
   ];
 
   const details: string[] = [];

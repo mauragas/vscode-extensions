@@ -461,6 +461,75 @@ test('syncFolderBranches also accepts the local section item to sync all loaded 
   assert.match(vscodeState.infoMessages.at(-1), /Local/);
 });
 
+test('syncFolderBranches counts failed tracked branches in the processed summary', async () => {
+  const vscodeState = createVscodeState();
+
+  createBulkActionsModule({
+    vscodeState,
+    gitMock: {
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async deleteTag() {},
+      async fetchRemoteState() {},
+      async getBranches() {
+        return [
+          {
+            name: 'feature/one',
+            isCurrent: false,
+            upstreamName: 'origin/feature/one',
+            upstreamMissing: false,
+          },
+          {
+            name: 'feature/two',
+            isCurrent: false,
+            upstreamName: 'origin/feature/two',
+            upstreamMissing: false,
+          },
+        ];
+      },
+      async pushBranch() {
+        throw new Error('pushBranch should not be called in this test');
+      },
+      async syncBranch(_repoRoot, branchName) {
+        throw new Error(`sync failed for ${branchName}`);
+      },
+    },
+  }).commandContext.state.descendantBranches.set('folder:local:feature', [
+    {
+      kind: 'branch',
+      fullName: 'feature/one',
+      label: 'one',
+      path: 'feature/one',
+      info: {
+        name: 'feature/one',
+        isCurrent: false,
+      },
+    },
+    {
+      kind: 'branch',
+      fullName: 'feature/two',
+      label: 'two',
+      path: 'feature/two',
+      info: {
+        name: 'feature/two',
+        isCurrent: false,
+      },
+    },
+  ]);
+
+  await vscodeState.registeredCommands['gitBranchesPanel.syncFolderBranches']({
+    nodeType: 'folder',
+    containerScope: 'local',
+    containerKey: 'folder:local:feature',
+    containerPath: 'feature',
+    repoRoot: '/repo',
+    label: 'feature',
+  });
+
+  assert.match(vscodeState.warningMessages.at(-1).message, /Processed 2 tracked local branches under 'feature'/);
+  assert.match(vscodeState.warningMessages.at(-1).message, /2 failed/);
+});
+
 test('pushFolderBranches pushes tracked branches and publishes unpublished descendants', async () => {
   const vscodeState = createVscodeState();
   vscodeState.warningResponses.push('Push');
@@ -555,6 +624,65 @@ test('pushFolderBranches pushes tracked branches and publishes unpublished desce
   assert.match(vscodeState.infoMessages.at(-1), /Processed 2 local branches under 'feature'/);
   assert.match(vscodeState.infoMessages.at(-1), /pushed/);
   assert.match(vscodeState.infoMessages.at(-1), /published/);
+});
+
+test('pushFolderBranches counts failed branches in the processed summary', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Push');
+
+  const { commandContext } = createBulkActionsModule({
+    vscodeState,
+    gitMock: {
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async deleteTag() {},
+      async fetchRemoteState() {},
+      async getBranches() {
+        return [];
+      },
+      async pushBranch(_repoRoot, branchName) {
+        throw new Error(`push failed for ${branchName}`);
+      },
+      async syncBranch() {
+        throw new Error('syncBranch should not be called in this test');
+      },
+    },
+  });
+
+  commandContext.state.descendantBranches.set('folder:local:feature', [
+    {
+      kind: 'branch',
+      fullName: 'feature/one',
+      label: 'one',
+      path: 'feature/one',
+      info: {
+        name: 'feature/one',
+        isCurrent: false,
+      },
+    },
+    {
+      kind: 'branch',
+      fullName: 'feature/two',
+      label: 'two',
+      path: 'feature/two',
+      info: {
+        name: 'feature/two',
+        isCurrent: false,
+      },
+    },
+  ]);
+
+  await vscodeState.registeredCommands['gitBranchesPanel.pushFolderBranches']({
+    nodeType: 'folder',
+    containerScope: 'local',
+    containerKey: 'folder:local:feature',
+    containerPath: 'feature',
+    repoRoot: '/repo',
+    label: 'feature',
+  });
+
+  assert.match(vscodeState.warningMessages.at(-1).message, /Processed 2 local branches under 'feature'/);
+  assert.match(vscodeState.warningMessages.at(-1).message, /2 failed/);
 });
 
 test('deleteFolderBranches confirms once, skips the current branch, and refreshes after deletions', async () => {
