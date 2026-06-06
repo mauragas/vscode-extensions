@@ -188,7 +188,10 @@ function createBranchCommandsModule({
         normalizeSpy.push(value);
         return normalizeImpl(value);
       },
-      validateBranchName(value, currentName, options) {
+      validateBranchName() {
+        return undefined;
+      },
+      validateNewBranchNameInput(value, currentName, options) {
         validateSpy.push({ value, currentName, options });
         return validateImpl(value, currentName, options);
       },
@@ -263,7 +266,13 @@ test('newBranch sanitizes the entered branch name when normalization is disabled
   await vscodeState.registeredCommands['gitBranchesPanel.newBranch']();
 
   assert.equal(await vscodeState.inputBoxRequests[0].validateInput('anything at all'), undefined);
-  assert.deepEqual(validateSpy, []);
+  assert.deepEqual(validateSpy, [
+    {
+      value: 'anything at all',
+      currentName: undefined,
+      options: { normalize: false },
+    },
+  ]);
   assert.deepEqual(sanitizeSpy, [' - Feature / Hello--- World - ']);
   assert.deepEqual(normalizeSpy, []);
   assert.deepEqual(createBranchCalls, [{ repoRoot: '/repo', branchName: 'Feature/Hello---World' }]);
@@ -331,7 +340,13 @@ test('newBranch normalizes the created branch name when the setting is enabled',
   await vscodeState.registeredCommands['gitBranchesPanel.newBranch']();
 
   assert.equal(await vscodeState.inputBoxRequests[0].validateInput('anything at all'), undefined);
-  assert.deepEqual(validateSpy, []);
+  assert.deepEqual(validateSpy, [
+    {
+      value: 'anything at all',
+      currentName: undefined,
+      options: { normalize: true },
+    },
+  ]);
   assert.deepEqual(sanitizeSpy, []);
   assert.deepEqual(normalizeSpy, [' - Feature / Hello--- World - ']);
   assert.deepEqual(createBranchCalls, [{ repoRoot: '/repo', branchName: 'feature/hello-world' }]);
@@ -402,7 +417,13 @@ test('newBranchFromSelected creates a branch from a local branch without checkou
 
   assert.match(vscodeState.inputBoxRequests[0].prompt, /feature\/source/);
   assert.equal(await vscodeState.inputBoxRequests[0].validateInput('anything at all'), undefined);
-  assert.deepEqual(validateSpy, []);
+  assert.deepEqual(validateSpy, [
+    {
+      value: 'anything at all',
+      currentName: 'feature/source',
+      options: { normalize: false },
+    },
+  ]);
   assert.deepEqual(sanitizeSpy, [' feature/child name?? ']);
   assert.deepEqual(normalizeSpy, []);
   assert.deepEqual(createBranchFromRefCalls, [
@@ -480,7 +501,13 @@ test('newBranchFromSelectedAndCheckout creates and checks out a branch from a re
   });
 
   assert.equal(await vscodeState.inputBoxRequests[0].validateInput('anything at all'), undefined);
-  assert.deepEqual(validateSpy, []);
+  assert.deepEqual(validateSpy, [
+    {
+      value: 'anything at all',
+      currentName: undefined,
+      options: { normalize: true },
+    },
+  ]);
   assert.deepEqual(sanitizeSpy, []);
   assert.deepEqual(normalizeSpy, [' - Feature / Hello--- World - ']);
   assert.deepEqual(createBranchFromRefCalls, [
@@ -497,6 +524,79 @@ test('newBranchFromSelectedAndCheckout creates and checks out a branch from a re
       options: { fetchRemoteState: false },
     },
   ]);
+});
+
+test('newBranch stops when sanitization removes every valid branch-name character', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.inputBoxResponse = ' ??? ';
+  const validateSpy = [];
+  const sanitizeSpy = [];
+  const normalizeSpy = [];
+  const createBranchCalls = [];
+
+  const { commandContext } = createBranchCommandsModule({
+    vscodeState,
+    validateSpy,
+    validateImpl() {
+      return 'Branch name must include at least one valid character.';
+    },
+    sanitizeSpy,
+    sanitizeImpl() {
+      return '';
+    },
+    normalizeSpy,
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch(repoRoot, branchName) {
+        createBranchCalls.push({ repoRoot, branchName });
+      },
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.newBranch']();
+
+  assert.equal(
+    await vscodeState.inputBoxRequests[0].validateInput(' ??? '),
+    'Branch name must include at least one valid character.'
+  );
+  assert.deepEqual(validateSpy, [
+    {
+      value: ' ??? ',
+      currentName: undefined,
+      options: { normalize: false },
+    },
+  ]);
+  assert.deepEqual(sanitizeSpy, [' ??? ']);
+  assert.deepEqual(normalizeSpy, []);
+  assert.deepEqual(createBranchCalls, []);
+  assert.deepEqual(commandContext.state.successRefreshes, []);
 });
 
 test('publishBranch pushes the selected branch and refreshes remote state', async () => {

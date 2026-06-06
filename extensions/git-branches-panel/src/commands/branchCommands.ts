@@ -23,15 +23,23 @@ import {
   normalizeBranchName,
   sanitizeNewBranchName,
   validateBranchName,
+  validateNewBranchNameInput,
 } from '../extensionHelpers';
 import { BranchTreeItem } from '../treeProvider';
 import { NO_CURRENT_BRANCH_MESSAGE, type CommandContext } from './shared';
 
 const NORMALIZE_NEW_BRANCH_NAMES_SETTING = 'normalizeNewBranchNames';
+const NEW_BRANCH_PLACEHOLDER = 'feature/my-feature or hotfix/bug-123';
 
 interface BranchActionItem extends vscode.QuickPickItem {
   readonly actionId: string;
   run(): Promise<void>;
+}
+
+interface NewBranchPromptOptions {
+  prompt: string;
+  currentName?: string;
+  normalize: boolean;
 }
 
 export function registerBranchDomainCommands(
@@ -310,18 +318,10 @@ async function handleNewBranch(commandContext: CommandContext): Promise<void> {
     return;
   }
 
-  const normalizeNewBranchNames = shouldNormalizeNewBranchNames();
-
-  const name = await vscode.window.showInputBox({
+  const branchName = await promptForNewBranchName({
     prompt: 'Enter a name for the new branch',
-    placeHolder: 'feature/my-feature or hotfix/bug-123',
-    validateInput: () => undefined,
+    normalize: shouldNormalizeNewBranchNames(),
   });
-  if (name === undefined) {
-    return;
-  }
-
-  const branchName = resolveNewBranchName(name, normalizeNewBranchNames);
   if (!branchName) {
     return;
   }
@@ -351,21 +351,15 @@ async function handleCreateBranchFromSelected(
     return;
   }
 
-  const normalizeNewBranchNames = shouldNormalizeNewBranchNames();
   const sourceBranchName = item.branchName;
   const sourceBranchDisplayName = sourceBranchName;
-  const name = await vscode.window.showInputBox({
+  const branchName = await promptForNewBranchName({
     prompt: checkoutNewBranch
       ? `Enter a name for the new branch to create from '${sourceBranchDisplayName}' and switch to`
       : `Enter a name for the new branch to create from '${sourceBranchDisplayName}'`,
-    placeHolder: 'feature/my-feature or hotfix/bug-123',
-    validateInput: () => undefined,
+    currentName: item.nodeType === 'remoteBranch' ? undefined : sourceBranchName,
+    normalize: shouldNormalizeNewBranchNames(),
   });
-  if (name === undefined) {
-    return;
-  }
-
-  const branchName = resolveNewBranchName(name, normalizeNewBranchNames);
   if (!branchName) {
     return;
   }
@@ -566,6 +560,24 @@ function shouldNormalizeNewBranchNames(): boolean {
   return vscode.workspace
     .getConfiguration('gitBranchesPanel')
     .get<boolean>(NORMALIZE_NEW_BRANCH_NAMES_SETTING, false);
+}
+
+async function promptForNewBranchName(
+  options: NewBranchPromptOptions
+): Promise<string | undefined> {
+  const name = await vscode.window.showInputBox({
+    prompt: options.prompt,
+    placeHolder: NEW_BRANCH_PLACEHOLDER,
+    validateInput: (value) =>
+      validateNewBranchNameInput(value, options.currentName, {
+        normalize: options.normalize,
+      }),
+  });
+  if (!name) {
+    return undefined;
+  }
+
+  return resolveNewBranchName(name, options.normalize) || undefined;
 }
 
 function resolveNewBranchName(name: string, normalize: boolean): string {

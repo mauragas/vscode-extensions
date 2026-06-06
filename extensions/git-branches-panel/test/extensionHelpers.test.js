@@ -10,6 +10,7 @@ const {
   normalizeBranchName,
   sanitizeNewBranchName,
   validateBranchName,
+  validateNewBranchNameInput,
   validateTagName,
 } = require('../out/extensionHelpers.js');
 
@@ -93,7 +94,7 @@ test('sanitizeNewBranchName keeps minimum cleanup while preserving case and fold
   assert.equal(sanitizeNewBranchName(' - Feature / Hello--- World - '), 'Feature/Hello---World');
   assert.equal(sanitizeNewBranchName('release?? / patch[*'), 'release/patch');
   assert.equal(sanitizeNewBranchName('Feature\\Sub Branch'), 'Feature/Sub-Branch');
-  assert.equal(sanitizeNewBranchName('  ???  '), 'new-branch');
+  assert.equal(sanitizeNewBranchName('  ???  '), '');
 });
 
 test('normalizeBranchName converts mixed case names to lowercase kebab-case and preserves folders', () => {
@@ -105,19 +106,22 @@ test('normalizeBranchName converts mixed case names to lowercase kebab-case and 
   assert.equal(normalizeBranchName(' - Feature / Hello--- World - '), 'feature/hello-world');
 });
 
-test('validateBranchName can allow whitespace while still enforcing other branch rules', () => {
-  assert.equal(validateBranchName('Feature/make Fix', undefined, { allowWhitespace: true }), undefined);
+test('validateNewBranchNameInput accepts names that sanitize cleanly and rejects empty results', () => {
+  assert.equal(validateNewBranchNameInput('Feature/make Fix'), undefined);
   assert.equal(
-    validateBranchName(' feature/demo ', 'feature/demo', { allowWhitespace: true }),
+    validateNewBranchNameInput(' ??? '),
+    'Branch name must include at least one valid character.'
+  );
+  assert.equal(
+    validateNewBranchNameInput(' feature/demo ', 'feature/demo'),
     'Please enter a different branch name.'
   );
-  assert.equal(validateBranchName('Feature/make Fix'), 'Branch name cannot contain spaces.');
 });
 
-test('validateBranchName respects normalization when enabled', () => {
-  assert.equal(validateBranchName('Feature/make Fix', undefined, { normalize: true }), undefined);
+test('validateNewBranchNameInput respects normalization when enabled', () => {
+  assert.equal(validateNewBranchNameInput('Feature/make Fix', undefined, { normalize: true }), undefined);
   assert.equal(
-    validateBranchName(' feature/demo ', 'Feature/Demo', { normalize: true }),
+    validateNewBranchNameInput(' feature/demo ', 'Feature/Demo', { normalize: true }),
     'Please enter a different branch name.'
   );
 });

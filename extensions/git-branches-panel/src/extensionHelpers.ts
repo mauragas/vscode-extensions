@@ -70,8 +70,7 @@ export function buildSyncResultMessage(syncResult: SyncBranchResult): string {
   return `Pushed '${syncResult.branchName}' to '${syncResult.upstreamName}'.`;
 }
 
-interface BranchNameValidationOptions {
-  allowWhitespace?: boolean;
+interface NewBranchNameValidationOptions {
   normalize?: boolean;
 }
 
@@ -87,13 +86,7 @@ export function sanitizeNewBranchName(value: string, options?: { normalize?: boo
     .map((segment) => sanitizeNewBranchSegment(segment, options?.normalize ?? false))
     .filter(Boolean);
 
-  const branchName = segments.join('/');
-
-  if (!branchName) {
-    return 'new-branch';
-  }
-
-  return branchName === '@' ? 'new-branch' : branchName;
+  return segments.join('/');
 }
 
 export function normalizeBranchName(value: string): string {
@@ -124,22 +117,36 @@ function sanitizeNewBranchSegment(segment: string, normalize: boolean): string {
   return sanitizedSegment === '@' ? '' : sanitizedSegment;
 }
 
-function resolveBranchNameValue(value: string, options?: BranchNameValidationOptions): string {
-  return options?.normalize ? normalizeBranchName(value) : value.trim();
+function resolveNewBranchNameValue(value: string, options?: NewBranchNameValidationOptions): string {
+  return options?.normalize ? normalizeBranchName(value) : sanitizeNewBranchName(value);
 }
 
-export function validateBranchName(
+export function validateNewBranchNameInput(
   value: string,
   currentName?: string,
-  options?: BranchNameValidationOptions
+  options?: NewBranchNameValidationOptions
 ): string | undefined {
-  const trimmedValue = resolveBranchNameValue(value, options);
+  const branchName = resolveNewBranchNameValue(value, options);
+
+  if (!branchName) {
+    return 'Branch name must include at least one valid character.';
+  }
+
+  if (currentName && branchName === resolveNewBranchNameValue(currentName, options)) {
+    return 'Please enter a different branch name.';
+  }
+
+  return undefined;
+}
+
+export function validateBranchName(value: string, currentName?: string): string | undefined {
+  const trimmedValue = value.trim();
 
   if (!trimmedValue) {
     return 'Branch name cannot be empty.';
   }
 
-  if (!options?.allowWhitespace && /\s/.test(trimmedValue)) {
+  if (/\s/.test(trimmedValue)) {
     return 'Branch name cannot contain spaces.';
   }
 
@@ -151,7 +158,7 @@ export function validateBranchName(
     return 'Branch name cannot end with a slash or contain empty path segments.';
   }
 
-  if (currentName && trimmedValue === resolveBranchNameValue(currentName, options)) {
+  if (currentName && trimmedValue === currentName) {
     return 'Please enter a different branch name.';
   }
 
