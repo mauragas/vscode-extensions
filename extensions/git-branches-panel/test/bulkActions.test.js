@@ -200,7 +200,7 @@ test('showAdvancedActions routes the quick-pick selection to the clean repositor
   ]);
 });
 
-test('pruneMissingUpstreamBranches filters candidates, skips merge-protected branches, and refreshes once', async () => {
+test('pruneMissingUpstreamBranches force deletes stale branches and refreshes once', async () => {
   const vscodeState = createVscodeState();
   vscodeState.warningResponses.push('Prune');
 
@@ -210,11 +210,8 @@ test('pruneMissingUpstreamBranches filters candidates, skips merge-protected bra
   const { commandContext } = createBulkActionsModule({
     vscodeState,
     gitMock: {
-      async deleteBranch(repoRoot, branchName) {
-        deleteBranchCalls.push({ repoRoot, branchName });
-        if (branchName === 'feature/merge-protected') {
-          throw new Error('branch is not fully merged');
-        }
+      async deleteBranch(repoRoot, branchName, force) {
+        deleteBranchCalls.push({ repoRoot, branchName, force });
       },
       async deleteRemoteBranch() {},
       async deleteTag() {},
@@ -226,7 +223,7 @@ test('pruneMissingUpstreamBranches filters candidates, skips merge-protected bra
           { name: 'main', isCurrent: true, upstreamName: 'origin/main', upstreamMissing: true },
           { name: 'feature/stale', isCurrent: false, upstreamName: 'origin/feature/stale', upstreamMissing: true },
           { name: 'feature/keep', isCurrent: false, upstreamName: 'origin/feature/keep', upstreamMissing: false },
-          { name: 'feature/merge-protected', isCurrent: false, upstreamName: 'origin/feature/merge-protected', upstreamMissing: true },
+          { name: 'feature/prune-me-too', isCurrent: false, upstreamName: 'origin/feature/prune-me-too', upstreamMissing: true },
         ];
       },
       async pushBranch() {},
@@ -240,14 +237,14 @@ test('pruneMissingUpstreamBranches filters candidates, skips merge-protected bra
 
   assert.deepEqual(fetchRemoteStateCalls, ['/repo']);
   assert.deepEqual(deleteBranchCalls, [
-    { repoRoot: '/repo', branchName: 'feature/stale' },
-    { repoRoot: '/repo', branchName: 'feature/merge-protected' },
+    { repoRoot: '/repo', branchName: 'feature/stale', force: true },
+    { repoRoot: '/repo', branchName: 'feature/prune-me-too', force: true },
   ]);
   assert.deepEqual(commandContext.state.refreshCalls, [{ fetchRemoteState: false }]);
   assert.equal(vscodeState.warningMessages[0].options.modal, true);
   assert.match(vscodeState.warningMessages[0].message, /feature\/stale/);
-  assert.match(vscodeState.warningMessages.at(-1).message, /Pruned 1 local branch/);
-  assert.match(vscodeState.warningMessages.at(-1).message, /feature\/merge-protected/);
+  assert.match(vscodeState.warningMessages[0].message, /feature\/prune-me-too/);
+  assert.match(vscodeState.infoMessages.at(-1), /Pruned 2 local branches/);
 });
 
 test('syncFolderBranches only syncs tracked descendants and reports branches that need publishing', async () => {

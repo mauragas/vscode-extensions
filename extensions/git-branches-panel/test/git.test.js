@@ -443,6 +443,31 @@ test('getBranches includes upstream tracking details for local branches', async 
   assert.equal(featureBranch.behindCount, 0);
 });
 
+test('getBranches marks local branches whose tracked upstream was deleted', async (t) => {
+  const { repoRoot, remoteRoot } = createRemoteBackedRepository(t);
+  const collaboratorRoot = cloneRepository(t, remoteRoot);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/stale']);
+  commitFile(repoRoot, 'stale.txt', 'stale\n', 'Add stale branch');
+  runGit(repoRoot, ['push', '-u', 'origin', 'feature/stale']);
+  runGit(repoRoot, ['checkout', 'main']);
+
+  runGit(collaboratorRoot, ['fetch', 'origin']);
+  runGit(collaboratorRoot, ['push', 'origin', '--delete', 'feature/stale']);
+
+  await fetchRemoteState(repoRoot);
+
+  const branches = await getBranches(repoRoot);
+  const staleBranch = branches.find((branch) => branch.name === 'feature/stale');
+
+  assert.ok(staleBranch);
+  assert.equal(staleBranch.scope, 'local');
+  assert.equal(staleBranch.upstreamName, 'origin/feature/stale');
+  assert.equal(staleBranch.upstreamMissing, true);
+  assert.equal(staleBranch.aheadCount, 0);
+  assert.equal(staleBranch.behindCount, 0);
+});
+
 test('getRemoteBranches filters origin/HEAD while keeping real remote branches', async (t) => {
   const { repoRoot } = createRemoteBackedRepository(t);
 

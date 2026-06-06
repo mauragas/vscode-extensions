@@ -371,6 +371,7 @@ async function handlePruneMissingUpstreamBranches(commandContext: CommandContext
       confirmationPrompt:
         'Prune local branches whose tracked upstream no longer exists?',
       emptyMessage: 'No local branches with missing upstreams were found.',
+      forceDelete: true,
       commandContext,
       successMessageBuilder: buildPruneResultMessage,
     });
@@ -498,6 +499,7 @@ async function handleBulkLocalDelete(options: {
   confirmationLabel: 'Delete' | 'Prune';
   confirmationPrompt: string;
   emptyMessage: string;
+  forceDelete?: boolean;
   commandContext: CommandContext;
   successMessageBuilder(result: BulkDeleteResult): string;
 }): Promise<void> {
@@ -508,6 +510,7 @@ async function handleBulkLocalDelete(options: {
     confirmationLabel,
     confirmationPrompt,
     emptyMessage,
+    forceDelete = false,
     commandContext,
   } = options;
 
@@ -544,7 +547,7 @@ async function handleBulkLocalDelete(options: {
     return;
   }
 
-  const result = await deleteLocalBranches(repoRoot, targets);
+  const result = await deleteLocalBranches(repoRoot, targets, forceDelete);
 
   if (result.deleted.length > 0) {
     await commandContext.refresh({ fetchRemoteState: false });
@@ -558,7 +561,8 @@ async function handleBulkLocalDelete(options: {
 
 async function deleteLocalBranches(
   repoRoot: string,
-  targets: readonly LocalBranchTarget[]
+  targets: readonly LocalBranchTarget[],
+  forceDelete = false
 ): Promise<BulkDeleteResult> {
   const result: BulkDeleteResult = {
     deleted: [],
@@ -574,7 +578,7 @@ async function deleteLocalBranches(
     }
 
     try {
-      await deleteBranch(repoRoot, target.name, false);
+      await deleteBranch(repoRoot, target.name, forceDelete);
       result.deleted.push(target.name);
     } catch (error) {
       const message = getErrorMessage(error);
