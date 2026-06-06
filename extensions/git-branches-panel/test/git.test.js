@@ -11,6 +11,7 @@ const {
   checkoutTag,
   createTag,
   deleteTag,
+  dropAllStashes,
   dropStash,
   fetchAllRemotes,
   fetchRemoteState,
@@ -270,6 +271,20 @@ test('dropStash removes the selected stash entry', async (t) => {
   await stashSilently(repoRoot);
 
   await dropStash(repoRoot, 'stash@{0}');
+
+  assert.equal(hasRef(repoRoot, 'refs/stash'), false);
+  assert.equal((await getStashes(repoRoot)).length, 0);
+});
+
+test('dropAllStashes clears every stash entry', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  writeFileSync(join(repoRoot, 'README.md'), '# Test repo\nthird\n');
+  await stashSilently(repoRoot);
+  writeFileSync(join(repoRoot, 'README.md'), '# Test repo\nfourth\n');
+  await stashSilently(repoRoot);
+
+  await dropAllStashes(repoRoot);
 
   assert.equal(hasRef(repoRoot, 'refs/stash'), false);
   assert.equal((await getStashes(repoRoot)).length, 0);

@@ -46,6 +46,10 @@ export async function dropStash(repoRoot: string, stashName: string): Promise<vo
   await runGit(repoRoot, ['stash', 'drop', stashName]);
 }
 
+export async function dropAllStashes(repoRoot: string): Promise<void> {
+  await runGit(repoRoot, ['stash', 'clear']);
+}
+
 export async function stashSilently(repoRoot: string): Promise<boolean> {
   const { stdout } = await runGit(repoRoot, ['status', '--porcelain', '--untracked-files=all']);
 

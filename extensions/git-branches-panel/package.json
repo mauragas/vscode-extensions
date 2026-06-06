@@ -175,6 +175,11 @@
         "icon": "$(trash)"
       },
       {
+        "command": "gitBranchesPanel.dropAllStashes",
+        "title": "Drop All Stashes",
+        "icon": "$(trash)"
+      },
+      {
         "command": "gitBranchesPanel.openWorktree",
         "title": "Open Worktree",
         "icon": "$(folder-opened)"
@@ -221,12 +226,6 @@
         "command": "gitBranchesPanel.pruneMissingUpstreamBranches",
         "title": "Prune Local Branches with Missing Upstream",
         "icon": "$(trash)"
-      }
-    ],
-    "submenus": [
-      {
-        "id": "gitBranchesPanel.sectionAdvanced",
-        "label": "Advanced"
       }
     ],
     "menus": {
@@ -389,13 +388,6 @@
           "group": "2_folder@3"
         },
         {
-          "submenu": "gitBranchesPanel.sectionAdvanced",
-          "when": "viewItem == localSection || viewItem == remoteSection || viewItem == stashSection || viewItem == tagsSection",
-          "group": "1_section@1"
-        }
-      ],
-      "gitBranchesPanel.sectionAdvanced": [
-        {
           "command": "gitBranchesPanel.syncFolderBranches",
           "when": "viewItem == localSection",
           "group": "1_local@1"
@@ -416,7 +408,7 @@
           "group": "1_remote@2"
         },
         {
-          "command": "gitBranchesPanel.stashSilently",
+          "command": "gitBranchesPanel.dropAllStashes",
           "when": "viewItem == stashSection",
           "group": "1_stash@1"
         },
