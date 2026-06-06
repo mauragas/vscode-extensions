@@ -223,12 +223,6 @@
         "icon": "$(trash)"
       }
     ],
-    "submenus": [
-      {
-        "id": "gitBranchesPanel.folderAdvanced",
-        "label": "Advanced"
-      }
-    ],
     "menus": {
       "view/title": [
         {
@@ -374,31 +368,24 @@
           "group": "2_worktree@1"
         },
         {
-          "submenu": "gitBranchesPanel.folderAdvanced",
-          "when": "viewItem == local-folder || viewItem == remote-folder || viewItem == tag-folder",
-          "group": "1_folder@1"
-        }
-      ],
-      "gitBranchesPanel.folderAdvanced": [
-        {
           "command": "gitBranchesPanel.syncFolderBranches",
           "when": "viewItem == local-folder",
-          "group": "1_local@1"
+          "group": "1_folder@1"
         },
         {
           "command": "gitBranchesPanel.deleteFolderBranches",
           "when": "viewItem == local-folder",
-          "group": "2_local@1"
+          "group": "2_folder@1"
         },
         {
           "command": "gitBranchesPanel.deleteRemoteFolderBranches",
           "when": "viewItem == remote-folder",
-          "group": "2_remote@1"
+          "group": "2_folder@2"
         },
         {
           "command": "gitBranchesPanel.deleteFolderTags",
           "when": "viewItem == tag-folder",
-          "group": "2_tag@1"
+          "group": "2_folder@3"
         }
       ]
     },
