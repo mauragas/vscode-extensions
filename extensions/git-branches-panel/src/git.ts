@@ -1,4 +1,4 @@
-export { getRepoRoot } from './git/shared';
+export { cleanRepository, getRepoRoot } from './git/shared';
 
 export * from './git/branchGit';
 export * from './git/remoteGit';

@@ -24,6 +24,10 @@ export interface SyncBranchOptions {
   refreshRemoteState?: boolean;
 }
 
+export interface CreateBranchFromRefOptions {
+  checkout?: boolean;
+}
+
 export interface RefComparisonChange {
   status: 'A' | 'D' | 'M' | 'R';
   path: string;
@@ -46,7 +50,21 @@ export async function checkoutBranch(repoRoot: string, branchName: string): Prom
 }
 
 export async function createBranch(repoRoot: string, branchName: string): Promise<void> {
-  await runGit(repoRoot, ['checkout', '-b', branchName]);
+  await createBranchFromRef(repoRoot, branchName, 'HEAD', { checkout: true });
+}
+
+export async function createBranchFromRef(
+  repoRoot: string,
+  branchName: string,
+  startPoint: string,
+  options: CreateBranchFromRefOptions = {}
+): Promise<void> {
+  if (options.checkout ?? false) {
+    await runGit(repoRoot, ['checkout', '-b', branchName, startPoint]);
+    return;
+  }
+
+  await runGit(repoRoot, ['branch', branchName, startPoint]);
 }
 
 export async function renameBranch(

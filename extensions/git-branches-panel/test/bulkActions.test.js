@@ -167,6 +167,37 @@ test('showAdvancedActions routes the quick-pick selection to the prune command',
   ]);
 });
 
+test('showAdvancedActions routes the quick-pick selection to the clean repository command', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.quickPickSelector = (items) =>
+    items.find((item) => item.actionId === 'cleanRepository');
+
+  createBulkActionsModule({
+    vscodeState,
+    gitMock: {
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async deleteTag() {},
+      async fetchRemoteState() {},
+      async getBranches() {
+        return [];
+      },
+      async syncBranch() {
+        throw new Error('syncBranch should not be called in this test');
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.showAdvancedActions']();
+
+  assert.deepEqual(vscodeState.executedCommands, [
+    {
+      command: 'gitBranchesPanel.cleanRepository',
+      args: [],
+    },
+  ]);
+});
+
 test('pruneMissingUpstreamBranches filters candidates, skips merge-protected branches, and refreshes once', async () => {
   const vscodeState = createVscodeState();
   vscodeState.warningResponses.push('Prune');

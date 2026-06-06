@@ -333,6 +333,14 @@ function buildRepositoryActionItems(commandContext: CommandContext): AdvancedAct
       },
     },
     {
+      actionId: 'cleanRepository',
+      label: 'Clean repository…',
+      description: 'Run git clean -fdx to remove untracked and ignored files',
+      run: async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.cleanRepository');
+      },
+    },
+    {
       actionId: 'refresh',
       label: 'Refresh branch tree',
       description: 'Reload the currently visible tree sections',

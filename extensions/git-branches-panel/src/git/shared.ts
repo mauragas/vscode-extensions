@@ -57,6 +57,10 @@ export async function runGit(
   }
 }
 
+export async function cleanRepository(repoRoot: string): Promise<void> {
+  await runGit(repoRoot, ['clean', '-fdx']);
+}
+
 export async function ensureRemoteExists(
   repoRoot: string,
   remoteName: string

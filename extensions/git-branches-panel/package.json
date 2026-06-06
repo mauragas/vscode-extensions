@@ -122,6 +122,16 @@
         "icon": "$(add)"
       },
       {
+        "command": "gitBranchesPanel.newBranchFromSelected",
+        "title": "New Branch from Selected Branch...",
+        "icon": "$(add)"
+      },
+      {
+        "command": "gitBranchesPanel.newBranchFromSelectedAndCheckout",
+        "title": "New Branch from Selected Branch and Checkout...",
+        "icon": "$(add)"
+      },
+      {
         "command": "gitBranchesPanel.renameBranch",
         "title": "Rename Branch",
         "icon": "$(edit)"
@@ -226,6 +236,11 @@
         "command": "gitBranchesPanel.pruneMissingUpstreamBranches",
         "title": "Prune Local Branches with Missing Upstream",
         "icon": "$(trash)"
+      },
+      {
+        "command": "gitBranchesPanel.cleanRepository",
+        "title": "Clean Repository",
+        "icon": "$(trash)"
       }
     ],
     "menus": {
@@ -281,6 +296,16 @@
           "command": "gitBranchesPanel.checkout",
           "when": "viewItem == branch || viewItem == currentBranch || viewItem == remoteBranch",
           "group": "1_branch@2"
+        },
+        {
+          "command": "gitBranchesPanel.newBranchFromSelected",
+          "when": "viewItem == branch || viewItem == currentBranch || viewItem == remoteBranch",
+          "group": "1_branch@2.1"
+        },
+        {
+          "command": "gitBranchesPanel.newBranchFromSelectedAndCheckout",
+          "when": "viewItem == branch || viewItem == currentBranch || viewItem == remoteBranch",
+          "group": "1_branch@2.2"
         },
         {
           "command": "gitBranchesPanel.renameBranch",

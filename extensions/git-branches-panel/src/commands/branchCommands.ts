@@ -6,6 +6,7 @@ import {
   checkoutBranch,
   checkoutRemoteBranch,
   createBranch,
+  createBranchFromRef,
   deleteBranch,
   deleteRemoteBranch,
   getDiffFilesBetweenRefs,
@@ -49,6 +50,18 @@ export function registerBranchDomainCommands(
     vscode.commands.registerCommand('gitBranchesPanel.newBranch', async () => {
       await handleNewBranch(commandContext);
     }),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.newBranchFromSelected',
+      async (item: BranchTreeItem) => {
+        await handleCreateBranchFromSelected(item, commandContext, false);
+      }
+    ),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.newBranchFromSelectedAndCheckout',
+      async (item: BranchTreeItem) => {
+        await handleCreateBranchFromSelected(item, commandContext, true);
+      }
+    ),
     vscode.commands.registerCommand('gitBranchesPanel.renameBranch', async (item: BranchTreeItem) => {
       await handleRenameBranch(item, commandContext);
     }),
@@ -250,6 +263,60 @@ async function handleNewBranch(commandContext: CommandContext): Promise<void> {
     await commandContext.showSuccessAndRefresh(`Created and switched to '${branchName}'.`);
   } catch (error) {
     commandContext.showCommandError(`Failed to create '${branchName}'`, error);
+  }
+}
+
+async function handleCreateBranchFromSelected(
+  item: BranchTreeItem,
+  commandContext: CommandContext,
+  checkoutNewBranch: boolean
+): Promise<void> {
+  if (!item.branchName || !item.repoRoot) {
+    return;
+  }
+
+  if (
+    item.nodeType !== 'branch' &&
+    item.nodeType !== 'currentBranch' &&
+    item.nodeType !== 'remoteBranch'
+  ) {
+    return;
+  }
+
+  const sourceBranchName = item.branchName;
+  const sourceBranchDisplayName = sourceBranchName;
+  const name = await vscode.window.showInputBox({
+    prompt: checkoutNewBranch
+      ? `Enter a name for the new branch to create from '${sourceBranchDisplayName}' and switch to`
+      : `Enter a name for the new branch to create from '${sourceBranchDisplayName}'`,
+    placeHolder: 'feature/my-feature or hotfix/bug-123',
+    validateInput: (value) =>
+      validateBranchName(
+        value,
+        item.nodeType === 'remoteBranch' ? undefined : sourceBranchName
+      ),
+  });
+  if (!name) {
+    return;
+  }
+
+  const branchName = name.trim();
+
+  try {
+    await createBranchFromRef(item.repoRoot, branchName, sourceBranchName, {
+      checkout: checkoutNewBranch,
+    });
+    await commandContext.showSuccessAndRefresh(
+      checkoutNewBranch
+        ? `Created and switched to '${branchName}' from '${sourceBranchDisplayName}'.`
+        : `Created branch '${branchName}' from '${sourceBranchDisplayName}'.`,
+      { fetchRemoteState: false }
+    );
+  } catch (error) {
+    commandContext.showCommandError(
+      `Failed to create '${branchName}' from '${sourceBranchDisplayName}'`,
+      error
+    );
   }
 }
 
