@@ -3,6 +3,7 @@ export type {
   BranchSortOrder,
   BranchSyncState,
   BranchTreeNode,
+  TreeContainerScope,
   TreeBranch,
   TreeChildNode,
   TreeFolder,

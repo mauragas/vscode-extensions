@@ -78,7 +78,14 @@ function createTreeItemMock() {
     BranchTreeItem: class BranchTreeItem {
       constructor(node, repoRoot) {
         this.nodeType = node.kind === 'branch' ? 'branch' : node.kind;
+        this.containerKey =
+          node.kind === 'branch'
+            ? undefined
+            : node.kind === 'section'
+              ? node.path
+              : `folder:${node.scope ?? 'local'}:${node.path}`;
         this.containerPath = node.kind === 'branch' ? undefined : node.path;
+        this.containerScope = node.kind === 'branch' ? undefined : node.scope;
         this.branchName = node.kind === 'branch' ? node.fullName : undefined;
         this.repoRoot = repoRoot;
       }
@@ -86,23 +93,46 @@ function createTreeItemMock() {
   };
 }
 
-function findContainerNode(nodes, containerPath) {
+function getContainerKey(node) {
+  return node.kind === 'section' ? node.path : `folder:${node.scope ?? 'local'}:${node.path}`;
+}
+
+function findContainerNode(nodes, containerKey) {
   for (const node of nodes) {
     if (node.kind === 'branch') {
       continue;
     }
 
-    if (node.path === containerPath) {
+    if (getContainerKey(node) === containerKey) {
       return node;
     }
 
-    const nestedMatch = findContainerNode(node.children, containerPath);
+    const nestedMatch = findContainerNode(node.children, containerKey);
     if (nestedMatch) {
       return nestedMatch;
     }
   }
 
   return undefined;
+}
+
+function findDescendantBranches(nodes, containerKey) {
+  const container = findContainerNode(nodes, containerKey);
+  if (!container) {
+    return [];
+  }
+
+  const descendants = [];
+  for (const child of container.children) {
+    if (child.kind === 'branch') {
+      descendants.push(child);
+      continue;
+    }
+
+    descendants.push(...findDescendantBranches([child], getContainerKey(child)));
+  }
+
+  return descendants;
 }
 
 function createDataLoader(state) {
@@ -213,6 +243,7 @@ test('BranchTreeProvider refreshes status bar data and exposes tree items', asyn
         kind: 'section',
         label: 'Local',
         path: 'section:local',
+        scope: 'local',
         children: [],
       },
     ],
@@ -241,6 +272,7 @@ test('BranchTreeProvider refreshes status bar data and exposes tree items', asyn
       buildStatusBarText: (branch) => (branch ? `branch:${branch.name}` : ''),
       buildStatusBarTooltipContent: (branch) => `tooltip:${branch.name}`,
       findContainerNode,
+      findDescendantBranches,
     },
   });
 
@@ -266,6 +298,7 @@ test('BranchTreeProvider refreshes status bar data and exposes tree items', asyn
   const rootChildren = await provider.getChildren();
   assert.equal(rootChildren.length, 1);
   assert.equal(rootChildren[0].containerPath, 'section:local');
+  assert.equal(rootChildren[0].containerKey, 'section:local');
   assert.equal(provider.getTreeItem(rootChildren[0]), rootChildren[0]);
 });
 
@@ -286,12 +319,14 @@ test('BranchTreeProvider loads nested container children and hides the status ba
           kind: 'section',
           label: 'Local',
           path: 'section:local',
+          scope: 'local',
           children: state.loadedSections.has('local')
             ? [
                 {
                   kind: 'folder',
                   label: 'feature',
                   path: 'feature',
+                  scope: 'local',
                   children: [
                     {
                       kind: 'branch',
@@ -312,6 +347,7 @@ test('BranchTreeProvider loads nested container children and hides the status ba
           kind: 'section',
           label: 'Remote',
           path: 'section:remote',
+          scope: 'remote',
           children: state.loadedSections.has('remote')
             ? [
                 {
@@ -362,6 +398,7 @@ test('BranchTreeProvider loads nested container children and hides the status ba
       buildStatusBarText: () => '',
       buildStatusBarTooltipContent: () => '',
       findContainerNode,
+      findDescendantBranches,
     },
   });
 
@@ -371,6 +408,7 @@ test('BranchTreeProvider loads nested container children and hides the status ba
   const folderChildren = await provider.getChildren(rootChildren[0]);
   const branchChildren = await provider.getChildren(folderChildren[0]);
   const remoteChildren = await provider.getChildren(rootChildren[1]);
+  const descendantBranches = provider.getDescendantBranches('folder:local:feature');
 
   assert.deepEqual(dataLoader.refreshCalls, [
     { sections: ['local'], fetchRemoteState: false },
@@ -378,9 +416,11 @@ test('BranchTreeProvider loads nested container children and hides the status ba
   ]);
   assert.equal(rootChildren.length, 2);
   assert.equal(rootChildren[0].containerPath, 'section:local');
+  assert.equal(folderChildren[0].containerKey, 'folder:local:feature');
   assert.equal(folderChildren[0].containerPath, 'feature');
   assert.equal(branchChildren[0].branchName, 'feature/demo');
   assert.equal(remoteChildren[0].branchName, 'origin/main');
+  assert.deepEqual(descendantBranches.map((branch) => branch.fullName), ['feature/demo']);
 
   await provider.refresh();
 

@@ -2,35 +2,49 @@ import {
   buildBranchDescription,
   formatSyncStatus,
 } from '../branchModel/descriptions';
-import type { BranchInfo, BranchTreeNode, TreeBranch } from '../branchModel/types';
+import type {
+  BranchInfo,
+  BranchTreeNode,
+  TreeBranch,
+  TreeContainerScope,
+} from '../branchModel/types';
 import type {
   NodeType,
   TreeItemIconDescriptor,
   TreeItemPresentation,
 } from './types';
+import { getContainerNodeKey } from './containerLookup';
 
 export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresentation {
   if (node.kind === 'section') {
+    const containerKey = getContainerNodeKey(node);
+
     return {
       nodeType: 'section',
       label: node.label,
-      id: node.path,
-      contextValue: getSectionContextValue(node.path),
-      collapsibleState: getSectionCollapsibleState(node.path),
-      icon: { id: getSectionIconId(node.path) },
+      id: containerKey,
+      contextValue: getSectionContextValue(node.scope),
+      collapsibleState: getSectionCollapsibleState(node.scope),
+      icon: { id: getSectionIconId(node.scope) },
+      containerKey,
       containerPath: node.path,
+      containerScope: node.scope,
     };
   }
 
   if (node.kind === 'folder') {
+    const containerKey = getContainerNodeKey(node);
+
     return {
       nodeType: 'folder',
       label: node.label,
-      id: `folder:${node.path}`,
-      contextValue: 'folder',
+      id: containerKey,
+      contextValue: getFolderContextValue(node.scope),
       collapsibleState: 'collapsed',
       icon: { id: 'folder' },
+      containerKey,
       containerPath: node.path,
+      containerScope: node.scope,
     };
   }
 
@@ -156,25 +170,29 @@ function buildTreeItemDescription(branch: BranchInfo, syncStatus: string): strin
   return branch.lastCommitDate || undefined;
 }
 
-function getSectionContextValue(sectionPath: string): string {
-  return sectionPath === 'section:tags' ? 'tagsSection' : 'section';
+function getSectionContextValue(scope: TreeContainerScope): string {
+  return scope === 'tag' ? 'tagsSection' : 'section';
 }
 
-function getSectionCollapsibleState(sectionPath: string): 'expanded' | 'collapsed' {
-  return sectionPath === 'section:local' ? 'expanded' : 'collapsed';
+function getSectionCollapsibleState(scope: TreeContainerScope): 'expanded' | 'collapsed' {
+  return scope === 'local' ? 'expanded' : 'collapsed';
 }
 
-function getSectionIconId(sectionPath: string): string {
-  switch (sectionPath) {
-    case 'section:remote':
+function getSectionIconId(scope: TreeContainerScope): string {
+  switch (scope) {
+    case 'remote':
       return 'cloud';
-    case 'section:stash':
+    case 'stash':
       return 'archive';
-    case 'section:worktree':
+    case 'worktree':
       return 'folder';
     default:
       return 'source-control';
   }
+}
+
+function getFolderContextValue(scope: TreeContainerScope): string {
+  return `${scope}-folder`;
 }
 
 function resolveNodeType(info: BranchInfo): NodeType {

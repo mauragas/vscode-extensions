@@ -1,4 +1,4 @@
-import type { BranchTreeNode } from '../branchModel/types';
+import type { BranchTreeNode, TreeContainerScope } from '../branchModel/types';
 
 export type NodeType =
   | 'section'
@@ -32,7 +32,9 @@ export interface TreeItemPresentation {
   icon: TreeItemIconDescriptor;
   description?: string;
   tooltip?: string;
+  containerKey?: string;
   containerPath?: string;
+  containerScope?: TreeContainerScope;
   branchName?: string;
   command?: TreeItemCommandDescriptor;
 }

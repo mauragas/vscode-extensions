@@ -2,7 +2,7 @@
   "name": "git-branches-panel",
   "displayName": "Git Branches Panel",
   "description": "Tree view for local and remote Git branches, stashes, worktrees, and tags with grouping, sync state, and quick actions.",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "publisher": "karolis-mauragas",
   "license": "MIT",
   "repository": {
@@ -80,6 +80,11 @@
         "command": "gitBranchesPanel.fetchAllPrune",
         "title": "Fetch All (Prune)",
         "icon": "$(cloud-download)"
+      },
+      {
+        "command": "gitBranchesPanel.showAdvancedActions",
+        "title": "More Actions",
+        "icon": "$(ellipsis)"
       },
       {
         "command": "gitBranchesPanel.stashSilently",
@@ -191,6 +196,37 @@
         "command": "gitBranchesPanel.removeWorktree",
         "title": "Remove Worktree",
         "icon": "$(trash)"
+      },
+      {
+        "command": "gitBranchesPanel.syncFolderBranches",
+        "title": "Sync Descendant Branches",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "gitBranchesPanel.deleteFolderBranches",
+        "title": "Delete Descendant Branches",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "gitBranchesPanel.deleteRemoteFolderBranches",
+        "title": "Delete Descendant Remote Branches",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "gitBranchesPanel.deleteFolderTags",
+        "title": "Delete Descendant Tags",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "gitBranchesPanel.pruneMissingUpstreamBranches",
+        "title": "Prune Local Branches with Missing Upstream",
+        "icon": "$(trash)"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "gitBranchesPanel.folderAdvanced",
+        "label": "Advanced"
       }
     ],
     "menus": {
@@ -224,6 +260,11 @@
           "command": "gitBranchesPanel.refresh",
           "when": "view == gitBranchesPanel || view == gitBranchesSCM",
           "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "view == gitBranchesPanel || view == gitBranchesSCM",
+          "group": "navigation@7"
         }
       ],
       "view/item/context": [
@@ -331,6 +372,33 @@
           "command": "gitBranchesPanel.removeWorktree",
           "when": "viewItem == worktree",
           "group": "2_worktree@1"
+        },
+        {
+          "submenu": "gitBranchesPanel.folderAdvanced",
+          "when": "viewItem == local-folder || viewItem == remote-folder || viewItem == tag-folder",
+          "group": "1_folder@1"
+        }
+      ],
+      "gitBranchesPanel.folderAdvanced": [
+        {
+          "command": "gitBranchesPanel.syncFolderBranches",
+          "when": "viewItem == local-folder",
+          "group": "1_local@1"
+        },
+        {
+          "command": "gitBranchesPanel.deleteFolderBranches",
+          "when": "viewItem == local-folder",
+          "group": "2_local@1"
+        },
+        {
+          "command": "gitBranchesPanel.deleteRemoteFolderBranches",
+          "when": "viewItem == remote-folder",
+          "group": "2_remote@1"
+        },
+        {
+          "command": "gitBranchesPanel.deleteFolderTags",
+          "when": "viewItem == tag-folder",
+          "group": "2_tag@1"
         }
       ]
     },

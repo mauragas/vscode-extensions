@@ -4,6 +4,7 @@ import {
   type BranchInfo,
   type BranchSortOrder,
   type BranchTreeNode,
+  type TreeContainerScope,
   type TreeChildNode,
   type TreeSection,
 } from './branchModel';
@@ -104,6 +105,7 @@ export class BranchDataLoader {
       kind: 'section',
       label: BRANCH_SECTION_LABELS[section],
       path: BRANCH_SECTION_PATHS[section],
+      scope: toTreeContainerScope(section),
       children: this.sectionStates[section].children,
     }) satisfies TreeSection);
   }
@@ -203,7 +205,8 @@ export class BranchDataLoader {
     const sortedBranches = sortBranches(branches, configuration.sortOrder);
     const children = buildBranchTree(
       sortedBranches,
-      section === 'worktree' ? false : configuration.groupByFolder
+      section === 'worktree' ? false : configuration.groupByFolder,
+      toTreeContainerScope(section)
     );
 
     if (section === 'local') {
@@ -264,4 +267,8 @@ function createEmptySectionStates(): Record<BranchSectionKey, SectionState> {
     worktree: createEmptySectionState(),
     tags: createEmptySectionState(),
   };
+}
+
+function toTreeContainerScope(section: BranchSectionKey): TreeContainerScope {
+  return section === 'tags' ? 'tag' : section;
 }

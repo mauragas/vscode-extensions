@@ -7,6 +7,7 @@ const {
   buildStatusBarText,
   buildStatusBarTooltipContent,
   buildTreeItemPresentation,
+  findDescendantBranches,
   findContainerNode,
 } = require('../out/treePresentation.js');
 
@@ -126,36 +127,42 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
     kind: 'section',
     label: 'Local',
     path: 'section:local',
+    scope: 'local',
     children: [],
   });
   const sectionPresentation = buildTreeItemPresentation({
     kind: 'section',
     label: 'Remote',
     path: 'section:remote',
+    scope: 'remote',
     children: [],
   });
   const stashSectionPresentation = buildTreeItemPresentation({
     kind: 'section',
     label: 'Stash',
     path: 'section:stash',
+    scope: 'stash',
     children: [],
   });
   const worktreeSectionPresentation = buildTreeItemPresentation({
     kind: 'section',
     label: 'Worktree',
     path: 'section:worktree',
+    scope: 'worktree',
     children: [],
   });
   const tagsSectionPresentation = buildTreeItemPresentation({
     kind: 'section',
     label: 'Tags',
     path: 'section:tags',
+    scope: 'tag',
     children: [],
   });
   const folderPresentation = buildTreeItemPresentation({
     kind: 'folder',
     label: 'feature',
     path: 'feature',
+    scope: 'local',
     children: [],
   });
   const localBranchPresentation = buildTreeItemPresentation({
@@ -258,11 +265,13 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
 
   assert.equal(localSectionPresentation.nodeType, 'section');
   assert.equal(localSectionPresentation.collapsibleState, 'expanded');
+  assert.equal(localSectionPresentation.containerKey, 'section:local');
 
   assert.equal(sectionPresentation.nodeType, 'section');
   assert.equal(sectionPresentation.icon.id, 'cloud');
   assert.equal(sectionPresentation.collapsibleState, 'collapsed');
   assert.equal(sectionPresentation.contextValue, 'section');
+  assert.equal(sectionPresentation.containerKey, 'section:remote');
 
   assert.equal(stashSectionPresentation.nodeType, 'section');
   assert.equal(stashSectionPresentation.icon.id, 'archive');
@@ -276,7 +285,9 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(tagsSectionPresentation.contextValue, 'tagsSection');
 
   assert.equal(folderPresentation.nodeType, 'folder');
-  assert.equal(folderPresentation.id, 'folder:feature');
+  assert.equal(folderPresentation.id, 'folder:local:feature');
+  assert.equal(folderPresentation.containerKey, 'folder:local:feature');
+  assert.equal(folderPresentation.contextValue, 'local-folder');
   assert.equal(folderPresentation.icon.id, 'folder');
   assert.equal(folderPresentation.collapsibleState, 'collapsed');
 
@@ -330,11 +341,28 @@ test('findContainerNode resolves section and nested folder paths', () => {
   );
 
   const remoteSection = findContainerNode(sections, 'section:remote');
-  const nestedFolder = findContainerNode(sections, 'origin/feature');
+  const nestedFolder = findContainerNode(sections, 'folder:remote:origin/feature');
 
   assert.ok(remoteSection);
   assert.equal(remoteSection.label, 'Remote');
   assert.ok(nestedFolder);
   assert.equal(nestedFolder.label, 'feature');
-  assert.equal(findContainerNode(sections, 'missing/path'), undefined);
+  assert.equal(findContainerNode(sections, 'folder:local:missing/path'), undefined);
+});
+
+test('findDescendantBranches uses unique folder keys so matching paths in different sections stay separate', () => {
+  const sections = buildBranchSections(
+    [{ name: 'release/1.0', isCurrent: false }],
+    [],
+    [],
+    [],
+    [{ name: 'release/v1.0.0', isCurrent: false, scope: 'tag' }],
+    true
+  );
+
+  const localReleaseBranches = findDescendantBranches(sections, 'folder:local:release');
+  const tagReleaseBranches = findDescendantBranches(sections, 'folder:tag:release');
+
+  assert.deepEqual(localReleaseBranches.map((branch) => branch.fullName), ['release/1.0']);
+  assert.deepEqual(tagReleaseBranches.map((branch) => branch.fullName), ['release/v1.0.0']);
 });

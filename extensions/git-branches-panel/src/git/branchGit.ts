@@ -20,6 +20,10 @@ export interface SyncBranchResult {
   publishedUpstream: boolean;
 }
 
+export interface SyncBranchOptions {
+  refreshRemoteState?: boolean;
+}
+
 export interface RefComparisonChange {
   status: 'A' | 'D' | 'M' | 'R';
   path: string;
@@ -63,9 +67,12 @@ export async function deleteBranch(
 
 export async function syncBranch(
   repoRoot: string,
-  branchName: string
+  branchName: string,
+  options: SyncBranchOptions = {}
 ): Promise<SyncBranchResult> {
-  await fetchRemoteState(repoRoot);
+  if (options.refreshRemoteState ?? true) {
+    await fetchRemoteState(repoRoot);
+  }
 
   const branches = await getBranches(repoRoot);
   const branch = branches.find((candidate) => candidate.name === branchName);

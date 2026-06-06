@@ -70,6 +70,7 @@ test('buildBranchTree groups slash-separated branches into nested folders and ke
 
   const featureFolder = findFolderNode(tree, 'feature');
   assert.ok(featureFolder);
+  assert.equal(featureFolder.scope, 'local');
   assert.equal(featureFolder.children[0]?.kind, 'folder');
   assert.equal(
     featureFolder.children[0]?.kind === 'folder' ? featureFolder.children[0].path : '',
@@ -83,6 +84,7 @@ test('buildBranchTree groups slash-separated branches into nested folders and ke
 
   const paymentsFolder = findFolderNode(tree, 'feature/payments');
   assert.ok(paymentsFolder);
+  assert.equal(paymentsFolder.scope, 'local');
   assert.equal(paymentsFolder.children[0]?.kind, 'branch');
   assert.equal(
     paymentsFolder.children[0]?.kind === 'branch' ? paymentsFolder.children[0].fullName : '',
@@ -190,6 +192,7 @@ test('buildBranchSections shows local, remote, stash, worktree, and tag groups i
 
   const originFolder = findFolderNode(sections[1].children, 'origin');
   assert.ok(originFolder);
+  assert.equal(originFolder.scope, 'remote');
   assert.equal(originFolder.children[0]?.kind, 'folder');
   assert.equal(
     originFolder.children[0]?.kind === 'folder' ? originFolder.children[0].path : '',
@@ -344,6 +347,38 @@ test('findFolderNode can traverse through section roots', () => {
       ? remoteFeatureFolder.children[0].fullName
       : '',
     'origin/feature/auth'
+  );
+});
+
+test('findFolderNode can distinguish matching folder paths across sections when scope is provided', () => {
+  const sections = buildBranchSections(
+    [{ name: 'release/1.0', isCurrent: false }],
+    [],
+    [],
+    [],
+    [{ name: 'release/v1.0.0', isCurrent: false, scope: 'tag' }],
+    true
+  );
+
+  const localReleaseFolder = findFolderNode(sections, 'release', 'local');
+  const tagReleaseFolder = findFolderNode(sections, 'release', 'tag');
+
+  assert.ok(localReleaseFolder);
+  assert.ok(tagReleaseFolder);
+  assert.notStrictEqual(localReleaseFolder, tagReleaseFolder);
+  assert.equal(localReleaseFolder.scope, 'local');
+  assert.equal(tagReleaseFolder.scope, 'tag');
+  assert.equal(
+    localReleaseFolder.children[0]?.kind === 'branch'
+      ? localReleaseFolder.children[0].fullName
+      : '',
+    'release/1.0'
+  );
+  assert.equal(
+    tagReleaseFolder.children[0]?.kind === 'branch'
+      ? tagReleaseFolder.children[0].fullName
+      : '',
+    'release/v1.0.0'
   );
 });
 

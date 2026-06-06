@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2026-06-06
+
+- Added scope-aware folder context menus for Local, Remote, and Tags groups
+- Added bulk local-folder actions to sync or delete all descendant branches while automatically skipping the current branch during bulk deletes
+- Added bulk remote-folder and tag-folder delete actions for descendant branches and tags
+- Added a `...` toolbar button with advanced repository actions, including pruning local branches whose tracked upstream no longer exists
+- Fixed folder identity collisions across sections by making folder tree items section-aware end-to-end
+- Refreshed the marketplace icon with a cleaner high-resolution PNG for sharper rendering in the Extensions UI
+
 ## [1.2.0] - 2026-06-05
 
 - Improved first-load performance by loading the Local section first instead of eagerly loading every section at startup
