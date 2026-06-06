@@ -2,15 +2,6 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
-
-- Added settings to show or hide each toolbar quick action independently
-- Added `gitBranchesPanel.showStatusBarBranchAction` to hide the status bar sync/publish action for the current branch
-- Added separate publish actions for local branches that do not yet track a live upstream
-- Added a local-folder action to push descendant branches while publishing unpublished ones
-- Added a `Settings` toolbar quick action that opens this extension's settings directly
-- Added a `More Branch Actions...` context action that opens an iconized Quick Pick for branch commands
-
 ## [1.3.0] - 2026-06-06
 
 - Added scope-aware folder context menus for Local, Remote, and Tags groups
@@ -19,6 +10,12 @@ All notable changes to this project will be documented in this file.
 - Added a `...` toolbar button with advanced repository actions, including pruning local branches whose tracked upstream no longer exists
 - Fixed folder identity collisions across sections by making folder tree items section-aware end-to-end
 - Refreshed the marketplace icon with a cleaner high-resolution PNG for sharper rendering in the Extensions UI
+- Added settings to show or hide each toolbar quick action independently
+- Added `gitBranchesPanel.showStatusBarBranchAction` to hide the status bar sync/publish action for the current branch
+- Added separate publish actions for local branches that do not yet track a live upstream
+- Added a local-folder action to push descendant branches while publishing unpublished ones
+- Added a `Settings` toolbar quick action that opens this extension's settings directly
+- Added a `More Branch Actions...` context action that opens an iconized Quick Pick for branch commands
 
 ## [1.2.0] - 2026-06-05
 
