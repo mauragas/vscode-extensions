@@ -106,7 +106,7 @@ Remote, Stash, Worktree, and Tags stay collapsed until you expand them.
 
 - New branch creation always performs minimal cleanup to keep names Git-valid, for example `feature/hello world??` becomes `feature/hello-world`
 - If the entered text sanitizes down to nothing useful, the prompt asks for a better name instead of silently creating a generic fallback branch
-- Turn on `normalizeNewBranchNames` if you also want extra cleanup like lowercasing and duplicate-dash collapsing, so ` - Feature / Hello--- World - ` becomes `feature/hello-world`
+- Turn on `gitBranchesPanel.normalizeNewBranchNames` if you also want extra cleanup like lowercasing and duplicate-dash collapsing, so ` - Feature / Hello--- World - ` becomes `feature/hello-world`
 - Hide any toolbar quick action you never use to keep the title bar compact
 - Hide the status bar branch action if you prefer less workbench chrome
 - Keep the current branch banner visible in the tree while hiding the status bar action, or vice versa

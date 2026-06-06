@@ -74,7 +74,10 @@ interface NewBranchNameValidationOptions {
   normalize?: boolean;
 }
 
-export function sanitizeNewBranchName(value: string, options?: { normalize?: boolean }): string {
+export function sanitizeNewBranchName(
+  value: string,
+  options?: NewBranchNameValidationOptions
+): string {
   const trimmedValue = value.trim();
   if (!trimmedValue) {
     return '';
