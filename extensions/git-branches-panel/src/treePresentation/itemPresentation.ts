@@ -81,6 +81,7 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
 
 export function buildBranchTooltipContent(node: TreeBranch): string {
   const isRemoteBranch = node.info.scope === 'remote';
+  const isStaleRemoteBranch = isRemoteBranch && node.info.remoteTrackingState === 'stale';
   const isTag = node.info.scope === 'tag';
   const isStash = node.info.scope === 'stash';
   const isWorktree = node.info.scope === 'worktree';
@@ -117,10 +118,14 @@ export function buildBranchTooltipContent(node: TreeBranch): string {
   } else if (isTag) {
     tooltipLines.push('', '_Tag_');
   } else if (isRemoteBranch) {
-    tooltipLines.push('', '_Remote branch_');
+    tooltipLines.push('', isStaleRemoteBranch ? '_Stale remote-tracking ref_' : '_Remote branch_');
 
     if (node.info.remoteName) {
       tooltipLines.push('', `Remote: ${node.info.remoteName}`);
+    }
+
+    if (isStaleRemoteBranch) {
+      tooltipLines.push('', '_Remote is no longer configured locally_');
     }
   } else if (node.info.isCurrent) {
     tooltipLines.push('', '_Current branch_');
@@ -170,6 +175,10 @@ export function buildBranchTooltipContent(node: TreeBranch): string {
 }
 
 function buildTreeItemDescription(branch: BranchInfo, syncStatus: string): string | undefined {
+  if (branch.scope === 'remote' && branch.remoteTrackingState === 'stale') {
+    return ['stale remote', branch.lastCommitDate ?? ''].filter(Boolean).join(' • ');
+  }
+
   if (branch.scope === 'stash' || branch.scope === 'worktree' || !syncStatus) {
     return buildBranchDescription(branch) || undefined;
   }
@@ -224,7 +233,7 @@ function resolveNodeType(info: BranchInfo): NodeType {
     case 'tag':
       return 'tag';
     case 'remote':
-      return 'remoteBranch';
+      return info.remoteTrackingState === 'stale' ? 'staleRemoteBranch' : 'remoteBranch';
     default:
       return info.isCurrent ? 'currentBranch' : 'branch';
   }
@@ -267,6 +276,11 @@ function getItemIcon(nodeType: NodeType): TreeItemIconDescriptor {
       };
     case 'remoteBranch':
       return { id: 'cloud' };
+    case 'staleRemoteBranch':
+      return {
+        id: 'cloud',
+        colorId: 'list.warningForeground',
+      };
     case 'tag':
       return { id: 'tag' };
     case 'stash':

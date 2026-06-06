@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { join } from 'node:path';
 
+import type { RemoteTrackingState } from '../branchModel';
 import { getErrorMessage } from '../errorUtils';
 import {
   checkoutBranch,
@@ -9,9 +10,11 @@ import {
   createBranchFromRef,
   deleteBranch,
   deleteRemoteBranch,
+  getRemoteBranchTrackingState,
   getDiffFilesBetweenRefs,
   mergeBranchIntoCurrent,
   pushBranch as pushBranchToRemote,
+  removeRemoteTrackingRef,
   renameBranch,
   syncBranch,
 } from '../git';
@@ -30,6 +33,27 @@ import { NO_CURRENT_BRANCH_MESSAGE, type CommandContext } from './shared';
 
 const NORMALIZE_NEW_BRANCH_NAMES_SETTING = 'normalizeNewBranchNames';
 const NEW_BRANCH_PLACEHOLDER = 'feature/my-feature or hotfix/bug-123';
+const DELETE_ACTION = 'Delete';
+const REFRESH_BRANCHES_ACTION = 'Refresh Branches';
+const REMOVE_STALE_TRACKING_REF_ACTION = 'Remove Stale Tracking Ref';
+const RETRY_WITHOUT_HOOK_ACTION = 'Retry Without Hook…';
+const RETRY_WITHOUT_HOOK_CONFIRM_ACTION = 'Retry Without Hook';
+const SHOW_DETAILS_ACTION = 'Show Details';
+const OPEN_GIT_OUTPUT_ACTION = 'Open Git Output';
+
+type RemoteBranchTrackingState = RemoteTrackingState;
+type RemoteBranchDeleteFailureKind =
+  | 'LocalPrePushHookBlocked'
+  | 'RemoteRejected'
+  | 'MissingRemote'
+  | 'AuthOrNetworkFailure'
+  | 'Unknown';
+
+interface RemoteBranchDeleteFailure {
+  kind: RemoteBranchDeleteFailureKind;
+  message: string;
+  remoteName?: string;
+}
 
 interface BranchActionItem extends vscode.QuickPickItem {
   readonly actionId: string;
@@ -77,6 +101,12 @@ export function registerBranchDomainCommands(
     vscode.commands.registerCommand('gitBranchesPanel.deleteBranch', async (item: BranchTreeItem) => {
       await handleDeleteBranch(item, commandContext);
     }),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.removeStaleRemoteTrackingRef',
+      async (item: BranchTreeItem) => {
+        await handleRemoveStaleRemoteTrackingRef(item, commandContext);
+      }
+    ),
     vscode.commands.registerCommand('gitBranchesPanel.newBranch', async () => {
       await handleNewBranch(commandContext);
     }),
@@ -145,6 +175,13 @@ async function handleCheckout(
     }
 
     commandContext.activationTracker.reset();
+    return;
+  }
+
+  if (item.nodeType === 'staleRemoteBranch') {
+    vscode.window.showWarningMessage(
+      `Remote-tracking ref '${item.branchName}' is stale. Create a new local branch from it instead of checking it out directly.`
+    );
     return;
   }
 
@@ -246,28 +283,36 @@ async function handleDeleteBranch(
     return;
   }
 
+  if (item.nodeType === 'staleRemoteBranch') {
+    await showMissingRemoteNotification(item, commandContext, {
+      kind: 'MissingRemote',
+      message: `Remote branch '${item.branchName}' belongs to a remote that is no longer configured.`,
+      remoteName: item.branchInfo?.remoteName,
+    });
+    return;
+  }
+
   if (item.nodeType === 'remoteBranch') {
-    const confirmation = await vscode.window.showWarningMessage(
-      `Delete remote branch '${item.branchName}'?`,
-      { modal: true },
-      'Delete'
-    );
-    if (confirmation !== 'Delete') {
+    const trackingState = await resolveRemoteBranchTrackingState(item);
+    if (trackingState === 'stale') {
+      await showMissingRemoteNotification(item, commandContext, {
+        kind: 'MissingRemote',
+        message: `Remote branch '${item.branchName}' belongs to a remote that is no longer configured.`,
+        remoteName: item.branchInfo?.remoteName,
+      });
       return;
     }
 
-    try {
-      await deleteRemoteBranch(item.repoRoot, item.branchName);
-      await commandContext.showSuccessAndRefresh(`Deleted remote branch '${item.branchName}'.`, {
-        fetchRemoteState: true,
-        forceFetchRemoteState: true,
-      });
-    } catch (error) {
-      commandContext.showCommandError(
-        `Failed to delete remote branch '${item.branchName}'`,
-        error
-      );
+    const confirmation = await vscode.window.showWarningMessage(
+      `Delete remote branch '${item.branchName}'?`,
+      { modal: true },
+      DELETE_ACTION
+    );
+    if (confirmation !== DELETE_ACTION) {
+      return;
     }
+
+    await performRemoteBranchDelete(item, commandContext);
 
     return;
   }
@@ -275,9 +320,9 @@ async function handleDeleteBranch(
   const confirmation = await vscode.window.showWarningMessage(
     `Delete branch '${item.branchName}'?`,
     { modal: true },
-    'Delete'
+    DELETE_ACTION
   );
-  if (confirmation !== 'Delete') {
+  if (confirmation !== DELETE_ACTION) {
     return;
   }
 
@@ -346,7 +391,8 @@ async function handleCreateBranchFromSelected(
   if (
     item.nodeType !== 'branch' &&
     item.nodeType !== 'currentBranch' &&
-    item.nodeType !== 'remoteBranch'
+    item.nodeType !== 'remoteBranch' &&
+    item.nodeType !== 'staleRemoteBranch'
   ) {
     return;
   }
@@ -357,7 +403,10 @@ async function handleCreateBranchFromSelected(
     prompt: checkoutNewBranch
       ? `Enter a name for the new branch to create from '${sourceBranchDisplayName}' and switch to`
       : `Enter a name for the new branch to create from '${sourceBranchDisplayName}'`,
-    currentName: item.nodeType === 'remoteBranch' ? undefined : sourceBranchName,
+    currentName:
+      item.nodeType === 'remoteBranch' || item.nodeType === 'staleRemoteBranch'
+        ? undefined
+        : sourceBranchName,
     normalize: shouldNormalizeNewBranchNames(),
   });
   if (!branchName) {
@@ -426,7 +475,11 @@ async function handleCompareBranchWithCurrent(
     return;
   }
 
-  if (item.nodeType !== 'branch' && item.nodeType !== 'remoteBranch') {
+  if (
+    item.nodeType !== 'branch' &&
+    item.nodeType !== 'remoteBranch' &&
+    item.nodeType !== 'staleRemoteBranch'
+  ) {
     return;
   }
 
@@ -586,8 +639,9 @@ function resolveNewBranchName(name: string, normalize: boolean): string {
 
 function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
   const items: BranchActionItem[] = [];
+  const isStaleRemoteBranch = item.nodeType === 'staleRemoteBranch';
 
-  if (item.nodeType !== 'remoteBranch') {
+  if (item.nodeType !== 'remoteBranch' && item.nodeType !== 'staleRemoteBranch') {
     items.push(
       createBranchActionItem(
         isPublishableBranchItem(item) ? 'publishBranch' : 'syncBranch',
@@ -610,10 +664,15 @@ function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
     );
   }
 
+  if (!isStaleRemoteBranch) {
+    items.push(
+      createBranchActionItem('checkout', '$(arrow-right) Checkout Branch', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.checkout', item);
+      })
+    );
+  }
+
   items.push(
-    createBranchActionItem('checkout', '$(arrow-right) Checkout Branch', async () => {
-      await vscode.commands.executeCommand('gitBranchesPanel.checkout', item);
-    }),
     createBranchActionItem(
       'newBranchFromSelected',
       '$(add) New Branch from Selected Branch...',
@@ -633,7 +692,7 @@ function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
     )
   );
 
-  if (item.nodeType !== 'remoteBranch') {
+  if (item.nodeType !== 'remoteBranch' && item.nodeType !== 'staleRemoteBranch') {
     items.push(
       createBranchActionItem('renameBranch', '$(edit) Rename Branch', async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.renameBranch', item);
@@ -662,9 +721,18 @@ function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
       createBranchActionItem('mergeIntoCurrent', '$(git-merge) Merge into Current Branch', async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.mergeIntoCurrent', item);
       }),
-      createBranchActionItem('deleteBranch', '$(trash) Delete Branch', async () => {
-        await vscode.commands.executeCommand('gitBranchesPanel.deleteBranch', item);
-      })
+      createBranchActionItem(
+        isStaleRemoteBranch ? 'removeStaleRemoteTrackingRef' : 'deleteBranch',
+        isStaleRemoteBranch ? '$(trash) Remove Stale Tracking Ref' : '$(trash) Delete Branch',
+        async () => {
+          await vscode.commands.executeCommand(
+            isStaleRemoteBranch
+              ? 'gitBranchesPanel.removeStaleRemoteTrackingRef'
+              : 'gitBranchesPanel.deleteBranch',
+            item
+          );
+        }
+      )
     );
   }
 
@@ -689,8 +757,13 @@ function isBranchActionItem(item: BranchTreeItem | undefined): item is BranchTre
 
 function isSupportedBranchActionNodeType(
   nodeType: BranchTreeItem['nodeType']
-): nodeType is 'branch' | 'currentBranch' | 'remoteBranch' {
-  return nodeType === 'branch' || nodeType === 'currentBranch' || nodeType === 'remoteBranch';
+): nodeType is 'branch' | 'currentBranch' | 'remoteBranch' | 'staleRemoteBranch' {
+  return (
+    nodeType === 'branch' ||
+    nodeType === 'currentBranch' ||
+    nodeType === 'remoteBranch' ||
+    nodeType === 'staleRemoteBranch'
+  );
 }
 
 function isPublishableBranchItem(item: BranchTreeItem): boolean {
@@ -753,4 +826,283 @@ interface GitApi {
 
 interface GitExtensionExports {
   getAPI(version: number): GitApi;
+}
+
+async function performRemoteBranchDelete(
+  item: BranchTreeItem,
+  commandContext: CommandContext,
+  options: {
+    skipPushHooks?: boolean;
+  } = {}
+): Promise<void> {
+  if (!item.branchName || !item.repoRoot) {
+    return;
+  }
+
+  try {
+    await deleteRemoteBranch(item.repoRoot, item.branchName, {
+      skipPushHooks: options.skipPushHooks,
+    });
+    await commandContext.showSuccessAndRefresh(`Deleted remote branch '${item.branchName}'.`, {
+      fetchRemoteState: true,
+      forceFetchRemoteState: true,
+    });
+  } catch (error) {
+    await handleRemoteBranchDeleteFailure(item, commandContext, error, options);
+  }
+}
+
+async function handleRemoteBranchDeleteFailure(
+  item: BranchTreeItem,
+  commandContext: CommandContext,
+  error: unknown,
+  options: {
+    skipPushHooks?: boolean;
+  }
+): Promise<void> {
+  const failure = classifyRemoteBranchDeleteFailure(item.branchName ?? '', error);
+
+  switch (failure.kind) {
+    case 'LocalPrePushHookBlocked': {
+      if (options.skipPushHooks ?? false) {
+        await showGenericRemoteDeleteFailureNotification(item, error);
+        return;
+      }
+
+      const selection = await vscode.window.showErrorMessage(
+        'Remote branch deletion was blocked by a local Git pre-push hook.',
+        RETRY_WITHOUT_HOOK_ACTION,
+        SHOW_DETAILS_ACTION,
+        OPEN_GIT_OUTPUT_ACTION
+      );
+
+      if (selection === RETRY_WITHOUT_HOOK_ACTION) {
+        const confirmation = await vscode.window.showWarningMessage(
+          `Retry deleting remote branch '${item.branchName}' without running local pre-push hooks? This bypasses local repository policy checks for this push only.`,
+          { modal: true },
+          RETRY_WITHOUT_HOOK_CONFIRM_ACTION
+        );
+        if (confirmation === RETRY_WITHOUT_HOOK_CONFIRM_ACTION) {
+          await performRemoteBranchDelete(item, commandContext, { skipPushHooks: true });
+        }
+        return;
+      }
+
+      await handleRemoteDeleteFailureAuxiliaryAction(item, error, selection);
+      return;
+    }
+    case 'MissingRemote': {
+      await showMissingRemoteNotification(item, commandContext, failure, error);
+      return;
+    }
+    case 'RemoteRejected': {
+      const selection = await vscode.window.showErrorMessage(
+        'Remote rejected branch deletion.',
+        SHOW_DETAILS_ACTION,
+        OPEN_GIT_OUTPUT_ACTION
+      );
+      await handleRemoteDeleteFailureAuxiliaryAction(item, error, selection);
+      return;
+    }
+    case 'AuthOrNetworkFailure': {
+      const selection = await vscode.window.showErrorMessage(
+        `Could not delete remote branch '${item.branchName}'.`,
+        SHOW_DETAILS_ACTION,
+        OPEN_GIT_OUTPUT_ACTION
+      );
+      await handleRemoteDeleteFailureAuxiliaryAction(item, error, selection);
+      return;
+    }
+    default:
+      await showGenericRemoteDeleteFailureNotification(item, error);
+  }
+}
+
+async function showMissingRemoteNotification(
+  item: BranchTreeItem,
+  commandContext: CommandContext,
+  failure: RemoteBranchDeleteFailure,
+  error?: unknown
+): Promise<void> {
+  const remoteName =
+    failure.remoteName ?? item.branchInfo?.remoteName ?? parseRemoteBranchName(item.branchName);
+  const selection = await vscode.window.showErrorMessage(
+    remoteName
+      ? `This branch belongs to remote '${remoteName}', but that remote is no longer configured.`
+      : `This remote-tracking branch is stale because its remote is no longer configured.`,
+    REMOVE_STALE_TRACKING_REF_ACTION,
+    REFRESH_BRANCHES_ACTION,
+    SHOW_DETAILS_ACTION
+  );
+
+  if (selection === REMOVE_STALE_TRACKING_REF_ACTION) {
+    await handleRemoveStaleRemoteTrackingRef(item, commandContext);
+    return;
+  }
+
+  if (selection === REFRESH_BRANCHES_ACTION) {
+    await commandContext.refresh({ fetchRemoteState: false });
+    return;
+  }
+
+  if (selection === SHOW_DETAILS_ACTION && error !== undefined) {
+    showRemoteDeleteDetails(item, error);
+  }
+}
+
+async function handleRemoveStaleRemoteTrackingRef(
+  item: BranchTreeItem,
+  commandContext: CommandContext
+): Promise<void> {
+  if (!item.branchName || !item.repoRoot) {
+    return;
+  }
+
+  const trackingState = await resolveRemoteBranchTrackingState(item);
+  if (trackingState !== 'stale') {
+    vscode.window.showInformationMessage(
+      `Remote branch '${item.branchName}' still belongs to a configured remote.`
+    );
+    return;
+  }
+
+  try {
+    await removeRemoteTrackingRef(item.repoRoot, item.branchName);
+    await commandContext.showSuccessAndRefresh(
+      `Removed stale tracking ref '${item.branchName}'.`,
+      { fetchRemoteState: false }
+    );
+  } catch (error) {
+    commandContext.showCommandError(
+      `Failed to remove stale tracking ref '${item.branchName}'`,
+      error
+    );
+  }
+}
+
+async function resolveRemoteBranchTrackingState(
+  item: BranchTreeItem
+): Promise<RemoteBranchTrackingState> {
+  if (item.branchInfo?.remoteTrackingState) {
+    return item.branchInfo.remoteTrackingState;
+  }
+
+  if (!item.repoRoot || !item.branchName) {
+    return 'live';
+  }
+
+  return getRemoteBranchTrackingState(item.repoRoot, item.branchName);
+}
+
+function classifyRemoteBranchDeleteFailure(
+  branchName: string,
+  error: unknown
+): RemoteBranchDeleteFailure {
+  const message = getErrorMessage(error);
+  const remoteName = parseRemoteBranchName(branchName);
+
+  if (/remote ['"][^'"]+['"] was not found\./i.test(message) || /no such remote/i.test(message)) {
+    return {
+      kind: 'MissingRemote',
+      message,
+      remoteName,
+    };
+  }
+
+  if (/(^|\n)pre-push:/iu.test(message) || /hook declined/iu.test(message)) {
+    return {
+      kind: 'LocalPrePushHookBlocked',
+      message,
+      remoteName,
+    };
+  }
+
+  if (
+    /authentication failed/iu.test(message) ||
+    /could not read username/iu.test(message) ||
+    /permission denied/iu.test(message) ||
+    /repository not found/iu.test(message) ||
+    /could not resolve host/iu.test(message) ||
+    /failed to connect/iu.test(message) ||
+    /timed out/iu.test(message) ||
+    /network is unreachable/iu.test(message) ||
+    /ssl/i.test(message)
+  ) {
+    return {
+      kind: 'AuthOrNetworkFailure',
+      message,
+      remoteName,
+    };
+  }
+
+  if (
+    /remote rejected/iu.test(message) ||
+    /protected branch/iu.test(message) ||
+    /gh006/iu.test(message) ||
+    /deletion prohibited/iu.test(message) ||
+    /denied/iu.test(message) ||
+    (/(^|\n)remote:/iu.test(message) && /failed to push some refs/iu.test(message))
+  ) {
+    return {
+      kind: 'RemoteRejected',
+      message,
+      remoteName,
+    };
+  }
+
+  return {
+    kind: 'Unknown',
+    message,
+    remoteName,
+  };
+}
+
+async function showGenericRemoteDeleteFailureNotification(
+  item: BranchTreeItem,
+  error: unknown
+): Promise<void> {
+  const selection = await vscode.window.showErrorMessage(
+    `Failed to delete remote branch '${item.branchName}'.`,
+    SHOW_DETAILS_ACTION,
+    OPEN_GIT_OUTPUT_ACTION
+  );
+  await handleRemoteDeleteFailureAuxiliaryAction(item, error, selection);
+}
+
+async function handleRemoteDeleteFailureAuxiliaryAction(
+  item: BranchTreeItem,
+  error: unknown,
+  selection: string | undefined
+): Promise<void> {
+  if (selection === SHOW_DETAILS_ACTION) {
+    showRemoteDeleteDetails(item, error);
+    return;
+  }
+
+  if (selection === OPEN_GIT_OUTPUT_ACTION) {
+    await openGitOutput();
+  }
+}
+
+function showRemoteDeleteDetails(item: BranchTreeItem, error: unknown): void {
+  vscode.window.showErrorMessage(
+    `Failed to delete remote branch '${item.branchName}': ${getErrorMessage(error)}`
+  );
+}
+
+async function openGitOutput(): Promise<void> {
+  try {
+    await vscode.commands.executeCommand('git.showOutput');
+  } catch {
+    // Ignore missing Git output command; the existing notification already carries the failure.
+  }
+}
+
+function parseRemoteBranchName(branchName: string | undefined): string | undefined {
+  if (!branchName) {
+    return undefined;
+  }
+
+  const [remoteName] = branchName.split('/');
+  return remoteName || undefined;
 }

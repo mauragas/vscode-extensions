@@ -32,10 +32,14 @@ function createVscodeState() {
     inputBoxRequests: [],
     inputBoxResponse: undefined,
     infoMessages: [],
+    infoSelector: undefined,
     quickPickRequests: [],
     quickPickSelector: undefined,
     warningMessages: [],
+    warningSelector: undefined,
+    warningResponses: [],
     errorMessages: [],
+    errorSelector: undefined,
   };
 }
 
@@ -96,17 +100,29 @@ function createVscodeMock(state) {
           ? state.quickPickSelector(items, options)
           : undefined;
       },
-      async showInformationMessage(message) {
+      async showInformationMessage(message, ...items) {
         state.infoMessages.push(message);
+        return typeof state.infoSelector === 'function'
+          ? state.infoSelector(message, items)
+          : undefined;
+      },
+      async showWarningMessage(message, options, ...items) {
+        state.warningMessages.push({ message, options, items });
+        if (typeof state.warningSelector === 'function') {
+          return state.warningSelector(message, options, items);
+        }
+
+        if (options && options.modal) {
+          return state.warningResponses.shift();
+        }
+
         return undefined;
       },
-      async showWarningMessage(message) {
-        state.warningMessages.push(message);
-        return undefined;
-      },
-      async showErrorMessage(message) {
-        state.errorMessages.push(message);
-        return undefined;
+      async showErrorMessage(message, ...items) {
+        state.errorMessages.push({ message, items });
+        return typeof state.errorSelector === 'function'
+          ? state.errorSelector(message, items)
+          : undefined;
       },
     },
   };
@@ -781,4 +797,247 @@ test('showBranchActions adapts the quick pick for remote branches', async () => 
       args: [item],
     },
   ]);
+});
+
+test('showBranchActions exposes stale remote-tracking cleanup instead of remote delete', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.quickPickSelector = (items) =>
+    items.find((item) => item.actionId === 'removeStaleRemoteTrackingRef');
+
+  createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async getRemoteBranchTrackingState() {
+        return 'stale';
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async removeRemoteTrackingRef() {},
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  const item = {
+    nodeType: 'staleRemoteBranch',
+    contextValue: 'staleRemoteBranch',
+    branchName: 'ghost/feature/demo',
+    branchInfo: {
+      name: 'ghost/feature/demo',
+      isCurrent: false,
+      scope: 'remote',
+      remoteName: 'ghost',
+      remoteTrackingState: 'stale',
+    },
+    repoRoot: '/repo',
+  };
+
+  await vscodeState.registeredCommands['gitBranchesPanel.showBranchActions'](item);
+
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(trash) Remove Stale Tracking Ref'
+    )
+  );
+  assert.ok(
+    !vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(trash) Delete Branch'
+    )
+  );
+  assert.ok(
+    !vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(arrow-right) Checkout Branch'
+    )
+  );
+  assert.deepEqual(vscodeState.executedCommands, [
+    {
+      command: 'gitBranchesPanel.removeStaleRemoteTrackingRef',
+      args: [item],
+    },
+  ]);
+});
+
+test('deleteBranch offers retry without hook when remote deletion is blocked by a local pre-push hook', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Delete', 'Retry Without Hook');
+  vscodeState.errorSelector = (_message, items) => items[0];
+  const deleteRemoteBranchCalls = [];
+
+  const { commandContext } = createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch(repoRoot, branchName, options = {}) {
+        deleteRemoteBranchCalls.push({ repoRoot, branchName, options });
+        if (!options.skipPushHooks) {
+          throw new Error(
+            "Command failed: git push origin --delete feature/demo\npre-push: blocked branch deletion push to refs/heads/feature/demo on origin.\nerror: failed to push some refs to 'https://github.com/example/repo.git'"
+          );
+        }
+      },
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async getRemoteBranchTrackingState() {
+        return 'live';
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async removeRemoteTrackingRef() {},
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.deleteBranch']({
+    nodeType: 'remoteBranch',
+    branchName: 'origin/feature/demo',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'origin/feature/demo',
+      isCurrent: false,
+      scope: 'remote',
+      remoteName: 'origin',
+      remoteTrackingState: 'live',
+    },
+  });
+
+  assert.deepEqual(deleteRemoteBranchCalls, [
+    {
+      repoRoot: '/repo',
+      branchName: 'origin/feature/demo',
+      options: { skipPushHooks: undefined },
+    },
+    {
+      repoRoot: '/repo',
+      branchName: 'origin/feature/demo',
+      options: { skipPushHooks: true },
+    },
+  ]);
+  assert.equal(vscodeState.warningMessages[0].options.modal, true);
+  assert.match(vscodeState.errorMessages[0].message, /blocked by a local Git pre-push hook/i);
+  assert.deepEqual(commandContext.state.successRefreshes.at(-1), {
+    message: "Deleted remote branch 'origin/feature/demo'.",
+    options: { fetchRemoteState: true, forceFetchRemoteState: true },
+  });
+});
+
+test('deleteBranch offers stale tracking cleanup when the remote is missing', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.errorSelector = (_message, items) => items[0];
+  const removeRemoteTrackingRefCalls = [];
+
+  const { commandContext } = createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async getRemoteBranchTrackingState() {
+        return 'stale';
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async removeRemoteTrackingRef(repoRoot, branchName) {
+        removeRemoteTrackingRefCalls.push({ repoRoot, branchName });
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.deleteBranch']({
+    nodeType: 'remoteBranch',
+    branchName: 'ghost/feature/demo',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'ghost/feature/demo',
+      isCurrent: false,
+      scope: 'remote',
+      remoteName: 'ghost',
+      remoteTrackingState: 'stale',
+    },
+  });
+
+  assert.deepEqual(removeRemoteTrackingRefCalls, [
+    {
+      repoRoot: '/repo',
+      branchName: 'ghost/feature/demo',
+    },
+  ]);
+  assert.match(vscodeState.errorMessages[0].message, /remote 'ghost'/i);
+  assert.deepEqual(commandContext.state.successRefreshes.at(-1), {
+    message: "Removed stale tracking ref 'ghost/feature/demo'.",
+    options: { fetchRemoteState: false },
+  });
 });

@@ -1,8 +1,11 @@
+export type RemoteTrackingState = 'live' | 'stale';
+
 export interface BranchInfo {
   name: string;
   isCurrent: boolean;
   scope?: 'local' | 'remote' | 'tag' | 'stash' | 'worktree';
   remoteName?: string;
+  remoteTrackingState?: RemoteTrackingState;
   lastCommit?: string;
   lastCommitDate?: string;
   lastCommitTimestamp?: number;

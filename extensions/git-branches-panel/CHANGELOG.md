@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.1] - 2026-06-06
+
+- Classified remote-branch delete failures so local `pre-push` hook blocks, stale remote-tracking refs, remote-side rejections, and generic auth/network problems no longer collapse into one generic error path
+- Added **Retry Without Hook…** for remote branch deletes blocked by a local `pre-push` hook, using `git push --no-verify` only after an explicit modal confirmation
+- Marked remote-tracking refs whose remote is no longer configured as stale in the tree, disabled normal remote delete for them, and added **Remove Stale Tracking Ref** cleanup
+- Prevented stale remote-tracking refs from being included in descendant remote-folder deletes, reporting them as skipped cleanup candidates instead
+- Hardened remote ref parsing so symbolic refs such as `origin/HEAD` are never treated as deletable remote branches
+
 ## [1.4.0] - 2026-06-06
 
 - Branch creation now quietly sanitizes entered names into valid Git branch names instead of warning on spaces or passing invalid names through to Git, while rejecting inputs that sanitize to nothing instead of silently creating a generic fallback branch

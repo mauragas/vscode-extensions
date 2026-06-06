@@ -17,7 +17,7 @@ export function parseRemoteBranchReference(
   const [remoteName, ...branchSegments] = remoteBranchName.split('/');
   const branchName = branchSegments.join('/').trim();
 
-  if (!remoteName || !branchName) {
+  if (!remoteName || !branchName || branchName === 'HEAD') {
     return null;
   }
 

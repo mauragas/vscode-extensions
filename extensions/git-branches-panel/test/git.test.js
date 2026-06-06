@@ -12,6 +12,7 @@ const {
   checkoutTag,
   createBranchFromRef,
   createTag,
+  deleteRemoteBranch,
   deleteTag,
   dropAllStashes,
   dropStash,
@@ -19,6 +20,7 @@ const {
   fetchRemoteState,
   getDiffFilesBetweenRefs,
   getBranches,
+  getRemoteBranchTrackingState,
   getRemotes,
   getRemoteBranches,
   getStashes,
@@ -477,6 +479,42 @@ test('getRemoteBranches filters origin/HEAD while keeping real remote branches',
 
   assert.ok(remoteBranches.some((branch) => branch.name === 'origin/main'));
   assert.ok(remoteBranches.every((branch) => branch.name !== 'origin/HEAD'));
+});
+
+test('getRemoteBranches marks refs from removed remotes as stale', async (t) => {
+  const { repoRoot } = createRemoteBackedRepository(t);
+
+  runGit(repoRoot, [
+    'update-ref',
+    'refs/remotes/ghost/feature/stale-ghost',
+    runGit(repoRoot, ['rev-parse', 'HEAD']),
+  ]);
+
+  const remoteBranches = await getRemoteBranches(repoRoot);
+  const staleBranch = remoteBranches.find((branch) => branch.name === 'ghost/feature/stale-ghost');
+  const liveBranch = remoteBranches.find((branch) => branch.name === 'origin/main');
+
+  assert.ok(staleBranch);
+  assert.equal(staleBranch.remoteTrackingState, 'stale');
+  assert.ok(liveBranch);
+  assert.equal(liveBranch.remoteTrackingState, 'live');
+});
+
+test('getRemoteBranchTrackingState detects stale remote-tracking refs after remote removal', async (t) => {
+  const { repoRoot, remoteRoot } = createRemoteBackedRepository(t);
+
+  runGit(repoRoot, ['remote', 'add', 'ghost', remoteRoot]);
+  runGit(repoRoot, ['fetch', 'ghost']);
+  runGit(repoRoot, ['remote', 'remove', 'ghost']);
+
+  assert.equal(await getRemoteBranchTrackingState(repoRoot, 'origin/main'), 'live');
+  assert.equal(await getRemoteBranchTrackingState(repoRoot, 'ghost/main'), 'stale');
+});
+
+test('deleteRemoteBranch rejects symbolic remote HEAD refs as invalid', async (t) => {
+  const { repoRoot } = createRemoteBackedRepository(t);
+
+  await assert.rejects(deleteRemoteBranch(repoRoot, 'origin/HEAD'), /is invalid/i);
 });
 
 test('checkoutRemoteBranch creates and reuses a tracking local branch', async (t) => {

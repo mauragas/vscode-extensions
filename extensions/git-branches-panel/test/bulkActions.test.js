@@ -802,3 +802,77 @@ test('deleteFolderBranches reports current-only folders without claiming they ar
   assert.match(vscodeState.infoMessages.at(-1), /No non-current local branches were found under 'feature'/);
   assert.match(vscodeState.infoMessages.at(-1), /Skipped current branch: feature\/current/);
 });
+
+test('deleteRemoteFolderBranches skips stale remote-tracking refs and deletes only live remote branches', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Delete');
+  const deleteRemoteBranchCalls = [];
+
+  const { commandContext } = createBulkActionsModule({
+    vscodeState,
+    gitMock: {
+      async deleteBranch() {},
+      async deleteRemoteBranch(repoRoot, branchName) {
+        deleteRemoteBranchCalls.push({ repoRoot, branchName });
+      },
+      async deleteTag() {},
+      async fetchRemoteState() {},
+      async getBranches() {
+        return [];
+      },
+      async pushBranch() {
+        throw new Error('pushBranch should not be called in this test');
+      },
+      async syncBranch() {
+        throw new Error('syncBranch should not be called in this test');
+      },
+    },
+  });
+
+  commandContext.state.descendantBranches.set('folder:remote:feature', [
+    {
+      kind: 'branch',
+      fullName: 'origin/feature/live',
+      label: 'live',
+      path: 'origin/feature/live',
+      info: {
+        name: 'origin/feature/live',
+        isCurrent: false,
+        scope: 'remote',
+        remoteName: 'origin',
+        remoteTrackingState: 'live',
+      },
+    },
+    {
+      kind: 'branch',
+      fullName: 'ghost/feature/stale',
+      label: 'stale',
+      path: 'ghost/feature/stale',
+      info: {
+        name: 'ghost/feature/stale',
+        isCurrent: false,
+        scope: 'remote',
+        remoteName: 'ghost',
+        remoteTrackingState: 'stale',
+      },
+    },
+  ]);
+
+  await vscodeState.registeredCommands['gitBranchesPanel.deleteRemoteFolderBranches']({
+    nodeType: 'folder',
+    containerScope: 'remote',
+    containerKey: 'folder:remote:feature',
+    containerPath: 'feature',
+    repoRoot: '/repo',
+    label: 'feature',
+  });
+
+  assert.deepEqual(deleteRemoteBranchCalls, [
+    {
+      repoRoot: '/repo',
+      branchName: 'origin/feature/live',
+    },
+  ]);
+  assert.match(vscodeState.warningMessages[0].message, /Stale tracking ref/i);
+  assert.match(vscodeState.infoMessages.at(-1), /Skipped stale tracking ref: ghost\/feature\/stale/);
+});
