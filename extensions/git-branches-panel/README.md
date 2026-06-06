@@ -30,7 +30,7 @@ Remote, Stash, Worktree, and Tags stay collapsed until you expand them.
 - 🪄 **Optional current branch banner** — keep or hide the top `Current branch: ...` summary from settings
 - 🎛️ **Configurable toolbar quick actions** — show or hide each toolbar button independently from settings
 - 📍 **Optional status bar branch action** — keep or hide the status bar sync/publish action for the current branch
-- 🧹 **Quiet branch-name sanitization** — new branch names are cleaned up automatically to stay Git-valid, with optional lowercase kebab-case normalization on top
+- 🧹 **Quiet branch-name sanitization** — new branch names are cleaned up automatically to stay Git-valid, with optional lowercase kebab-case normalization that also strips extra special characters while preserving `-` and `/`
 - 🕐 **Last commit time** — shown as a relative description and in the tooltip
 - 🔄 **Sync state badges** — incoming and outgoing commits stay visible even when branch names are long
 - ☁️ **Inline sync button** — every branch gets a small sync button, including branches that are not currently checked out
@@ -89,7 +89,7 @@ Remote, Stash, Worktree, and Tags stay collapsed until you expand them.
 | Setting | Default | Description |
 | --- | --- | --- |
 | `gitBranchesPanel.groupByFolder` | `true` | Group branches by `/`-separated prefix |
-| `gitBranchesPanel.normalizeNewBranchNames` | `false` | Apply extra lowercase kebab-case normalization after branch creation first sanitizes the entered text into a valid Git branch name while preserving `/` folder separators |
+| `gitBranchesPanel.normalizeNewBranchNames` | `false` | Apply extra lowercase kebab-case normalization after branch creation first sanitizes the entered text into a valid Git branch name, stripping special characters other than `-` while preserving `/` folder separators |
 | `gitBranchesPanel.sortOrder` | `alphabetical` | `alphabetical` or `recent` |
 | `gitBranchesPanel.showCurrentBranchInfo` | `true` | Show the current branch summary above the tree views |
 | `gitBranchesPanel.showStatusBarBranchAction` | `true` | Show the status bar action that syncs or publishes the current branch |
@@ -106,7 +106,7 @@ Remote, Stash, Worktree, and Tags stay collapsed until you expand them.
 
 - New branch creation always performs minimal cleanup to keep names Git-valid, for example `feature/hello world??` becomes `feature/hello-world`
 - If the entered text sanitizes down to nothing useful, the prompt asks for a better name instead of silently creating a generic fallback branch
-- Turn on `gitBranchesPanel.normalizeNewBranchNames` if you also want extra cleanup like lowercasing and duplicate-dash collapsing, so ` - Feature / Hello--- World - ` becomes `feature/hello-world`
+- Turn on `gitBranchesPanel.normalizeNewBranchNames` if you also want extra cleanup like lowercasing, special-character stripping, and duplicate-dash collapsing, so ` - Feature / Hello--- World!_@ - ` becomes `feature/hello-world`
 - Hide any toolbar quick action you never use to keep the title bar compact
 - Hide the status bar branch action if you prefer less workbench chrome
 - Keep the current branch banner visible in the tree while hiding the status bar action, or vice versa

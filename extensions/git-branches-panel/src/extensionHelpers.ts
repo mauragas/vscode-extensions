@@ -104,18 +104,20 @@ function sanitizeNewBranchSegment(segment: string, normalize: boolean): string {
   sanitizedSegment = sanitizedSegment.replace(/\s*-\s*/g, '-');
   sanitizedSegment = sanitizedSegment.replace(/\s+/g, '-');
   sanitizedSegment = sanitizedSegment.replace(/\.\.+/g, '.');
+  sanitizedSegment = sanitizedSegment
+    .replace(/^\.+/g, '')
+    .replace(/\.+$/g, '')
+    .replace(/\.lock$/gi, '');
 
   if (normalize) {
     sanitizedSegment = sanitizedSegment.toLowerCase();
+    sanitizedSegment = sanitizedSegment.replace(/[^\p{L}\p{N}-]+/gu, '');
     sanitizedSegment = sanitizedSegment.replace(/-+/g, '-');
   }
 
   sanitizedSegment = sanitizedSegment
-    .replace(/^\.+/g, '')
-    .replace(/\.+$/g, '')
     .replace(/^-+/g, '')
-    .replace(/-+$/g, '')
-    .replace(/\.lock$/gi, '');
+    .replace(/-+$/g, '');
 
   return sanitizedSegment === '@' ? '' : sanitizedSegment;
 }

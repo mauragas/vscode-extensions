@@ -97,13 +97,15 @@ test('sanitizeNewBranchName keeps minimum cleanup while preserving case and fold
   assert.equal(sanitizeNewBranchName('  ???  '), '');
 });
 
-test('normalizeBranchName converts mixed case names to lowercase kebab-case and preserves folders', () => {
+test('normalizeBranchName converts mixed case names to lowercase kebab-case, strips extra special characters, and preserves folders', () => {
   assert.equal(normalizeBranchName('Feature/make Fix'), 'feature/make-fix');
   assert.equal(normalizeBranchName('Feature/make-Fix'), 'feature/make-fix');
   assert.equal(normalizeBranchName('  Release/Hot Fix  '), 'release/hot-fix');
   assert.equal(normalizeBranchName('Feature/Sub Feature/Next Step'), 'feature/sub-feature/next-step');
   assert.equal(normalizeBranchName('Feature/make--Fix'), 'feature/make-fix');
   assert.equal(normalizeBranchName(' - Feature / Hello--- World - '), 'feature/hello-world');
+  assert.equal(normalizeBranchName('Feature/API_Client'), 'feature/apiclient');
+  assert.equal(normalizeBranchName('Release/v1.2.3_beta!'), 'release/v123beta');
 });
 
 test('validateNewBranchNameInput accepts names that sanitize cleanly and rejects empty results', () => {
@@ -122,6 +124,10 @@ test('validateNewBranchNameInput respects normalization when enabled', () => {
   assert.equal(validateNewBranchNameInput('Feature/make Fix', undefined, { normalize: true }), undefined);
   assert.equal(
     validateNewBranchNameInput(' feature/demo ', 'Feature/Demo', { normalize: true }),
+    'Please enter a different branch name.'
+  );
+  assert.equal(
+    validateNewBranchNameInput('Feature/API_Client', 'feature/apiclient', { normalize: true }),
     'Please enter a different branch name.'
   );
 });

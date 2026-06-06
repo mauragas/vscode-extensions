@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [1.4.0] - 2026-06-06
 
 - Branch creation now quietly sanitizes entered names into valid Git branch names instead of warning on spaces or passing invalid names through to Git, while rejecting inputs that sanitize to nothing instead of silently creating a generic fallback branch
-- Added `gitBranchesPanel.normalizeNewBranchNames` to optionally apply extra lowercase kebab-case normalization on top of the default sanitization while preserving `/` folder separators
+- Added `gitBranchesPanel.normalizeNewBranchNames` to optionally apply extra lowercase kebab-case normalization on top of the default sanitization, stripping special characters other than `-` while preserving `/` folder separators
 - Applied normalization only to branch creation flows (`New Branch`, `New Branch from Selected`, and `New Branch from Selected and Checkout`), leaving rename and tag naming behavior unchanged
 - Added cleanup for common invalid Git ref patterns such as spaces, duplicate separators, invalid punctuation, leading/trailing dashes, and `.lock` suffixes during branch creation
 
