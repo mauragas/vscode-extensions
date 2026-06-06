@@ -25,6 +25,11 @@ import {
 import { BranchTreeItem } from '../treeProvider';
 import { NO_CURRENT_BRANCH_MESSAGE, type CommandContext } from './shared';
 
+interface BranchActionItem extends vscode.QuickPickItem {
+  readonly actionId: string;
+  run(): Promise<void>;
+}
+
 export function registerBranchDomainCommands(
   context: vscode.ExtensionContext,
   commandContext: CommandContext
@@ -39,6 +44,12 @@ export function registerBranchDomainCommands(
     vscode.commands.registerCommand('gitBranchesPanel.checkout', async (item: BranchTreeItem) => {
       await handleCheckout(item, commandContext, true);
     }),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.showBranchActions',
+      async (item: BranchTreeItem) => {
+        await handleShowBranchActions(item);
+      }
+    ),
     vscode.commands.registerCommand('gitBranchesPanel.syncCurrentBranch', async () => {
       await handleSyncCurrentBranch(commandContext);
     }),
@@ -147,6 +158,22 @@ async function handleCheckout(
   } catch (error) {
     commandContext.showCommandError(`Failed to checkout '${item.branchName}'`, error);
   }
+}
+
+async function handleShowBranchActions(item: BranchTreeItem | undefined): Promise<void> {
+  if (!isBranchActionItem(item)) {
+    return;
+  }
+
+  const selection = await vscode.window.showQuickPick(buildBranchActionItems(item), {
+    placeHolder: `Choose an action for '${item.branchName}'`,
+  });
+
+  if (!selection) {
+    return;
+  }
+
+  await selection.run();
 }
 
 async function handleSyncCurrentBranch(commandContext: CommandContext): Promise<void> {
@@ -524,6 +551,119 @@ async function pushBranchByName(
   } catch (error) {
     commandContext.showCommandError(`Failed to publish '${branchName}'`, error);
   }
+}
+
+function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
+  const items: BranchActionItem[] = [];
+
+  if (item.nodeType !== 'remoteBranch') {
+    items.push(
+      createBranchActionItem(
+        isPublishableBranchItem(item) ? 'publishBranch' : 'syncBranch',
+        isPublishableBranchItem(item)
+          ? item.nodeType === 'currentBranch'
+            ? '$(cloud-upload) Publish Current Branch'
+            : '$(cloud-upload) Publish Branch'
+          : item.nodeType === 'currentBranch'
+            ? '$(sync) Sync Current Branch'
+            : '$(sync) Sync Branch',
+        async () => {
+          await vscode.commands.executeCommand(
+            isPublishableBranchItem(item)
+              ? 'gitBranchesPanel.publishBranch'
+              : 'gitBranchesPanel.syncBranch',
+            item
+          );
+        }
+      )
+    );
+  }
+
+  items.push(
+    createBranchActionItem('checkout', '$(arrow-right) Checkout Branch', async () => {
+      await vscode.commands.executeCommand('gitBranchesPanel.checkout', item);
+    }),
+    createBranchActionItem(
+      'newBranchFromSelected',
+      '$(add) New Branch from Selected Branch...',
+      async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.newBranchFromSelected', item);
+      }
+    ),
+    createBranchActionItem(
+      'newBranchFromSelectedAndCheckout',
+      '$(add) New Branch from Selected Branch and Checkout...',
+      async () => {
+        await vscode.commands.executeCommand(
+          'gitBranchesPanel.newBranchFromSelectedAndCheckout',
+          item
+        );
+      }
+    )
+  );
+
+  if (item.nodeType !== 'remoteBranch') {
+    items.push(
+      createBranchActionItem('renameBranch', '$(edit) Rename Branch', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.renameBranch', item);
+      }),
+      createBranchActionItem('createTag', '$(tag) Create Tag...', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.createTag', item);
+      })
+    );
+  }
+
+  items.push(
+    createBranchActionItem('copyBranchName', '$(copy) Copy Branch Name', async () => {
+      await vscode.commands.executeCommand('gitBranchesPanel.copyBranchName', item);
+    })
+  );
+
+  if (item.nodeType !== 'currentBranch') {
+    items.push(
+      createBranchActionItem(
+        'compareBranchWithCurrent',
+        '$(diff-multiple) Compare with Current Branch',
+        async () => {
+          await vscode.commands.executeCommand('gitBranchesPanel.compareBranchWithCurrent', item);
+        }
+      ),
+      createBranchActionItem('mergeIntoCurrent', '$(git-merge) Merge into Current Branch', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.mergeIntoCurrent', item);
+      }),
+      createBranchActionItem('deleteBranch', '$(trash) Delete Branch', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.deleteBranch', item);
+      })
+    );
+  }
+
+  return items;
+}
+
+function createBranchActionItem(
+  actionId: string,
+  label: string,
+  run: () => Promise<void>
+): BranchActionItem {
+  return {
+    actionId,
+    label,
+    run,
+  };
+}
+
+function isBranchActionItem(item: BranchTreeItem | undefined): item is BranchTreeItem {
+  return Boolean(item?.branchName && item.repoRoot && isSupportedBranchActionNodeType(item.nodeType));
+}
+
+function isSupportedBranchActionNodeType(
+  nodeType: BranchTreeItem['nodeType']
+): nodeType is 'branch' | 'currentBranch' | 'remoteBranch' {
+  return nodeType === 'branch' || nodeType === 'currentBranch' || nodeType === 'remoteBranch';
+}
+
+function isPublishableBranchItem(item: BranchTreeItem): boolean {
+  return item.contextValue === 'publishableBranch' || item.contextValue === 'publishableCurrentBranch';
 }
 
 function buildCompareResource(

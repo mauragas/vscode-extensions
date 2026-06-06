@@ -25,9 +25,12 @@ function loadFresh(modulePath, mocks) {
 function createVscodeState() {
   return {
     registeredCommands: {},
+    executedCommands: [],
     inputBoxRequests: [],
     inputBoxResponse: undefined,
     infoMessages: [],
+    quickPickRequests: [],
+    quickPickSelector: undefined,
     warningMessages: [],
     errorMessages: [],
   };
@@ -40,7 +43,8 @@ function createVscodeMock(state) {
         state.registeredCommands[name] = callback;
         return { dispose() {} };
       },
-      async executeCommand() {
+      async executeCommand(command, ...args) {
+        state.executedCommands.push({ command, args });
         return undefined;
       },
     },
@@ -66,6 +70,12 @@ function createVscodeMock(state) {
       async showInputBox(options) {
         state.inputBoxRequests.push(options);
         return state.inputBoxResponse;
+      },
+      async showQuickPick(items, options) {
+        state.quickPickRequests.push({ items, options });
+        return typeof state.quickPickSelector === 'function'
+          ? state.quickPickSelector(items, options)
+          : undefined;
       },
       async showInformationMessage(message) {
         state.infoMessages.push(message);
@@ -327,6 +337,138 @@ test('publishBranch pushes the selected branch and refreshes remote state', asyn
     {
       message: 'sync',
       options: { fetchRemoteState: true, forceFetchRemoteState: true },
+    },
+  ]);
+});
+
+test('showBranchActions opens an iconized quick pick for publishable branches and routes the selection', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.quickPickSelector = (items) =>
+    items.find((item) => item.actionId === 'publishBranch');
+  const validateSpy = [];
+
+  createBranchCommandsModule({
+    vscodeState,
+    validateSpy,
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return { branchName: 'main', upstreamName: 'origin/main', didPull: false, didPush: false, publishedUpstream: false };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return { branchName: 'main', upstreamName: 'origin/main', didPull: false, didPush: false, publishedUpstream: false };
+      },
+    },
+  });
+
+  const item = {
+    nodeType: 'branch',
+    contextValue: 'publishableBranch',
+    branchName: 'feature/offline',
+    repoRoot: '/repo',
+  };
+
+  await vscodeState.registeredCommands['gitBranchesPanel.showBranchActions'](item);
+
+  assert.deepEqual(validateSpy, []);
+  assert.equal(vscodeState.quickPickRequests.length, 1);
+  assert.match(vscodeState.quickPickRequests[0].options.placeHolder, /feature\/offline/);
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(cloud-upload) Publish Branch'
+    )
+  );
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(arrow-right) Checkout Branch'
+    )
+  );
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(trash) Delete Branch'
+    )
+  );
+  assert.ok(
+    !vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(sync) Sync Branch'
+    )
+  );
+  assert.deepEqual(vscodeState.executedCommands, [
+    {
+      command: 'gitBranchesPanel.publishBranch',
+      args: [item],
+    },
+  ]);
+});
+
+test('showBranchActions adapts the quick pick for remote branches', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.quickPickSelector = (items) => items.find((item) => item.actionId === 'deleteBranch');
+  const validateSpy = [];
+
+  createBranchCommandsModule({
+    vscodeState,
+    validateSpy,
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return { branchName: 'main', upstreamName: 'origin/main', didPull: false, didPush: false, publishedUpstream: false };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return { branchName: 'main', upstreamName: 'origin/main', didPull: false, didPush: false, publishedUpstream: false };
+      },
+    },
+  });
+
+  const item = {
+    nodeType: 'remoteBranch',
+    contextValue: 'remoteBranch',
+    branchName: 'origin/feature/demo',
+    repoRoot: '/repo',
+  };
+
+  await vscodeState.registeredCommands['gitBranchesPanel.showBranchActions'](item);
+
+  assert.deepEqual(validateSpy, []);
+  assert.equal(vscodeState.quickPickRequests.length, 1);
+  assert.ok(
+    !vscodeState.quickPickRequests[0].items.some((quickPickItem) => /Sync Branch/.test(quickPickItem.label))
+  );
+  assert.ok(
+    !vscodeState.quickPickRequests[0].items.some((quickPickItem) => /Publish Branch/.test(quickPickItem.label))
+  );
+  assert.ok(
+    !vscodeState.quickPickRequests[0].items.some((quickPickItem) => /Rename Branch/.test(quickPickItem.label))
+  );
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(trash) Delete Branch'
+    )
+  );
+  assert.deepEqual(vscodeState.executedCommands, [
+    {
+      command: 'gitBranchesPanel.deleteBranch',
+      args: [item],
     },
   ]);
 });

@@ -3,6 +3,8 @@ import * as vscode from 'vscode';
 import { cleanRepository, fetchAllRemotes, fetchRemoteState } from '../git';
 import type { CommandContext } from './shared';
 
+const EXTENSION_SETTINGS_QUERY = '@ext:karolis-mauragas.git-branches-panel';
+
 export function registerRepositoryCommands(
   context: vscode.ExtensionContext,
   commandContext: CommandContext
@@ -10,6 +12,9 @@ export function registerRepositoryCommands(
   context.subscriptions.push(
     vscode.commands.registerCommand('gitBranchesPanel.refresh', async () => {
       await handleRefresh(commandContext);
+    }),
+    vscode.commands.registerCommand('gitBranchesPanel.openSettings', async () => {
+      await handleOpenSettings();
     }),
     vscode.commands.registerCommand('gitBranchesPanel.fetchAll', async () => {
       await handleFetchAll(commandContext);
@@ -25,6 +30,10 @@ export function registerRepositoryCommands(
 
 async function handleRefresh(commandContext: CommandContext): Promise<void> {
   await commandContext.refresh({ fetchRemoteState: true });
+}
+
+async function handleOpenSettings(): Promise<void> {
+  await vscode.commands.executeCommand('workbench.action.openSettings', EXTENSION_SETTINGS_QUERY);
 }
 
 async function handleFetchAll(commandContext: CommandContext): Promise<void> {

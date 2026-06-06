@@ -72,6 +72,11 @@
         "icon": "$(refresh)"
       },
       {
+        "command": "gitBranchesPanel.openSettings",
+        "title": "Open Extension Settings",
+        "icon": "$(gear)"
+      },
+      {
         "command": "gitBranchesPanel.fetchAll",
         "title": "Fetch All",
         "icon": "$(cloud-download)"
@@ -105,6 +110,11 @@
         "command": "gitBranchesPanel.checkout",
         "title": "Checkout Branch",
         "icon": "$(arrow-right)"
+      },
+      {
+        "command": "gitBranchesPanel.showBranchActions",
+        "title": "More Branch Actions...",
+        "icon": "$(ellipsis)"
       },
       {
         "command": "gitBranchesPanel.checkoutTag",
@@ -299,6 +309,11 @@
           "command": "gitBranchesPanel.showAdvancedActions",
           "when": "view == gitBranchesPanel || view == gitBranchesSCM",
           "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.openSettings",
+          "when": "view == gitBranchesPanel || view == gitBranchesSCM",
+          "group": "navigation@8"
         }
       ],
       "view/item/context": [
@@ -366,6 +381,11 @@
           "command": "gitBranchesPanel.deleteBranch",
           "when": "viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch",
           "group": "2_delete@1"
+        },
+        {
+          "command": "gitBranchesPanel.showBranchActions",
+          "when": "viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch",
+          "group": "3_more@1"
         },
         {
           "command": "gitBranchesPanel.checkoutTag",

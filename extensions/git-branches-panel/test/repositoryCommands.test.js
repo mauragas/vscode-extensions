@@ -25,6 +25,7 @@ function loadFresh(modulePath, mocks) {
 function createVscodeState() {
   return {
     registeredCommands: {},
+    executedCommands: [],
     warningMessages: [],
     warningResponses: [],
   };
@@ -36,6 +37,10 @@ function createVscodeMock(state) {
       registerCommand(name, callback) {
         state.registeredCommands[name] = callback;
         return { dispose() {} };
+      },
+      async executeCommand(command, ...args) {
+        state.executedCommands.push({ command, args });
+        return undefined;
       },
     },
     window: {
@@ -121,6 +126,28 @@ test('cleanRepository confirms, cleans the repository, and refreshes once', asyn
     {
       message: 'Removed untracked and ignored files from the repository.',
       options: { fetchRemoteState: false },
+    },
+  ]);
+});
+
+test('openSettings opens the extension settings query', async () => {
+  const vscodeState = createVscodeState();
+
+  createRepositoryCommandsModule({
+    vscodeState,
+    gitMock: {
+      async cleanRepository() {},
+      async fetchAllRemotes() {},
+      async fetchRemoteState() {},
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.openSettings']();
+
+  assert.deepEqual(vscodeState.executedCommands, [
+    {
+      command: 'workbench.action.openSettings',
+      args: ['@ext:karolis-mauragas.git-branches-panel'],
     },
   ]);
 });
