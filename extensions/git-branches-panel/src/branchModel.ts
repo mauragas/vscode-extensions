@@ -1,5 +1,6 @@
 export type {
   BranchInfo,
+  RemoteTrackingState,
   BranchSortOrder,
   BranchSyncState,
   BranchTreeNode,

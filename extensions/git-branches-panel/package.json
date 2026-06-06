@@ -2,7 +2,7 @@
   "name": "git-branches-panel",
   "displayName": "Git Branches Panel",
   "description": "Tree view for local and remote Git branches, stashes, worktrees, and tags with grouping, sync state, and quick actions.",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "publisher": "karolis-mauragas",
   "license": "MIT",
   "repository": {
@@ -134,6 +134,11 @@
       {
         "command": "gitBranchesPanel.deleteBranch",
         "title": "Delete Branch",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "gitBranchesPanel.removeStaleRemoteTrackingRef",
+        "title": "Remove Stale Tracking Ref",
         "icon": "$(trash)"
       },
       {
@@ -344,12 +349,12 @@
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelected",
-          "when": "viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch",
+          "when": "viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch",
           "group": "1_branch@2.1"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelectedAndCheckout",
-          "when": "viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch",
+          "when": "viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch",
           "group": "1_branch@2.2"
         },
         {
@@ -364,17 +369,17 @@
         },
         {
           "command": "gitBranchesPanel.copyBranchName",
-          "when": "viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch",
+          "when": "viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch",
           "group": "1_branch@5"
         },
         {
           "command": "gitBranchesPanel.compareBranchWithCurrent",
-          "when": "viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch",
+          "when": "viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch",
           "group": "1_branch@6"
         },
         {
           "command": "gitBranchesPanel.mergeIntoCurrent",
-          "when": "viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch",
+          "when": "viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch",
           "group": "1_branch@7"
         },
         {
@@ -383,8 +388,13 @@
           "group": "2_delete@1"
         },
         {
+          "command": "gitBranchesPanel.removeStaleRemoteTrackingRef",
+          "when": "viewItem == staleRemoteBranch",
+          "group": "2_delete@1"
+        },
+        {
           "command": "gitBranchesPanel.showBranchActions",
-          "when": "viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch",
+          "when": "viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch",
           "group": "3_more@1"
         },
         {

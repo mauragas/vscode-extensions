@@ -36,6 +36,8 @@ Remote, Stash, Worktree, and Tags stay collapsed until you expand them.
 - ☁️ **Inline sync button** — every branch gets a small sync button, including branches that are not currently checked out
 - 🚀 **Non-current branch sync** — sync a branch with its upstream without checking it out first
 - ☁️ **Publish actions** — publish local branches without an upstream, including the current branch and descendant folder actions
+- 🧭 **Classified remote-branch delete recovery** — remote deletion failures now distinguish local hook blocks, stale tracking refs, and remote-side rejections instead of offering a generic retry
+- 🧹 **Stale remote-tracking cleanup** — branches whose remote was removed are marked as stale, skip destructive remote-delete actions, and can be cleaned up locally in one click
 - 🆚 **Compare with current branch** — compare a local or remote branch against the currently checked out branch from the context menu
 - 📦 **Stash actions** — apply, pop, or drop a stash from the context menu
 - 🪟 **Worktree actions** — open, reveal, copy, or remove worktrees from the context menu
@@ -64,6 +66,7 @@ Remote, Stash, Worktree, and Tags stay collapsed until you expand them.
 | Rename Branch | Rename the selected branch |
 | Create Tag | Create a local tag on the selected local branch |
 | Compare with Current Branch | Open a multi-file comparison between the selected branch and the checked out branch |
+| Remove Stale Tracking Ref | Delete a stale local `refs/remotes/<remote>/...` entry without contacting any remote |
 | Apply Stash | Apply the selected stash without removing it |
 | Pop Stash | Apply the selected stash and remove it if successful |
 | Drop Stash | Delete the selected stash |
@@ -81,8 +84,15 @@ Remote, Stash, Worktree, and Tags stay collapsed until you expand them.
 | Merge into Current Branch | Merge the selected branch into the current branch |
 | Copy Branch Name | Copy the branch name to the clipboard |
 | Copy Tag Name | Copy the selected tag name to the clipboard |
-| Delete Branch | Delete the selected branch with merge safety checks |
+| Delete Branch | Delete the selected branch with merge safety checks and context-aware remote-delete recovery |
 | Delete Tag | Delete the selected local tag |
+
+### Remote delete behavior
+
+- Live remote branches still use `git push <remote> --delete <branch>`.
+- If a local `pre-push` hook blocks deletion, the extension offers **Retry Without Hook…** and only asks for a modal confirmation before bypassing local hooks with `--no-verify`.
+- If a remote-tracking branch belongs to a remote that no longer exists locally, it is shown as a **stale remote-tracking ref** and the extension offers **Remove Stale Tracking Ref** instead of pretending a remote delete can work.
+- If the remote/server rejects deletion, the extension shows details and Git output actions without offering a misleading force-delete path.
 
 ## Settings
 

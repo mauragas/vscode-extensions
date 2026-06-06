@@ -51,6 +51,20 @@ test('buildBranchTooltipContent describes local, remote, stash, tag, and worktre
       lastCommitDate: 'yesterday',
     },
   });
+  const staleRemoteTooltip = buildBranchTooltipContent({
+    kind: 'branch',
+    fullName: 'ghost/feature/demo',
+    label: 'demo',
+    path: 'ghost/feature/demo',
+    info: {
+      name: 'ghost/feature/demo',
+      isCurrent: false,
+      scope: 'remote',
+      remoteName: 'ghost',
+      remoteTrackingState: 'stale',
+      lastCommitDate: 'last week',
+    },
+  });
   const tagTooltip = buildBranchTooltipContent({
     kind: 'branch',
     fullName: 'v1.0.0',
@@ -101,6 +115,9 @@ test('buildBranchTooltipContent describes local, remote, stash, tag, and worktre
 
   assert.match(remoteTooltip, /_Remote branch_/);
   assert.match(remoteTooltip, /Remote: origin/);
+  assert.match(staleRemoteTooltip, /_Stale remote-tracking ref_/);
+  assert.match(staleRemoteTooltip, /Remote: ghost/);
+  assert.match(staleRemoteTooltip, /_Remote is no longer configured locally_/);
   assert.match(tagTooltip, /_Tag_/);
   assert.match(stashTooltip, /_Stash_/);
   assert.match(stashTooltip, /Saved: 5 minutes ago/);
@@ -248,6 +265,20 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
       remoteName: 'origin',
     },
   });
+  const staleRemoteBranchPresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'ghost/main',
+    label: 'main',
+    path: 'ghost/main',
+    info: {
+      name: 'ghost/main',
+      isCurrent: false,
+      scope: 'remote',
+      remoteName: 'ghost',
+      remoteTrackingState: 'stale',
+      lastCommitDate: 'yesterday',
+    },
+  });
   const tagPresentation = buildTreeItemPresentation({
     kind: 'branch',
     fullName: 'v1.0.0',
@@ -352,6 +383,13 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(remoteBranchPresentation.nodeType, 'remoteBranch');
   assert.equal(remoteBranchPresentation.icon.id, 'cloud');
   assert.equal(remoteBranchPresentation.command, undefined);
+
+  assert.equal(staleRemoteBranchPresentation.nodeType, 'staleRemoteBranch');
+  assert.equal(staleRemoteBranchPresentation.contextValue, 'staleRemoteBranch');
+  assert.equal(staleRemoteBranchPresentation.icon.id, 'cloud');
+  assert.equal(staleRemoteBranchPresentation.icon.colorId, 'list.warningForeground');
+  assert.equal(staleRemoteBranchPresentation.description, 'stale remote • yesterday');
+  assert.equal(staleRemoteBranchPresentation.command, undefined);
 
   assert.equal(tagPresentation.nodeType, 'tag');
   assert.equal(tagPresentation.icon.id, 'tag');

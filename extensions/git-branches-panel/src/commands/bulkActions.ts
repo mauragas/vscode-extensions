@@ -266,10 +266,19 @@ async function handleDeleteRemoteFolderBranches(
   }
 
   const folderLabel = getContainerLabel(item);
-  const branches = getFolderBranches(item, commandContext, 'remote').map((branch) => branch.fullName);
+  const descendantBranches = getFolderBranches(item, commandContext, 'remote');
+  const staleBranches = descendantBranches
+    .filter((branch) => branch.info.remoteTrackingState === 'stale')
+    .map((branch) => branch.fullName);
+  const branches = descendantBranches
+    .filter((branch) => branch.info.remoteTrackingState !== 'stale')
+    .map((branch) => branch.fullName);
+
   if (branches.length === 0) {
     vscode.window.showInformationMessage(
-      `No remote branches were found under '${folderLabel}'.`
+      staleBranches.length > 0
+        ? `No live remote branches were found under '${folderLabel}'. Stale tracking refs: ${formatNameList(staleBranches)}.`
+        : `No remote branches were found under '${folderLabel}'.`
     );
     return;
   }
@@ -277,6 +286,9 @@ async function handleDeleteRemoteFolderBranches(
   const confirmation = await vscode.window.showWarningMessage(
     [
       `Delete ${branches.length} remote ${pluralize('branch', branches.length)} under '${folderLabel}'?`,
+      staleBranches.length > 0
+        ? `Stale tracking ${pluralize('ref', staleBranches.length)} will be skipped: ${formatNameList(staleBranches)}.`
+        : '',
       buildNamePreview(branches),
     ]
       .filter(Boolean)
@@ -301,7 +313,7 @@ async function handleDeleteRemoteFolderBranches(
 
   showNotification(
     result.failed.length > 0 ? 'warning' : 'info',
-    buildNamedDeleteResultMessage('remote branches', folderLabel, result)
+    buildNamedDeleteResultMessage('remote branches', folderLabel, result, staleBranches)
   );
 }
 
@@ -825,9 +837,16 @@ function buildLocalDeleteResultMessage(
 function buildNamedDeleteResultMessage(
   subject: string,
   folderLabel: string,
-  result: BulkDeleteResult
+  result: BulkDeleteResult,
+  skippedStaleNames: readonly string[] = []
 ): string {
   const parts = [`Deleted ${result.deleted.length} ${subject} under '${folderLabel}'.`];
+
+  if (skippedStaleNames.length > 0) {
+    parts.push(
+      `Skipped stale tracking ${pluralize('ref', skippedStaleNames.length)}: ${formatNameList(skippedStaleNames)}.`
+    );
+  }
 
   if (result.failed.length > 0) {
     parts.push(`Failures: ${formatFailureList(result.failed)}.`);

@@ -6,6 +6,7 @@ export type NodeType =
   | 'branch'
   | 'currentBranch'
   | 'remoteBranch'
+  | 'staleRemoteBranch'
   | 'tag'
   | 'stash'
   | 'worktree';
