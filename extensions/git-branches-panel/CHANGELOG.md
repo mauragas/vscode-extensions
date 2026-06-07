@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [1.5.0] - 2026-06-07
 
 - Local branches whose tracked upstream no longer exists are now shown with a warning color so they are visually distinct from healthy branches
-- Added **Prune Local Branches with Missing Upstream** command to the context menu for these warning-colored branches
+- Added **Prune Local Branches with Missing Upstream** command to the Local section context menu
 - Improved the branch tooltip to clearly separate "no upstream configured" from "tracked upstream was deleted" states
 - Added inline buttons next to branch names for checkout, create new branch from selected and checkout, and delete
 - Inline buttons adapt to branch type — sync/publish, checkout, create-new-branch, and delete appear where appropriate

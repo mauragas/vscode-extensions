@@ -289,7 +289,8 @@ async function handleDeleteRemoteFolderBranches(
       protectedBranchNames
     )
   );
-  const deletableBranches = branches.filter((branchName) => !protectedBranches.includes(branchName));
+  const protectedBranchesSet = new Set(protectedBranches);
+  const deletableBranches = branches.filter((branchName) => !protectedBranchesSet.has(branchName));
 
   if (deletableBranches.length === 0) {
     vscode.window.showInformationMessage(
@@ -573,8 +574,9 @@ async function handleBulkLocalDelete(options: {
       protectedBranchNames
     )
   );
+  const skippedProtectedTargetNames = new Set(skippedProtectedTargets.map((target) => target.name));
   const unprotectedTargets = targets.filter(
-    (target) => !skippedProtectedTargets.some((protectedTarget) => protectedTarget.name === target.name)
+    (target) => !skippedProtectedTargetNames.has(target.name)
   );
   const deletableTargets = unprotectedTargets.filter((target) => !target.isCurrent);
   const skippedCurrentTargets = unprotectedTargets.filter((target) => target.isCurrent);
