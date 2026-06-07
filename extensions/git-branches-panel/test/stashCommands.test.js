@@ -184,3 +184,75 @@ test('dropAllStashes confirms, clears all stashes, and refreshes once', async ()
     },
   ]);
 });
+
+test('popLatestStash shows an info message when there are no stashes', async () => {
+  const vscodeState = createVscodeState();
+  const popCalls = [];
+
+  createStashCommandsModule({
+    vscodeState,
+    gitMock: {
+      async applyStash() {},
+      async dropAllStashes() {},
+      async dropStash() {},
+      async getStashes() {
+        return [];
+      },
+      async popStash(repoRoot, stashName) {
+        popCalls.push({ repoRoot, stashName });
+      },
+      async stashSilently() {
+        return false;
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.popLatestStash']({
+    nodeType: 'section',
+    containerScope: 'stash',
+    repoRoot: '/repo',
+  });
+
+  assert.deepEqual(popCalls, []);
+  assert.deepEqual(vscodeState.infoMessages, ['No stashes were found to pop.']);
+});
+
+test('popLatestStash pops the latest stash from the stash section and refreshes once', async () => {
+  const vscodeState = createVscodeState();
+  const popCalls = [];
+
+  const { commandContext } = createStashCommandsModule({
+    vscodeState,
+    gitMock: {
+      async applyStash() {},
+      async dropAllStashes() {},
+      async dropStash() {},
+      async getStashes() {
+        return [
+          { name: 'stash@{0}', isCurrent: false, scope: 'stash' },
+          { name: 'stash@{1}', isCurrent: false, scope: 'stash' },
+        ];
+      },
+      async popStash(repoRoot, stashName) {
+        popCalls.push({ repoRoot, stashName });
+      },
+      async stashSilently() {
+        return false;
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.popLatestStash']({
+    nodeType: 'section',
+    containerScope: 'stash',
+    repoRoot: '/repo',
+  });
+
+  assert.deepEqual(popCalls, [{ repoRoot: '/repo', stashName: 'stash@{0}' }]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: "Popped latest stash 'stash@{0}'.",
+      options: { fetchRemoteState: false },
+    },
+  ]);
+});

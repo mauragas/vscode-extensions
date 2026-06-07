@@ -177,6 +177,26 @@ test('BranchDataLoader only refreshes explicitly requested lazy sections', async
   assert.equal(sections.find((node) => node.path === 'section:tags').children.length, 1);
 });
 
+test('BranchDataLoader decorates branches before sorting and tree building', async () => {
+  const { dependencies } = createDependencies({
+    decorateBranchInfo: (_repoRoot, branch) =>
+      branch.name === 'feature/demo'
+        ? {
+            ...branch,
+            isPinned: true,
+          }
+        : branch,
+  });
+  const loader = new BranchDataLoader(dependencies, () => 1_000);
+
+  await loader.refresh({ sections: ['local'], fetchRemoteState: false });
+
+  const localSection = loader.getTreeData().find((node) => node.path === 'section:local');
+  assert.ok(localSection);
+  assert.equal(localSection.children[0].kind, 'branch');
+  assert.equal(localSection.children[0].fullName, 'feature/demo');
+});
+
 test('BranchDataLoader ignores stale section results after the repo root changes', async () => {
   let resolveRemoteBranches;
   const remoteBranchesPromise = new Promise((resolve) => {

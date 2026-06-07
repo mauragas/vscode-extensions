@@ -57,7 +57,8 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
     node.label,
     nodeType,
     syncStatus,
-    node.info.isCurrent
+    node.info.isCurrent,
+    node.info.isPinned
   );
 
   return {
@@ -86,6 +87,10 @@ export function buildBranchTooltipContent(node: TreeBranch): string {
   const isStash = node.info.scope === 'stash';
   const isWorktree = node.info.scope === 'worktree';
   const tooltipLines = [`**${node.info.worktreePath ?? node.fullName}**`];
+
+  if (node.info.isPinned) {
+    tooltipLines.push('', '_Pinned item_');
+  }
 
   if (isWorktree) {
     tooltipLines.push('', '_Worktree_');
@@ -250,15 +255,36 @@ function buildTreeItemLabel(
   label: string,
   nodeType: NodeType,
   syncStatus: string,
-  isCurrent: boolean
+  isCurrent: boolean,
+  isPinned: boolean | undefined
 ): string {
-  const prefix =
-    nodeType === 'currentBranch' || (nodeType === 'worktree' && isCurrent) ? '● ' : '';
+  const prefixParts: string[] = [];
+  if (isPinned) {
+    prefixParts.push('★');
+  }
+  if (nodeType === 'currentBranch' || (nodeType === 'worktree' && isCurrent)) {
+    prefixParts.push('●');
+  }
+
+  const prefix = prefixParts.length > 0 ? `${prefixParts.join(' ')} ` : '';
 
   return syncStatus ? `${prefix}${syncStatus} ${label}` : `${prefix}${label}`;
 }
 
 function getItemContextValue(nodeType: NodeType, branch: BranchInfo): string {
+  const baseContextValue = resolveBaseContextValue(nodeType, branch);
+  if (branch.isSyncing) {
+    return resolveBusyContextValue(baseContextValue);
+  }
+
+  if (branch.isDeletionProtected) {
+    return resolveProtectedContextValue(baseContextValue);
+  }
+
+  return baseContextValue;
+}
+
+function resolveBaseContextValue(nodeType: NodeType, branch: BranchInfo): string {
   if (nodeType === 'worktree') {
     return branch.isCurrent ? 'currentWorktree' : 'worktree';
   }
@@ -272,6 +298,40 @@ function getItemContextValue(nodeType: NodeType, branch: BranchInfo): string {
   }
 
   return nodeType;
+}
+
+function resolveBusyContextValue(contextValue: string): string {
+  switch (contextValue) {
+    case 'branch':
+      return 'busyBranch';
+    case 'currentBranch':
+      return 'busyCurrentBranch';
+    case 'publishableBranch':
+      return 'busyPublishableBranch';
+    case 'publishableCurrentBranch':
+      return 'busyPublishableCurrentBranch';
+    case 'missingUpstreamBranch':
+      return 'busyMissingUpstreamBranch';
+    default:
+      return contextValue;
+  }
+}
+
+function resolveProtectedContextValue(contextValue: string): string {
+  switch (contextValue) {
+    case 'branch':
+      return 'protectedBranch';
+    case 'publishableBranch':
+      return 'protectedPublishableBranch';
+    case 'missingUpstreamBranch':
+      return 'protectedMissingUpstreamBranch';
+    case 'remoteBranch':
+      return 'protectedRemoteBranch';
+    case 'staleRemoteBranch':
+      return 'protectedStaleRemoteBranch';
+    default:
+      return contextValue;
+  }
 }
 
 function getItemIcon(nodeType: NodeType): TreeItemIconDescriptor {

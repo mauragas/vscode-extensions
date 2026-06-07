@@ -34,6 +34,33 @@ export async function removeWorktree(
   await runGit(repoRoot, ['worktree', 'remove', ...(force ? ['--force'] : []), worktreePath]);
 }
 
+export async function createWorktree(
+  repoRoot: string,
+  worktreePath: string,
+  refName: string,
+  options: {
+    detach?: boolean;
+  } = {}
+): Promise<void> {
+  const baseArgs = ['worktree', 'add'];
+  if (options.detach ?? false) {
+    baseArgs.push('--detach');
+  }
+
+  const args = [...baseArgs, worktreePath, refName];
+
+  try {
+    await runGit(repoRoot, args);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if ((options.detach ?? false) || !looksLikeBranchAlreadyCheckedOutError(message)) {
+      throw error;
+    }
+
+    await runGit(repoRoot, ['worktree', 'add', '--force', worktreePath, refName]);
+  }
+}
+
 function parseWorktreeRecords(stdout: string): ParsedWorktreeRecord[] {
   const records: ParsedWorktreeRecord[] = [];
   let currentRecord: ParsedWorktreeRecord | undefined;
@@ -112,4 +139,8 @@ function formatWorktreeReference(record: ParsedWorktreeRecord): string {
   }
 
   return record.head ? record.head.slice(0, 7) : '';
+}
+
+function looksLikeBranchAlreadyCheckedOutError(message: string): boolean {
+  return /already used by worktree/i.test(message);
 }

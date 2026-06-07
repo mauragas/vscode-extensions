@@ -1,6 +1,11 @@
 import * as vscode from 'vscode';
 
 import { isTrackedBranch, type BranchInfo, type TreeBranch } from '../branchModel';
+import {
+  DEFAULT_PROTECTED_BRANCH_NAMES,
+  isBranchProtectedFromDeletion,
+  normalizeConfiguredBranchNames,
+} from '../branchRules';
 import { getErrorMessage } from '../errorUtils';
 import { looksLikeMergeSafetyError } from '../extensionHelpers';
 import {
@@ -27,6 +32,7 @@ interface AdvancedActionItem extends vscode.QuickPickItem {
 interface BulkDeleteResult {
   deleted: string[];
   skippedCurrent: string[];
+  skippedProtected: string[];
   skippedNotFullyMerged: string[];
   failed: Array<{
     name: string;
@@ -270,26 +276,52 @@ async function handleDeleteRemoteFolderBranches(
   const staleBranches = descendantBranches
     .filter((branch) => branch.info.remoteTrackingState === 'stale')
     .map((branch) => branch.fullName);
+  const protectedBranchNames = getProtectedBranchNames();
   const branches = descendantBranches
     .filter((branch) => branch.info.remoteTrackingState !== 'stale')
     .map((branch) => branch.fullName);
+  const protectedBranches = branches.filter((branchName) =>
+    isBranchProtectedFromDeletion(
+      {
+        name: branchName,
+        scope: 'remote',
+      },
+      protectedBranchNames
+    )
+  );
+  const deletableBranches = branches.filter((branchName) => !protectedBranches.includes(branchName));
 
-  if (branches.length === 0) {
+  if (deletableBranches.length === 0) {
     vscode.window.showInformationMessage(
-      staleBranches.length > 0
-        ? `No live remote branches were found under '${folderLabel}'. Stale tracking refs: ${formatNameList(staleBranches)}.`
-        : `No remote branches were found under '${folderLabel}'.`
+      [
+        branches.length === 0
+          ? staleBranches.length > 0
+            ? `No live remote branches were found under '${folderLabel}'.`
+            : `No remote branches were found under '${folderLabel}'.`
+          : `No deletable remote branches were found under '${folderLabel}'.`,
+        staleBranches.length > 0
+          ? `Stale tracking ${pluralize('ref', staleBranches.length)}: ${formatNameList(staleBranches)}.`
+          : '',
+        protectedBranches.length > 0
+          ? `Protected ${pluralize('branch', protectedBranches.length)}: ${formatNameList(protectedBranches)}.`
+          : '',
+      ]
+        .filter(Boolean)
+        .join(' ')
     );
     return;
   }
 
   const confirmation = await vscode.window.showWarningMessage(
     [
-      `Delete ${branches.length} remote ${pluralize('branch', branches.length)} under '${folderLabel}'?`,
+      `Delete ${deletableBranches.length} remote ${pluralize('branch', deletableBranches.length)} under '${folderLabel}'?`,
       staleBranches.length > 0
         ? `Stale tracking ${pluralize('ref', staleBranches.length)} will be skipped: ${formatNameList(staleBranches)}.`
         : '',
-      buildNamePreview(branches),
+      protectedBranches.length > 0
+        ? `Protected ${pluralize('branch', protectedBranches.length)} will be skipped: ${formatNameList(protectedBranches)}.`
+        : '',
+      buildNamePreview(deletableBranches),
     ]
       .filter(Boolean)
       .join(' '),
@@ -300,7 +332,7 @@ async function handleDeleteRemoteFolderBranches(
     return;
   }
 
-  const result = await deleteNamedItems(branches, async (branchName) => {
+  const result = await deleteNamedItems(deletableBranches, async (branchName) => {
     await deleteRemoteBranch(repoRoot, branchName);
   });
 
@@ -313,7 +345,7 @@ async function handleDeleteRemoteFolderBranches(
 
   showNotification(
     result.failed.length > 0 ? 'warning' : 'info',
-    buildNamedDeleteResultMessage('remote branches', folderLabel, result, staleBranches)
+    buildNamedDeleteResultMessage('remote branches', folderLabel, result, staleBranches, protectedBranches)
   );
 }
 
@@ -531,13 +563,30 @@ async function handleBulkLocalDelete(options: {
     return;
   }
 
-  const deletableTargets = targets.filter((target) => !target.isCurrent);
-  const skippedCurrentTargets = targets.filter((target) => target.isCurrent);
+  const protectedBranchNames = getProtectedBranchNames();
+  const skippedProtectedTargets = targets.filter((target) =>
+    isBranchProtectedFromDeletion(
+      {
+        name: target.name,
+        scope: 'local',
+      },
+      protectedBranchNames
+    )
+  );
+  const unprotectedTargets = targets.filter(
+    (target) => !skippedProtectedTargets.some((protectedTarget) => protectedTarget.name === target.name)
+  );
+  const deletableTargets = unprotectedTargets.filter((target) => !target.isCurrent);
+  const skippedCurrentTargets = unprotectedTargets.filter((target) => target.isCurrent);
 
   if (deletableTargets.length === 0) {
     vscode.window.showInformationMessage(
-      skippedCurrentTargets.length > 0
-        ? buildNoDeletableLocalBranchesMessage(folderLabel, skippedCurrentTargets)
+      skippedCurrentTargets.length > 0 || skippedProtectedTargets.length > 0
+        ? buildNoDeletableLocalBranchesMessage(
+            folderLabel,
+            skippedCurrentTargets,
+            skippedProtectedTargets
+          )
         : emptyMessage
     );
     return;
@@ -549,6 +598,9 @@ async function handleBulkLocalDelete(options: {
       skippedCurrentTargets.length > 0
         ? `The current ${pluralize('branch', skippedCurrentTargets.length)} will be skipped automatically.`
         : '',
+      skippedProtectedTargets.length > 0
+        ? `Protected ${pluralize('branch', skippedProtectedTargets.length)} will be skipped automatically.`
+        : '',
     ]
       .filter(Boolean)
       .join(' '),
@@ -559,7 +611,8 @@ async function handleBulkLocalDelete(options: {
     return;
   }
 
-  const result = await deleteLocalBranches(repoRoot, targets, forceDelete);
+  const result = await deleteLocalBranches(repoRoot, unprotectedTargets, forceDelete);
+  result.skippedProtected.push(...skippedProtectedTargets.map((target) => target.name));
 
   if (result.deleted.length > 0) {
     await commandContext.refresh({ fetchRemoteState: false });
@@ -579,6 +632,7 @@ async function deleteLocalBranches(
   const result: BulkDeleteResult = {
     deleted: [],
     skippedCurrent: [],
+    skippedProtected: [],
     skippedNotFullyMerged: [],
     failed: [],
   };
@@ -616,6 +670,7 @@ async function deleteNamedItems(
   const result: BulkDeleteResult = {
     deleted: [],
     skippedCurrent: [],
+    skippedProtected: [],
     skippedNotFullyMerged: [],
     failed: [],
   };
@@ -778,6 +833,12 @@ function buildFolderDeleteResultMessage(folderLabel: string, result: BulkDeleteR
 function buildPruneResultMessage(result: BulkDeleteResult): string {
   const parts = [`Pruned ${result.deleted.length} local ${pluralize('branch', result.deleted.length)}.`];
 
+  if (result.skippedProtected.length > 0) {
+    parts.push(
+      `Skipped protected ${pluralize('branch', result.skippedProtected.length)}: ${formatNameList(result.skippedProtected)}.`
+    );
+  }
+
   if (result.skippedNotFullyMerged.length > 0) {
     parts.push(
       `Skipped not fully merged ${pluralize('branch', result.skippedNotFullyMerged.length)}: ${formatNameList(result.skippedNotFullyMerged)}.`
@@ -793,9 +854,18 @@ function buildPruneResultMessage(result: BulkDeleteResult): string {
 
 function buildNoDeletableLocalBranchesMessage(
   folderLabel: string,
-  skippedCurrentTargets: readonly LocalBranchTarget[]
+  skippedCurrentTargets: readonly LocalBranchTarget[],
+  skippedProtectedTargets: readonly LocalBranchTarget[] = []
 ): string {
   const parts = [`No non-current local branches were found under '${folderLabel}'.`];
+
+  if (skippedProtectedTargets.length > 0) {
+    parts.push(
+      `Skipped protected ${pluralize('branch', skippedProtectedTargets.length)}: ${formatNameList(
+        skippedProtectedTargets.map((target) => target.name)
+      )}.`
+    );
+  }
 
   if (skippedCurrentTargets.length > 0) {
     parts.push(
@@ -814,6 +884,12 @@ function buildLocalDeleteResultMessage(
   result: BulkDeleteResult
 ): string {
   const parts = [`Deleted ${result.deleted.length} ${subject} ${location}.`];
+
+  if (result.skippedProtected.length > 0) {
+    parts.push(
+      `Skipped protected ${pluralize('branch', result.skippedProtected.length)}: ${formatNameList(result.skippedProtected)}.`
+    );
+  }
 
   if (result.skippedCurrent.length > 0) {
     parts.push(
@@ -838,13 +914,20 @@ function buildNamedDeleteResultMessage(
   subject: string,
   folderLabel: string,
   result: BulkDeleteResult,
-  skippedStaleNames: readonly string[] = []
+  skippedStaleNames: readonly string[] = [],
+  skippedProtectedNames: readonly string[] = []
 ): string {
   const parts = [`Deleted ${result.deleted.length} ${subject} under '${folderLabel}'.`];
 
   if (skippedStaleNames.length > 0) {
     parts.push(
       `Skipped stale tracking ${pluralize('ref', skippedStaleNames.length)}: ${formatNameList(skippedStaleNames)}.`
+    );
+  }
+
+  if (skippedProtectedNames.length > 0) {
+    parts.push(
+      `Skipped protected ${pluralize('branch', skippedProtectedNames.length)}: ${formatNameList(skippedProtectedNames)}.`
     );
   }
 
@@ -906,4 +989,13 @@ function showNotification(kind: NotificationKind, message: string): void {
     default:
       vscode.window.showInformationMessage(message);
   }
+}
+
+function getProtectedBranchNames(): string[] {
+  return normalizeConfiguredBranchNames(
+    vscode.workspace
+      ?.getConfiguration('gitBranchesPanel')
+      .get<string[]>('protectedBranchNames', [...DEFAULT_PROTECTED_BRANCH_NAMES]) ??
+      [...DEFAULT_PROTECTED_BRANCH_NAMES]
+  );
 }

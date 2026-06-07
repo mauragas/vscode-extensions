@@ -34,14 +34,20 @@ Remote, Stash, Worktree, and Tags stay collapsed until you expand them.
 - 🕐 **Last commit time** — shown as a relative description and in the tooltip
 - 🔄 **Sync state badges** — incoming and outgoing commits stay visible even when branch names are long
 - ☁️ **Inline sync button** — every branch gets a small sync button, including branches that are not currently checked out
-- 🏷️ **Inline action buttons** — checkout, create new branch from selected and checkout, and delete appear inline alongside sync/publish for quick access
+- 🌀 **Inline sync animation** — branch sync and publish actions swap to a spinning inline indicator while Git is working
+- 🏷️ **Inline action buttons** — checkout, create new branch from selected and checkout, pin/unpin, and delete appear inline alongside sync/publish for quick access
 - 🚀 **Non-current branch sync** — sync a branch with its upstream without checking it out first
 - ☁️ **Publish actions** — publish local branches without an upstream, including the current branch and descendant folder actions
 - 🧭 **Classified remote-branch delete recovery** — remote deletion failures now distinguish local hook blocks, stale tracking refs, and remote-side rejections instead of offering a generic retry
 - 🧹 **Stale remote-tracking cleanup** — branches whose remote was removed are marked as stale, skip destructive remote-delete actions, and can be cleaned up locally in one click
 - ⚠️ **Missing upstream detection** — local branches whose tracked upstream no longer exists are shown with a warning color and the publish action instead of sync
+- 📌 **Pin starred items to the top** — pin local or remote branches, stashes, and worktrees so they stay easy to reach
+- 🪵 **Create worktrees from refs** — create a linked worktree directly from a branch or a detached worktree from a tag without checking that ref out first
+- 🍒 **Cherry-pick into current** — cherry-pick a selected branch into the checked out branch from the context menu
+- 🛡️ **Protected branch safeguards** — block delete actions for configured branch names such as `main`, `master`, and `develop`
+- 🧭 **Branch prefix picker** — optionally prefill new branch names from common folders like `feature/`, `bugfix/`, or `hotfix/`
 - 🆚 **Compare with current branch** — compare a local or remote branch against the currently checked out branch from the context menu
-- 📦 **Stash actions** — apply, pop, or drop a stash from the context menu
+- 📦 **Stash actions** — apply, pop, drop, or pop the latest stash from the Stash section context menu
 - 🪟 **Worktree actions** — open, reveal, copy, or remove worktrees from the context menu
 - ⚡ **Double-click checkout** — double-click a branch to switch instantly
 - 🔀 **Merge into current** — merge a selected branch into the current branch from the context menu
@@ -65,18 +71,22 @@ Remote, Stash, Worktree, and Tags stay collapsed until you expand them.
 | Sync Branch | Pull and/or push the branch with its remote, even when it is not checked out |
 | Publish Branch | Publish the selected local branch to its remote |
 | More Branch Actions... | Open a Quick Pick with iconized branch actions |
+| Create Worktree... | Create a linked worktree from a selected branch or a detached worktree from a selected tag |
 | Rename Branch | Rename the selected branch |
 | Create Tag | Create a local tag on the selected local branch |
+| Cherry-pick into Current Branch | Cherry-pick the selected branch into the currently checked out branch |
 | Compare with Current Branch | Open a multi-file comparison between the selected branch and the checked out branch |
 | Remove Stale Tracking Ref | Delete a stale local `refs/remotes/<remote>/...` entry without contacting any remote |
 | Apply Stash | Apply the selected stash without removing it |
 | Pop Stash | Apply the selected stash and remove it if successful |
+| Pop Latest Stash | Pop the latest stash directly from the Stash section context menu |
 | Drop Stash | Delete the selected stash |
 | Drop All Stashes | Delete every stash entry from the Stash section |
 | Open Worktree | Open the selected worktree in the current window |
 | Open Worktree in New Window | Open the selected worktree in a new window |
 | Reveal Worktree in File Explorer | Reveal the selected worktree in the OS file browser |
 | Copy Worktree Path | Copy the selected worktree path to the clipboard |
+| Pin / Unpin Item | Toggle pinning for branches, stashes, and worktrees so pinned items stay at the top |
 | Remove Worktree | Remove the selected linked worktree |
 | Push All Tags | Push all local tags to a selected remote from the Tags section context menu |
 | Push Descendant Branches | Push tracked descendant branches and publish unpublished ones from a local folder |
@@ -102,6 +112,8 @@ Remote, Stash, Worktree, and Tags stay collapsed until you expand them.
 | --- | --- | --- |
 | `gitBranchesPanel.groupByFolder` | `true` | Group branches by `/`-separated prefix |
 | `gitBranchesPanel.normalizeNewBranchNames` | `false` | Apply extra lowercase kebab-case normalization after branch creation first sanitizes the entered text into a valid Git branch name, stripping special characters other than `-` while preserving `/` folder separators |
+| `gitBranchesPanel.newBranchPrefixes` | `["feature", "bugfix", "hotfix"]` | Optional prefixes to offer before the new-branch input opens; use an empty array to disable the picker |
+| `gitBranchesPanel.protectedBranchNames` | `["main", "master", "develop"]` | Branch names to protect from delete actions; remote branches also honor the short branch name, so `main` protects `origin/main` |
 | `gitBranchesPanel.sortOrder` | `alphabetical` | `alphabetical` or `recent` |
 | `gitBranchesPanel.showCurrentBranchInfo` | `true` | Show the current branch summary above the tree views |
 | `gitBranchesPanel.showStatusBarBranchAction` | `true` | Show the status bar action that syncs or publishes the current branch |
@@ -119,6 +131,8 @@ Remote, Stash, Worktree, and Tags stay collapsed until you expand them.
 - New branch creation always performs minimal cleanup to keep names Git-valid, for example `feature/hello world??` becomes `feature/hello-world`
 - If the entered text sanitizes down to nothing useful, the prompt asks for a better name instead of silently creating a generic fallback branch
 - Turn on `gitBranchesPanel.normalizeNewBranchNames` if you also want extra cleanup like lowercasing, special-character stripping, and duplicate-dash collapsing, so ` - Feature / Hello--- World!_@ - ` becomes `feature/hello-world`
+- Keep `gitBranchesPanel.newBranchPrefixes` set to `feature`, `bugfix`, and `hotfix` for a lightweight branch-folder picker, or clear it entirely if you prefer typing everything yourself
+- Extend `gitBranchesPanel.protectedBranchNames` with long-lived release or environment branches to add an extra UI safety net before delete commands run
 - Hide any toolbar quick action you never use to keep the title bar compact
 - Hide the status bar branch action if you prefer less workbench chrome
 - Keep the current branch banner visible in the tree while hiding the status bar action, or vice versa

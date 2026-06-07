@@ -452,6 +452,117 @@ test('buildTreeItemPresentation sets correct context value and icon for missing 
   assert.equal(currentMissingUpstreamPresentation.command, undefined);
 });
 
+test('buildTreeItemPresentation adds pinned prefixes and busy context values where appropriate', () => {
+  const pinnedBusyBranchPresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'feature/demo',
+    label: 'demo',
+    path: 'feature/demo',
+    info: {
+      name: 'feature/demo',
+      isCurrent: false,
+      isPinned: true,
+      isSyncing: true,
+      lastCommitDate: '1 hour ago',
+      upstreamName: 'origin/feature/demo',
+      aheadCount: 1,
+    },
+  });
+  const pinnedCurrentWorktreePresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: '/tmp/git-branches-panel-main-pinned-worktree',
+    label: 'git-branches-panel-main-pinned-worktree',
+    path: '/tmp/git-branches-panel-main-pinned-worktree',
+    info: {
+      name: '/tmp/git-branches-panel-main-pinned-worktree',
+      isCurrent: true,
+      isPinned: true,
+      scope: 'worktree',
+      worktreePath: '/tmp/git-branches-panel-main-pinned-worktree',
+      worktreeRef: 'main',
+    },
+  });
+
+  assert.equal(pinnedBusyBranchPresentation.label, '★ 1↑ demo');
+  assert.equal(pinnedBusyBranchPresentation.contextValue, 'busyBranch');
+  assert.match(pinnedBusyBranchPresentation.tooltip, /_Pinned item_/);
+
+  assert.equal(pinnedCurrentWorktreePresentation.label, '★ ● git-branches-panel-main-pinned-worktree');
+  assert.equal(pinnedCurrentWorktreePresentation.contextValue, 'currentWorktree');
+});
+
+test('buildTreeItemPresentation exposes protected context values so delete actions can be hidden in menus', () => {
+  const protectedBranchPresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'main',
+    label: 'main',
+    path: 'main',
+    info: {
+      name: 'main',
+      isCurrent: false,
+      isDeletionProtected: true,
+      upstreamName: 'origin/main',
+    },
+  });
+  const protectedPublishableBranchPresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'develop',
+    label: 'develop',
+    path: 'develop',
+    info: {
+      name: 'develop',
+      isCurrent: false,
+      isDeletionProtected: true,
+    },
+  });
+  const protectedMissingUpstreamPresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'release/2026.06',
+    label: '2026.06',
+    path: 'release/2026.06',
+    info: {
+      name: 'release/2026.06',
+      isCurrent: false,
+      isDeletionProtected: true,
+      upstreamName: 'origin/release/2026.06',
+      upstreamMissing: true,
+    },
+  });
+  const protectedRemotePresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'origin/main',
+    label: 'main',
+    path: 'origin/main',
+    info: {
+      name: 'origin/main',
+      isCurrent: false,
+      isDeletionProtected: true,
+      scope: 'remote',
+      remoteName: 'origin',
+    },
+  });
+  const protectedStaleRemotePresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'ghost/main',
+    label: 'main',
+    path: 'ghost/main',
+    info: {
+      name: 'ghost/main',
+      isCurrent: false,
+      isDeletionProtected: true,
+      scope: 'remote',
+      remoteName: 'ghost',
+      remoteTrackingState: 'stale',
+    },
+  });
+
+  assert.equal(protectedBranchPresentation.contextValue, 'protectedBranch');
+  assert.equal(protectedPublishableBranchPresentation.contextValue, 'protectedPublishableBranch');
+  assert.equal(protectedMissingUpstreamPresentation.contextValue, 'protectedMissingUpstreamBranch');
+  assert.equal(protectedRemotePresentation.contextValue, 'protectedRemoteBranch');
+  assert.equal(protectedStaleRemotePresentation.contextValue, 'protectedStaleRemoteBranch');
+});
+
 test('findContainerNode resolves section and nested folder paths', () => {
   const sections = buildBranchSections(
     [{ name: 'main', isCurrent: true }],

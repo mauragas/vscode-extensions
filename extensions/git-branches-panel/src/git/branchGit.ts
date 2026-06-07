@@ -200,6 +200,13 @@ export async function mergeBranchIntoCurrent(
   await runGit(repoRoot, ['merge', '--no-edit', branchName]);
 }
 
+export async function cherryPickRef(
+  repoRoot: string,
+  refName: string
+): Promise<void> {
+  await runGit(repoRoot, ['cherry-pick', refName]);
+}
+
 export async function getDiffFilesBetweenRefs(
   repoRoot: string,
   leftRef: string,

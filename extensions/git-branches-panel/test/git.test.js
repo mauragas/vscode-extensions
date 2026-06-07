@@ -8,9 +8,11 @@ const test = require('node:test');
 const {
   applyStash,
   cleanRepository,
+  cherryPickRef,
   checkoutRemoteBranch,
   checkoutTag,
   createBranchFromRef,
+  createWorktree,
   createTag,
   deleteRemoteBranch,
   deleteTag,
@@ -234,6 +236,38 @@ test('createBranchFromRef can create and checkout a local branch from a remote r
   );
 });
 
+test('createWorktree creates a linked worktree from a local branch without changing the current checkout', async (t) => {
+  const repoRoot = createTempRepository(t);
+  const worktreeParent = mkdtempSync(join(tmpdir(), 'git-branches-panel-create-worktree-'));
+  const worktreeRoot = join(worktreeParent, 'feature-demo');
+
+  t.after(() => {
+    rmSync(worktreeParent, { recursive: true, force: true });
+  });
+
+  runGit(repoRoot, ['branch', 'feature/demo']);
+
+  await createWorktree(repoRoot, worktreeRoot, 'feature/demo');
+
+  assert.equal(runGit(repoRoot, ['rev-parse', '--abbrev-ref', 'HEAD']), 'main');
+  assert.equal(runGit(worktreeRoot, ['rev-parse', '--abbrev-ref', 'HEAD']), 'feature/demo');
+});
+
+test('createWorktree creates a detached worktree from a tag', async (t) => {
+  const repoRoot = createTempRepository(t);
+  const worktreeParent = mkdtempSync(join(tmpdir(), 'git-branches-panel-tag-worktree-'));
+  const worktreeRoot = join(worktreeParent, 'release-tag');
+
+  t.after(() => {
+    rmSync(worktreeParent, { recursive: true, force: true });
+  });
+
+  await createWorktree(repoRoot, worktreeRoot, 'refs/tags/v1.0.0', { detach: true });
+
+  assert.equal(runGit(worktreeRoot, ['rev-parse', '--abbrev-ref', 'HEAD']), 'HEAD');
+  assert.equal(runGit(worktreeRoot, ['describe', '--tags', '--exact-match']), 'v1.0.0');
+});
+
 test('getRemotes lists configured git remotes', async (t) => {
   const { repoRoot } = createRemoteBackedRepository(t);
 
@@ -352,6 +386,19 @@ test('getWorktrees lists the current and linked worktrees', async (t) => {
   assert.equal(linkedWorktree.scope, 'worktree');
   assert.equal(linkedWorktree.isCurrent, false);
   assert.equal(linkedWorktree.worktreeRef, 'feature/worktree');
+});
+
+test('cherryPickRef applies the selected branch commit onto the current branch', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/cherry-pick']);
+  commitFile(repoRoot, 'feature.txt', 'feature branch commit\n', 'Add cherry-pickable change');
+  runGit(repoRoot, ['checkout', 'main']);
+
+  await cherryPickRef(repoRoot, 'feature/cherry-pick');
+
+  assert.equal(readFileSync(join(repoRoot, 'feature.txt'), 'utf8'), 'feature branch commit\n');
+  assert.equal(runGit(repoRoot, ['log', '-1', '--pretty=%s']), 'Add cherry-pickable change');
 });
 
 test('removeWorktree removes a linked worktree path', async (t) => {

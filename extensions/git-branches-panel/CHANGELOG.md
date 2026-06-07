@@ -10,6 +10,14 @@ All notable changes to this project will be documented in this file.
 - Added inline buttons next to branch names for checkout, create new branch from selected and checkout, and delete
 - Inline buttons adapt to branch type — sync/publish, checkout, create-new-branch, and delete appear where appropriate
 - Added `missingUpstreamBranch` context value for finer-grained inline button control on branches with deleted upstreams
+- Added context menu actions to create a worktree directly from a local branch or a detached worktree from a tag without first checking out that ref
+- Added a branch context menu action to cherry-pick the selected branch into the currently checked out branch
+- Added a Stash section action to pop the latest stash in one click
+- Added `gitBranchesPanel.protectedBranchNames` with default safeguards for `main`, `master`, and `develop`, and enforced it across single-branch and bulk delete flows
+- Added `gitBranchesPanel.newBranchPrefixes` with default `feature`, `bugfix`, and `hotfix` entries to prefill new branch names from common folder prefixes
+- Added inline pin/unpin buttons for branches, stashes, and worktrees, and keep pinned items sorted to the top of their section
+- Added a spinning inline branch-action indicator while sync or publish operations are in progress
+- Fixed inline checkout, create-branch, and delete buttons so publishable branches and missing-upstream branches get the same quick-action coverage as regular local branches
 
 ## [1.4.1] - 2026-06-06
 
