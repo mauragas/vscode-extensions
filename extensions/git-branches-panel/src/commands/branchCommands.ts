@@ -392,7 +392,8 @@ async function handleCreateBranchFromSelected(
     item.nodeType !== 'branch' &&
     item.nodeType !== 'currentBranch' &&
     item.nodeType !== 'remoteBranch' &&
-    item.nodeType !== 'staleRemoteBranch'
+    item.nodeType !== 'staleRemoteBranch' &&
+    item.nodeType !== 'missingUpstreamBranch'
   ) {
     return;
   }
@@ -757,17 +758,22 @@ function isBranchActionItem(item: BranchTreeItem | undefined): item is BranchTre
 
 function isSupportedBranchActionNodeType(
   nodeType: BranchTreeItem['nodeType']
-): nodeType is 'branch' | 'currentBranch' | 'remoteBranch' | 'staleRemoteBranch' {
+): nodeType is 'branch' | 'currentBranch' | 'remoteBranch' | 'staleRemoteBranch' | 'missingUpstreamBranch' {
   return (
     nodeType === 'branch' ||
     nodeType === 'currentBranch' ||
     nodeType === 'remoteBranch' ||
-    nodeType === 'staleRemoteBranch'
+    nodeType === 'staleRemoteBranch' ||
+    nodeType === 'missingUpstreamBranch'
   );
 }
 
 function isPublishableBranchItem(item: BranchTreeItem): boolean {
-  return item.contextValue === 'publishableBranch' || item.contextValue === 'publishableCurrentBranch';
+  return (
+    item.contextValue === 'publishableBranch' ||
+    item.contextValue === 'publishableCurrentBranch' ||
+    item.contextValue === 'missingUpstreamBranch'
+  );
 }
 
 function buildCompareResource(

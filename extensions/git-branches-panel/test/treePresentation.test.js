@@ -411,6 +411,47 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(currentWorktreePresentation.contextValue, 'currentWorktree');
 });
 
+test('buildTreeItemPresentation sets correct context value and icon for missing upstream branches', () => {
+  const missingUpstreamBranchPresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'feature/old-feature',
+    label: 'old-feature',
+    path: 'feature/old-feature',
+    info: {
+      name: 'feature/old-feature',
+      isCurrent: false,
+      lastCommitDate: '3 days ago',
+      upstreamName: 'origin/feature/old-feature',
+      upstreamMissing: true,
+    },
+  });
+  const currentMissingUpstreamPresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'main',
+    label: 'main',
+    path: 'main',
+    info: {
+      name: 'main',
+      isCurrent: true,
+      lastCommitDate: '1 hour ago',
+      upstreamName: 'origin/main',
+      upstreamMissing: true,
+    },
+  });
+
+  assert.equal(missingUpstreamBranchPresentation.nodeType, 'missingUpstreamBranch');
+  assert.equal(missingUpstreamBranchPresentation.contextValue, 'missingUpstreamBranch');
+  assert.equal(missingUpstreamBranchPresentation.icon.id, 'git-branch');
+  assert.equal(missingUpstreamBranchPresentation.icon.colorId, 'list.warningForeground');
+  assert.equal(missingUpstreamBranchPresentation.command.command, 'gitBranchesPanel.activateBranchItem');
+
+  assert.equal(currentMissingUpstreamPresentation.nodeType, 'missingUpstreamBranch');
+  assert.equal(currentMissingUpstreamPresentation.contextValue, 'publishableCurrentBranch');
+  assert.equal(currentMissingUpstreamPresentation.icon.id, 'git-branch');
+  assert.equal(currentMissingUpstreamPresentation.icon.colorId, 'list.warningForeground');
+  assert.equal(currentMissingUpstreamPresentation.command, undefined);
+});
+
 test('findContainerNode resolves section and nested folder paths', () => {
   const sections = buildBranchSections(
     [{ name: 'main', isCurrent: true }],

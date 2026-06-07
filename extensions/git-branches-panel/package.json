@@ -329,8 +329,23 @@
         },
         {
           "command": "gitBranchesPanel.publishBranch",
-          "when": "viewItem == publishableBranch || viewItem == publishableCurrentBranch",
+          "when": "viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch",
           "group": "inline@1"
+        },
+        {
+          "command": "gitBranchesPanel.checkout",
+          "when": "(viewItem == branch || viewItem == currentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch) && !viewItem =~ /current/i",
+          "group": "inline@2"
+        },
+        {
+          "command": "gitBranchesPanel.newBranchFromSelectedAndCheckout",
+          "when": "viewItem == branch || viewItem == currentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch",
+          "group": "inline@3"
+        },
+        {
+          "command": "gitBranchesPanel.deleteBranch",
+          "when": "(viewItem == branch || viewItem == missingUpstreamBranch) && !viewItem == currentBranch",
+          "group": "inline@4"
         },
         {
           "command": "gitBranchesPanel.syncBranch",

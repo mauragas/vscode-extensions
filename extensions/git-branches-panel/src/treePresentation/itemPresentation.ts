@@ -70,7 +70,7 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
     description,
     tooltip: buildBranchTooltipContent(node),
     branchName: node.fullName,
-    command: shouldActivateOnClick(nodeType)
+    command: shouldActivateOnClick(nodeType, node.info.isCurrent)
       ? {
           command: 'gitBranchesPanel.activateBranchItem',
           title: 'Activate Branch Item',
@@ -264,7 +264,7 @@ function getItemContextValue(nodeType: NodeType, branch: BranchInfo): string {
   }
 
   if (nodeType === 'missingUpstreamBranch') {
-    return branch.isCurrent ? 'publishableCurrentBranch' : 'publishableBranch';
+    return branch.isCurrent ? 'publishableCurrentBranch' : 'missingUpstreamBranch';
   }
 
   if ((nodeType === 'branch' || nodeType === 'currentBranch') && isPublishableBranch(branch)) {
@@ -304,6 +304,9 @@ function getItemIcon(nodeType: NodeType): TreeItemIconDescriptor {
   }
 }
 
-function shouldActivateOnClick(nodeType: NodeType): boolean {
-  return nodeType === 'branch' || nodeType === 'missingUpstreamBranch';
+function shouldActivateOnClick(nodeType: NodeType, isCurrent: boolean): boolean {
+  if (nodeType === 'branch' || nodeType === 'missingUpstreamBranch') {
+    return !isCurrent;
+  }
+  return false;
 }

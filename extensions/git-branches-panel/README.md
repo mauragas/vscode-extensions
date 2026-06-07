@@ -34,6 +34,7 @@ Remote, Stash, Worktree, and Tags stay collapsed until you expand them.
 - 🕐 **Last commit time** — shown as a relative description and in the tooltip
 - 🔄 **Sync state badges** — incoming and outgoing commits stay visible even when branch names are long
 - ☁️ **Inline sync button** — every branch gets a small sync button, including branches that are not currently checked out
+- 🏷️ **Inline action buttons** — checkout, create new branch from selected and checkout, and delete appear inline alongside sync/publish for quick access
 - 🚀 **Non-current branch sync** — sync a branch with its upstream without checking it out first
 - ☁️ **Publish actions** — publish local branches without an upstream, including the current branch and descendant folder actions
 - 🧭 **Classified remote-branch delete recovery** — remote deletion failures now distinguish local hook blocks, stale tracking refs, and remote-side rejections instead of offering a generic retry
