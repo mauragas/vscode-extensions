@@ -32,6 +32,7 @@ export interface BranchDataLoaderDependencies {
   getWorktrees(repoRoot: string): Promise<BranchInfo[]>;
   getTags(repoRoot: string): Promise<BranchInfo[]>;
   fetchRemoteState(repoRoot: string): Promise<void>;
+  decorateBranchInfo?(repoRoot: string, branch: BranchInfo): BranchInfo;
   warn(message: string): void;
 }
 
@@ -202,7 +203,10 @@ export class BranchDataLoader {
       return;
     }
 
-    const sortedBranches = sortBranches(branches, configuration.sortOrder);
+    const decoratedBranches = this.dependencies.decorateBranchInfo
+      ? branches.map((branch) => this.dependencies.decorateBranchInfo?.(repoRoot, branch) ?? branch)
+      : branches;
+    const sortedBranches = sortBranches(decoratedBranches, configuration.sortOrder);
     const children = buildBranchTree(
       sortedBranches,
       section === 'worktree' ? false : configuration.groupByFolder,

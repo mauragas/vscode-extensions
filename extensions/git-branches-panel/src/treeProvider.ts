@@ -8,6 +8,11 @@ import {
   type TreeBranch,
 } from './branchModel';
 import {
+  DEFAULT_PROTECTED_BRANCH_NAMES,
+  isBranchProtectedFromDeletion,
+  normalizeConfiguredBranchNames,
+} from './branchRules';
+import {
   fetchRemoteState,
   getBranches,
   getRemoteBranches,
@@ -21,8 +26,10 @@ import {
   getBranchSectionKey,
   type BranchDataLoaderDependencies,
   type BranchLoadOptions,
+  type BranchSectionKey,
 } from './treeDataLoader';
 import { BranchTreeItem } from './treeItem';
+import { buildPinnedItemKey, PinnedItemsStore } from './pinnedItems';
 import {
   buildStatusBarText,
   buildStatusBarTooltipContent,
@@ -40,13 +47,17 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
   readonly onDidChangeTreeData = this.onDidChangeTreeDataEmitter.event;
 
   private readonly dataLoader: BranchDataLoader;
+  private readonly pinnedItems: PinnedItemsStore;
   private readonly statusBarItem: vscode.StatusBarItem;
+  private readonly busyBranchKeys = new Set<string>();
 
   constructor(
     context: vscode.ExtensionContext,
-    dataLoader: BranchDataLoader = createBranchDataLoader()
+    dataLoader?: BranchDataLoader
   ) {
-    this.dataLoader = dataLoader;
+    this.pinnedItems = new PinnedItemsStore(context.workspaceState);
+    this.dataLoader =
+      dataLoader ?? createBranchDataLoader((repoRoot, branch) => this.decorateBranchInfo(repoRoot, branch));
     this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
     this.statusBarItem.command = 'gitBranchesPanel.refresh';
     context.subscriptions.push(this.statusBarItem);
@@ -101,16 +112,57 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     return findDescendantBranches(this.dataLoader.getTreeData(), containerKey);
   }
 
+  async withBusyBranch<T>(
+    repoRoot: string,
+    branchName: string,
+    operation: () => Promise<T>
+  ): Promise<T> {
+    const busyBranchKey = buildPinnedItemKey(repoRoot, {
+      name: branchName,
+      scope: 'local',
+    });
+
+    this.busyBranchKeys.add(busyBranchKey);
+    await this.refresh({ sections: ['local'], fetchRemoteState: false, onlyIfLoaded: true });
+
+    try {
+      return await operation();
+    } finally {
+      this.busyBranchKeys.delete(busyBranchKey);
+      await this.refresh({ sections: ['local'], fetchRemoteState: false, onlyIfLoaded: true });
+    }
+  }
+
+  async togglePinnedItem(item: BranchTreeItem): Promise<boolean> {
+    if (!item.repoRoot || !item.branchInfo) {
+      return false;
+    }
+
+    const nextPinned = await this.pinnedItems.toggle(item.repoRoot, item.branchInfo);
+    await this.refresh({
+      sections: [resolveSectionKey(item.branchInfo)],
+      fetchRemoteState: false,
+      onlyIfLoaded: true,
+    });
+    return nextPinned;
+  }
+
   private nodesToItems(nodes: readonly BranchTreeNode[]): BranchTreeItem[] {
     return nodes.map((node) => new BranchTreeItem(node, this.dataLoader.getRepoRoot() ?? undefined));
   }
 
   private updateStatusBar(currentBranch: BranchInfo | undefined): void {
     const currentBranchNeedsPublish = Boolean(currentBranch && isPublishableBranch(currentBranch));
+    const currentBranchBusy = Boolean(currentBranch?.isSyncing);
     void vscode.commands.executeCommand(
       'setContext',
       'gitBranchesPanel.currentBranchNeedsPublish',
       currentBranchNeedsPublish
+    );
+    void vscode.commands.executeCommand(
+      'setContext',
+      'gitBranchesPanel.currentBranchBusy',
+      currentBranchBusy
     );
 
     const showStatusBarBranchAction = vscode.workspace
@@ -124,21 +176,36 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     }
 
     this.statusBarItem.text = statusBarText;
-    this.statusBarItem.command = currentBranchNeedsPublish
-      ? 'gitBranchesPanel.publishCurrentBranch'
-      : 'gitBranchesPanel.syncCurrentBranch';
+    this.statusBarItem.command = currentBranchBusy
+      ? 'gitBranchesPanel.branchActionInProgress'
+      : currentBranchNeedsPublish
+        ? 'gitBranchesPanel.publishCurrentBranch'
+        : 'gitBranchesPanel.syncCurrentBranch';
     this.statusBarItem.tooltip = new vscode.MarkdownString(
       buildStatusBarTooltipContent(currentBranch)
     );
     this.statusBarItem.show();
   }
+
+  private decorateBranchInfo(repoRoot: string, branch: BranchInfo): BranchInfo {
+    return {
+      ...branch,
+      isPinned: this.pinnedItems.isPinned(repoRoot, branch),
+      isSyncing: this.busyBranchKeys.has(buildPinnedItemKey(repoRoot, branch)),
+      isDeletionProtected: isBranchProtectedFromDeletion(branch, getProtectedBranchNames()),
+    };
+  }
 }
 
-function createBranchDataLoader(): BranchDataLoader {
-  return new BranchDataLoader(createBranchDataLoaderDependencies());
+function createBranchDataLoader(
+  decorateBranchInfo: NonNullable<BranchDataLoaderDependencies['decorateBranchInfo']>
+): BranchDataLoader {
+  return new BranchDataLoader(createBranchDataLoaderDependencies(decorateBranchInfo));
 }
 
-function createBranchDataLoaderDependencies(): BranchDataLoaderDependencies {
+function createBranchDataLoaderDependencies(
+  decorateBranchInfo: NonNullable<BranchDataLoaderDependencies['decorateBranchInfo']>
+): BranchDataLoaderDependencies {
   return {
     getWorkspaceFolderPaths: () =>
       vscode.workspace.workspaceFolders?.map((workspaceFolder) => workspaceFolder.uri.fsPath) ?? [],
@@ -157,8 +224,32 @@ function createBranchDataLoaderDependencies(): BranchDataLoaderDependencies {
     getWorktrees,
     getTags,
     fetchRemoteState,
+    decorateBranchInfo,
     warn: (message) => {
       console.warn(message);
     },
   };
+}
+
+function getProtectedBranchNames(): string[] {
+  return normalizeConfiguredBranchNames(
+    vscode.workspace
+      .getConfiguration('gitBranchesPanel')
+      .get<string[]>('protectedBranchNames', [...DEFAULT_PROTECTED_BRANCH_NAMES])
+  );
+}
+
+function resolveSectionKey(branch: Pick<BranchInfo, 'scope'>): BranchSectionKey {
+  switch (branch.scope) {
+    case 'remote':
+      return 'remote';
+    case 'stash':
+      return 'stash';
+    case 'worktree':
+      return 'worktree';
+    case 'tag':
+      return 'tags';
+    default:
+      return 'local';
+  }
 }

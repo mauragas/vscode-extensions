@@ -138,7 +138,11 @@ function createCommandContext() {
   return {
     state,
     context: {
-      provider: {},
+      provider: {
+        async withBusyBranch(_repoRoot, _branchName, operation) {
+          return operation();
+        },
+      },
       activationTracker: {
         shouldCheckout() {
           return false;
@@ -372,6 +376,62 @@ test('newBranch normalizes the created branch name when the setting is enabled',
       options: {},
     },
   ]);
+});
+
+test('newBranch prefills the selected configured branch prefix before creating the branch', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.configurationValues.newBranchPrefixes = ['feature', 'bugfix', 'hotfix'];
+  vscodeState.quickPickSelector = (items) => items.find((item) => item.prefix === 'bugfix');
+  vscodeState.inputBoxResponse = ' bugfix/issue 123 ';
+  const createBranchCalls = [];
+
+  createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    sanitizeSpy: [],
+    sanitizeImpl() {
+      return 'bugfix/issue-123';
+    },
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch(repoRoot, branchName) {
+        createBranchCalls.push({ repoRoot, branchName });
+      },
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.newBranch']();
+
+  assert.equal(vscodeState.quickPickRequests.length, 1);
+  assert.equal(vscodeState.inputBoxRequests[0].value, 'bugfix/');
+  assert.deepEqual(createBranchCalls, [{ repoRoot: '/repo', branchName: 'bugfix/issue-123' }]);
 });
 
 test('newBranchFromSelected creates a branch from a local branch without checkout', async () => {
@@ -721,6 +781,17 @@ test('showBranchActions opens an iconized quick pick for publishable branches an
   );
   assert.ok(
     vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(new-folder) Create Worktree...'
+    )
+  );
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) =>
+        quickPickItem.label === '$(git-commit) Cherry-pick into Current Branch'
+    )
+  );
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
       (quickPickItem) => quickPickItem.label === '$(trash) Delete Branch'
     )
   );
@@ -735,6 +806,50 @@ test('showBranchActions opens an iconized quick pick for publishable branches an
       args: [item],
     },
   ]);
+});
+
+test('deleteBranch blocks deletion of protected branches before any git command runs', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.configurationValues.protectedBranchNames = ['release/2026.06'];
+  const deleteBranchCalls = [];
+
+  createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch(repoRoot, branchName, force) {
+        deleteBranchCalls.push({ repoRoot, branchName, force });
+      },
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return { branchName: 'main', upstreamName: 'origin/main', didPull: false, didPush: false, publishedUpstream: false };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return { branchName: 'main', upstreamName: 'origin/main', didPull: false, didPush: false, publishedUpstream: false };
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.deleteBranch']({
+    nodeType: 'branch',
+    branchName: 'release/2026.06',
+    repoRoot: '/repo',
+  });
+
+  assert.deepEqual(deleteBranchCalls, []);
+  assert.match(
+    vscodeState.warningMessages[0].message,
+    /protected from deletion by 'gitBranchesPanel\.protectedBranchNames'/
+  );
 });
 
 test('showBranchActions adapts the quick pick for remote branches', async () => {
@@ -1040,4 +1155,290 @@ test('deleteBranch offers stale tracking cleanup when the remote is missing', as
     message: "Removed stale tracking ref 'ghost/feature/demo'.",
     options: { fetchRemoteState: false },
   });
+});
+
+test('newBranchFromSelectedAndCheckout creates a branch from a missing upstream branch', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.inputBoxResponse = ' feature/new-feature ';
+  const validateSpy = [];
+  const sanitizeSpy = [];
+  const normalizeSpy = [];
+  const createBranchFromRefCalls = [];
+
+  const { commandContext } = createBranchCommandsModule({
+    vscodeState,
+    validateSpy,
+    sanitizeSpy,
+    sanitizeImpl() {
+      return 'feature/new-feature';
+    },
+    normalizeSpy,
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef(repoRoot, branchName, startPoint, options) {
+        createBranchFromRefCalls.push({ repoRoot, branchName, startPoint, options });
+      },
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.newBranchFromSelectedAndCheckout']({
+    nodeType: 'missingUpstreamBranch',
+    branchName: 'feature/old-feature',
+    repoRoot: '/repo',
+  });
+
+  assert.equal(await vscodeState.inputBoxRequests[0].validateInput('anything at all'), undefined);
+  assert.deepEqual(validateSpy, [
+    {
+      value: 'anything at all',
+      currentName: 'feature/old-feature',
+      options: { normalize: false },
+    },
+  ]);
+  assert.deepEqual(sanitizeSpy, [' feature/new-feature ']);
+  assert.deepEqual(normalizeSpy, []);
+  assert.deepEqual(createBranchFromRefCalls, [
+    {
+      repoRoot: '/repo',
+      branchName: 'feature/new-feature',
+      startPoint: 'feature/old-feature',
+      options: { checkout: true },
+    },
+  ]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: "Created and switched to 'feature/new-feature' from 'feature/old-feature'.",
+      options: { fetchRemoteState: false },
+    },
+  ]);
+});
+
+test('deleteBranch deletes a missing upstream branch with confirmation', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Delete');
+  const deleteBranchCalls = [];
+
+  const { commandContext } = createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch(repoRoot, branchName, force) {
+        deleteBranchCalls.push({ repoRoot, branchName, force });
+      },
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.deleteBranch']({
+    nodeType: 'missingUpstreamBranch',
+    branchName: 'feature/old-feature',
+    repoRoot: '/repo',
+  });
+
+  assert.deepEqual(deleteBranchCalls, [
+    { repoRoot: '/repo', branchName: 'feature/old-feature', force: false },
+  ]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: "Deleted branch 'feature/old-feature'.",
+      options: {},
+    },
+  ]);
+});
+
+test('showBranchActions exposes actions for missing upstream branches', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.quickPickSelector = (items) => items.find((item) => item.actionId === 'deleteBranch');
+  const validateSpy = [];
+
+  createBranchCommandsModule({
+    vscodeState,
+    validateSpy,
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  const item = {
+    nodeType: 'missingUpstreamBranch',
+    contextValue: 'missingUpstreamBranch',
+    branchName: 'feature/old-feature',
+    repoRoot: '/repo',
+  };
+
+  await vscodeState.registeredCommands['gitBranchesPanel.showBranchActions'](item);
+
+  assert.deepEqual(validateSpy, []);
+  assert.equal(vscodeState.quickPickRequests.length, 1);
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(cloud-upload) Publish Branch'
+    )
+  );
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(arrow-right) Checkout Branch'
+    )
+  );
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(trash) Delete Branch'
+    )
+  );
+  assert.ok(
+    !vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(sync) Sync Branch'
+    )
+  );
+  assert.deepEqual(vscodeState.executedCommands, [
+    {
+      command: 'gitBranchesPanel.deleteBranch',
+      args: [item],
+    },
+  ]);
+});
+
+test('cherryPickIntoCurrent confirms, cherry-picks, and refreshes once', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Cherry-pick');
+  const cherryPickCalls = [];
+
+  const { commandContext } = createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async cherryPickRef(repoRoot, refName) {
+        cherryPickCalls.push({ repoRoot, refName });
+      },
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+  commandContext.state.currentBranch = {
+    name: 'main',
+    isCurrent: true,
+  };
+
+  await vscodeState.registeredCommands['gitBranchesPanel.cherryPickIntoCurrent']({
+    nodeType: 'branch',
+    branchName: 'feature/demo',
+    repoRoot: '/repo',
+  });
+
+  assert.deepEqual(cherryPickCalls, [{ repoRoot: '/repo', refName: 'feature/demo' }]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: "Cherry-picked 'feature/demo' into 'main'.",
+      options: { fetchRemoteState: false },
+    },
+  ]);
 });

@@ -10,13 +10,28 @@ export function buildStatusBarText(branch: BranchInfo | undefined): string {
     return '';
   }
 
+  const branchIcon = branch.isSyncing ? '$(sync~spin)' : '$(git-branch)';
   const syncStatus = formatSyncStatus(branch);
 
-  return syncStatus ? `$(git-branch) ${branch.name} ${syncStatus}` : `$(git-branch) ${branch.name}`;
+  return syncStatus ? `${branchIcon} ${branch.name} ${syncStatus}` : `${branchIcon} ${branch.name}`;
 }
 
 export function buildStatusBarTooltipContent(branch: BranchInfo): string {
   const tooltipLines = [`**Current branch:** ${branch.name}`];
+
+  if (branch.isSyncing) {
+    if (isPublishableBranch(branch)) {
+      tooltipLines.push('', `Publish target: ${getPublishTargetName(branch)}`);
+      tooltipLines.push('', '_Publishing current branch..._');
+    } else if (branch.upstreamName) {
+      tooltipLines.push('', `Upstream: ${branch.upstreamName}`);
+      tooltipLines.push('', '_Syncing current branch..._');
+    } else {
+      tooltipLines.push('', '_Syncing current branch..._');
+    }
+
+    return tooltipLines.join('\n');
+  }
 
   if (isPublishableBranch(branch)) {
     tooltipLines.push('', `Publish target: ${getPublishTargetName(branch)}`);

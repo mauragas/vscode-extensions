@@ -1,16 +1,24 @@
 import * as vscode from 'vscode';
-import { basename } from 'node:path';
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 
 import { getErrorMessage } from '../errorUtils';
-import { removeWorktree } from '../git';
+import { createWorktree, removeWorktree } from '../git';
 import { BranchTreeItem } from '../treeProvider';
 import type { CommandContext } from './shared';
+
+const WORKTREE_PATH_PLACEHOLDER = '/path/to/your-worktree';
 
 export function registerWorktreeCommands(
   context: vscode.ExtensionContext,
   commandContext: CommandContext
 ): void {
   context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.createWorktreeFromRef',
+      async (item: BranchTreeItem) => {
+        await handleCreateWorktreeFromRef(item, commandContext);
+      }
+    ),
     vscode.commands.registerCommand('gitBranchesPanel.openWorktree', async (item: BranchTreeItem) => {
       await handleOpenWorktree(item, false);
     }),
@@ -33,6 +41,49 @@ export function registerWorktreeCommands(
       await handleRemoveWorktree(item, commandContext);
     })
   );
+}
+
+async function handleCreateWorktreeFromRef(
+  item: BranchTreeItem,
+  commandContext: CommandContext
+): Promise<void> {
+  if (!item.branchName || !item.repoRoot || !isWorktreeSourceItem(item)) {
+    return;
+  }
+
+  const shouldDetach = shouldDetachWorktreeSource(item);
+
+  const worktreePathInput = await vscode.window.showInputBox({
+    prompt: buildCreateWorktreePrompt(item, shouldDetach),
+    placeHolder: WORKTREE_PATH_PLACEHOLDER,
+    value: buildSuggestedWorktreePath(item.repoRoot, item.branchName),
+    validateInput: (value) => validateWorktreePath(value, item.repoRoot ?? ''),
+  });
+  if (!worktreePathInput) {
+    return;
+  }
+
+  const worktreePath = resolveWorktreePath(item.repoRoot, worktreePathInput);
+  const worktreeLabel = basename(worktreePath) || worktreePath;
+
+  try {
+    await createWorktree(item.repoRoot, worktreePath, resolveWorktreeRef(item), {
+      detach: shouldDetach,
+    });
+    await commandContext.showSuccessAndRefresh(
+      shouldDetach
+        ? `Created detached worktree '${worktreeLabel}' from '${item.branchName}'.`
+        : `Created worktree '${worktreeLabel}' from '${item.branchName}'.`,
+      {
+        fetchRemoteState: false,
+      }
+    );
+  } catch (error) {
+    commandContext.showCommandError(
+      `Failed to create a worktree from '${item.branchName}'`,
+      error
+    );
+  }
 }
 
 async function handleOpenWorktree(
@@ -127,4 +178,68 @@ async function handleRemoveWorktree(
 
 function looksLikeDirtyWorktreeError(message: string): boolean {
   return /(not clean|contains modified or untracked files|use --force)/i.test(message);
+}
+
+function isWorktreeSourceItem(item: BranchTreeItem): boolean {
+  return (
+    item.nodeType === 'branch' ||
+    item.nodeType === 'currentBranch' ||
+    item.nodeType === 'missingUpstreamBranch' ||
+    item.nodeType === 'remoteBranch' ||
+    item.nodeType === 'staleRemoteBranch' ||
+    item.nodeType === 'tag'
+  );
+}
+
+function shouldDetachWorktreeSource(item: BranchTreeItem): boolean {
+  return (
+    item.nodeType === 'tag' ||
+    item.nodeType === 'remoteBranch' ||
+    item.nodeType === 'staleRemoteBranch'
+  );
+}
+
+function buildCreateWorktreePrompt(item: BranchTreeItem, shouldDetach: boolean): string {
+  if (!shouldDetach) {
+    return `Enter a path for the new worktree from '${item.branchName}'`;
+  }
+
+  if (item.nodeType === 'tag') {
+    return `Enter a path for a detached worktree from tag '${item.branchName}'`;
+  }
+
+  return `Enter a path for a detached worktree from '${item.branchName}'`;
+}
+
+function resolveWorktreeRef(item: BranchTreeItem): string {
+  return item.nodeType === 'tag' ? `refs/tags/${item.branchName}` : item.branchName ?? '';
+}
+
+function buildSuggestedWorktreePath(repoRoot: string, refName: string): string {
+  const repoName = basename(repoRoot) || 'worktree';
+  const refSuffix = refName
+    .replace(/[\\/]+/gu, '-')
+    .replace(/[^\p{L}\p{N}._-]+/gu, '-')
+    .replace(/-+/gu, '-')
+    .replace(/^-+|-+$/gu, '');
+
+  return join(dirname(repoRoot), `${repoName}-${refSuffix || 'worktree'}`);
+}
+
+function validateWorktreePath(value: string, repoRoot: string): string | undefined {
+  const trimmedValue = value.trim();
+  if (!trimmedValue) {
+    return 'Worktree path cannot be empty.';
+  }
+
+  const resolvedPath = resolveWorktreePath(repoRoot, trimmedValue);
+  if (resolvedPath === repoRoot) {
+    return 'Worktree path must be different from the repository root.';
+  }
+
+  return undefined;
+}
+
+function resolveWorktreePath(repoRoot: string, worktreePath: string): string {
+  return isAbsolute(worktreePath) ? worktreePath : resolve(repoRoot, worktreePath);
 }

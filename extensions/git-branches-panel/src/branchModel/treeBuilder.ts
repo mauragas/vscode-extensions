@@ -19,6 +19,10 @@ export function sortBranches(
   sortOrder: BranchSortOrder
 ): BranchInfo[] {
   return [...branches].sort((left, right) => {
+    if (Boolean(left.isPinned) !== Boolean(right.isPinned)) {
+      return left.isPinned ? -1 : 1;
+    }
+
     if (left.isCurrent !== right.isCurrent) {
       return left.isCurrent ? -1 : 1;
     }
@@ -57,6 +61,11 @@ export function buildBranchTree(
   };
 
   for (const branch of branches) {
+    if (branch.isPinned) {
+      root.children.push(createBranchNode(branch));
+      continue;
+    }
+
     const segments = branch.name.split('/').filter(Boolean);
 
     if (segments.length <= 1) {
@@ -209,6 +218,13 @@ function sortTreeNodes(
   });
 
   return sortedNodes.sort((left, right) => {
+    const leftPinned = left.kind === 'branch' && Boolean(left.info.isPinned);
+    const rightPinned = right.kind === 'branch' && Boolean(right.info.isPinned);
+
+    if (leftPinned !== rightPinned) {
+      return leftPinned ? -1 : 1;
+    }
+
     if (left.kind !== right.kind) {
       return left.kind === 'folder' ? -1 : 1;
     }

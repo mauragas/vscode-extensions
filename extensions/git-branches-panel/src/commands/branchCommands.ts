@@ -1,9 +1,20 @@
 import * as vscode from 'vscode';
 import { join } from 'node:path';
 
-import type { RemoteTrackingState } from '../branchModel';
+import {
+  isPublishableBranch,
+  type RemoteTrackingState,
+} from '../branchModel';
+import {
+  DEFAULT_NEW_BRANCH_PREFIXES,
+  DEFAULT_PROTECTED_BRANCH_NAMES,
+  isBranchProtectedFromDeletion,
+  normalizeConfiguredBranchNames,
+  normalizeConfiguredBranchPrefixes,
+} from '../branchRules';
 import { getErrorMessage } from '../errorUtils';
 import {
+  cherryPickRef,
   checkoutBranch,
   checkoutRemoteBranch,
   createBranch,
@@ -32,6 +43,8 @@ import { BranchTreeItem } from '../treeProvider';
 import { NO_CURRENT_BRANCH_MESSAGE, type CommandContext } from './shared';
 
 const NORMALIZE_NEW_BRANCH_NAMES_SETTING = 'normalizeNewBranchNames';
+const PROTECTED_BRANCH_NAMES_SETTING = 'protectedBranchNames';
+const NEW_BRANCH_PREFIXES_SETTING = 'newBranchPrefixes';
 const NEW_BRANCH_PLACEHOLDER = 'feature/my-feature or hotfix/bug-123';
 const DELETE_ACTION = 'Delete';
 const REFRESH_BRANCHES_ACTION = 'Refresh Branches';
@@ -58,6 +71,10 @@ interface RemoteBranchDeleteFailure {
 interface BranchActionItem extends vscode.QuickPickItem {
   readonly actionId: string;
   run(): Promise<void>;
+}
+
+interface BranchPrefixQuickPickItem extends vscode.QuickPickItem {
+  readonly prefix?: string;
 }
 
 interface NewBranchPromptOptions {
@@ -139,6 +156,12 @@ export function registerBranchDomainCommands(
       async (item: BranchTreeItem) => {
         await handleMergeIntoCurrent(item, commandContext);
       }
+    ),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.cherryPickIntoCurrent',
+      async (item: BranchTreeItem) => {
+        await handleCherryPickIntoCurrent(item, commandContext);
+      }
     )
   );
 }
@@ -147,7 +170,7 @@ async function handleBranchItemActivation(
   item: BranchTreeItem,
   commandContext: CommandContext
 ): Promise<void> {
-  if (item.nodeType !== 'branch') {
+  if (item.nodeType !== 'branch' && item.nodeType !== 'missingUpstreamBranch') {
     return;
   }
 
@@ -167,7 +190,7 @@ async function handleCheckout(
     return;
   }
 
-  if (item.nodeType === 'currentBranch') {
+  if (item.nodeType === 'currentBranch' || item.branchInfo?.isCurrent) {
     if (allowCurrentBranchMessage) {
       vscode.window.showInformationMessage(
         buildCurrentBranchAlreadyCheckedOutMessage(item.branchName)
@@ -283,6 +306,16 @@ async function handleDeleteBranch(
     return;
   }
 
+  if (item.nodeType === 'currentBranch' || item.branchInfo?.isCurrent) {
+    vscode.window.showInformationMessage('Cannot delete the current branch.');
+    return;
+  }
+
+  if (isDeletionProtectedItem(item)) {
+    showProtectedBranchDeleteMessage(item.branchName);
+    return;
+  }
+
   if (item.nodeType === 'staleRemoteBranch') {
     await showMissingRemoteNotification(item, commandContext, {
       kind: 'MissingRemote',
@@ -392,7 +425,8 @@ async function handleCreateBranchFromSelected(
     item.nodeType !== 'branch' &&
     item.nodeType !== 'currentBranch' &&
     item.nodeType !== 'remoteBranch' &&
-    item.nodeType !== 'staleRemoteBranch'
+    item.nodeType !== 'staleRemoteBranch' &&
+    item.nodeType !== 'missingUpstreamBranch'
   ) {
     return;
   }
@@ -477,6 +511,7 @@ async function handleCompareBranchWithCurrent(
 
   if (
     item.nodeType !== 'branch' &&
+    item.nodeType !== 'missingUpstreamBranch' &&
     item.nodeType !== 'remoteBranch' &&
     item.nodeType !== 'staleRemoteBranch'
   ) {
@@ -491,7 +526,7 @@ async function handleCompareBranchWithCurrent(
     return;
   }
 
-  if (item.nodeType === 'branch' && compareBranchName === currentBranch.name) {
+  if (compareBranchName === currentBranch.name) {
     vscode.window.showInformationMessage(`'${compareBranchName}' is already the current branch.`);
     return;
   }
@@ -543,7 +578,7 @@ async function handleMergeIntoCurrent(
   item: BranchTreeItem,
   commandContext: CommandContext
 ): Promise<void> {
-  if (!item.branchName || !item.repoRoot || item.nodeType === 'currentBranch') {
+  if (!item.branchName || !item.repoRoot || item.nodeType === 'currentBranch' || item.branchInfo?.isCurrent) {
     return;
   }
 
@@ -577,13 +612,67 @@ async function handleMergeIntoCurrent(
   }
 }
 
+async function handleCherryPickIntoCurrent(
+  item: BranchTreeItem,
+  commandContext: CommandContext
+): Promise<void> {
+  if (!item.branchName || !item.repoRoot || item.nodeType === 'currentBranch' || item.branchInfo?.isCurrent) {
+    return;
+  }
+
+  if (
+    item.nodeType !== 'branch' &&
+    item.nodeType !== 'missingUpstreamBranch' &&
+    item.nodeType !== 'remoteBranch' &&
+    item.nodeType !== 'staleRemoteBranch'
+  ) {
+    return;
+  }
+
+  const currentBranch = await commandContext.requireCurrentBranch(
+    'Could not determine the current branch for this repository.'
+  );
+  if (!currentBranch) {
+    return;
+  }
+
+  if (item.branchName === currentBranch.name) {
+    vscode.window.showInformationMessage(`'${item.branchName}' is already the current branch.`);
+    return;
+  }
+
+  const confirmation = await vscode.window.showWarningMessage(
+    `Cherry-pick '${item.branchName}' into current branch '${currentBranch.name}'?`,
+    { modal: true },
+    'Cherry-pick'
+  );
+  if (confirmation !== 'Cherry-pick') {
+    return;
+  }
+
+  try {
+    await cherryPickRef(item.repoRoot, item.branchName);
+    await commandContext.showSuccessAndRefresh(
+      `Cherry-picked '${item.branchName}' into '${currentBranch.name}'.`,
+      { fetchRemoteState: false }
+    );
+  } catch (error) {
+    commandContext.showCommandError(
+      `Failed to cherry-pick '${item.branchName}' into '${currentBranch.name}'`,
+      error
+    );
+  }
+}
+
 async function syncBranchByName(
   repoRoot: string,
   branchName: string,
   commandContext: CommandContext
 ): Promise<void> {
   try {
-    const syncResult = await syncBranch(repoRoot, branchName);
+    const syncResult = await commandContext.provider.withBusyBranch(repoRoot, branchName, () =>
+      syncBranch(repoRoot, branchName)
+    );
     await commandContext.showSuccessAndRefresh(buildSyncResultMessage(syncResult), {
       fetchRemoteState: true,
       forceFetchRemoteState: true,
@@ -599,7 +688,9 @@ async function pushBranchByName(
   commandContext: CommandContext
 ): Promise<void> {
   try {
-    const pushResult = await pushBranchToRemote(repoRoot, branchName);
+    const pushResult = await commandContext.provider.withBusyBranch(repoRoot, branchName, () =>
+      pushBranchToRemote(repoRoot, branchName)
+    );
     await commandContext.showSuccessAndRefresh(buildSyncResultMessage(pushResult), {
       fetchRemoteState: true,
       forceFetchRemoteState: true,
@@ -615,12 +706,56 @@ function shouldNormalizeNewBranchNames(): boolean {
     .get<boolean>(NORMALIZE_NEW_BRANCH_NAMES_SETTING, false);
 }
 
+function getProtectedBranchNames(): string[] {
+  return normalizeConfiguredBranchNames(
+    vscode.workspace
+      .getConfiguration('gitBranchesPanel')
+      .get<string[]>(PROTECTED_BRANCH_NAMES_SETTING, [...DEFAULT_PROTECTED_BRANCH_NAMES])
+  );
+}
+
+function getConfiguredNewBranchPrefixes(): string[] {
+  return normalizeConfiguredBranchPrefixes(
+    vscode.workspace
+      .getConfiguration('gitBranchesPanel')
+      .get<string[]>(NEW_BRANCH_PREFIXES_SETTING, [...DEFAULT_NEW_BRANCH_PREFIXES])
+  );
+}
+
+async function promptForNewBranchPrefix(): Promise<string | undefined> {
+  const prefixes = getConfiguredNewBranchPrefixes();
+  if (prefixes.length === 0) {
+    return undefined;
+  }
+
+  const selection = await vscode.window.showQuickPick<BranchPrefixQuickPickItem>(
+    [
+      {
+        label: 'No prefix',
+        description: 'Start from a plain branch name',
+      },
+      ...prefixes.map((prefix) => ({
+        label: `${prefix}/`,
+        description: `Prefill the new branch name with '${prefix}/'`,
+        prefix,
+      })),
+    ],
+    {
+      placeHolder: 'Choose a default branch folder for the new branch (optional)',
+    }
+  );
+
+  return selection?.prefix;
+}
+
 async function promptForNewBranchName(
   options: NewBranchPromptOptions
 ): Promise<string | undefined> {
+  const prefix = await promptForNewBranchPrefix();
   const name = await vscode.window.showInputBox({
     prompt: options.prompt,
     placeHolder: NEW_BRANCH_PLACEHOLDER,
+    value: prefix ? `${prefix}/` : undefined,
     validateInput: (value) =>
       validateNewBranchNameInput(value, options.currentName, {
         normalize: options.normalize,
@@ -640,16 +775,17 @@ function resolveNewBranchName(name: string, normalize: boolean): string {
 function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
   const items: BranchActionItem[] = [];
   const isStaleRemoteBranch = item.nodeType === 'staleRemoteBranch';
+  const isCurrentBranch = item.nodeType === 'currentBranch' || Boolean(item.branchInfo?.isCurrent);
 
   if (item.nodeType !== 'remoteBranch' && item.nodeType !== 'staleRemoteBranch') {
     items.push(
       createBranchActionItem(
         isPublishableBranchItem(item) ? 'publishBranch' : 'syncBranch',
         isPublishableBranchItem(item)
-          ? item.nodeType === 'currentBranch'
+          ? isCurrentBranch
             ? '$(cloud-upload) Publish Current Branch'
             : '$(cloud-upload) Publish Branch'
-          : item.nodeType === 'currentBranch'
+          : isCurrentBranch
             ? '$(sync) Sync Current Branch'
             : '$(sync) Sync Branch',
         async () => {
@@ -664,7 +800,15 @@ function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
     );
   }
 
-  if (!isStaleRemoteBranch) {
+  if (canCreateWorktreeFromItem(item)) {
+    items.push(
+      createBranchActionItem('createWorktreeFromRef', '$(new-folder) Create Worktree...', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.createWorktreeFromRef', item);
+      })
+    );
+  }
+
+  if (!isStaleRemoteBranch && !isCurrentBranch) {
     items.push(
       createBranchActionItem('checkout', '$(arrow-right) Checkout Branch', async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.checkout', item);
@@ -709,7 +853,7 @@ function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
     })
   );
 
-  if (item.nodeType !== 'currentBranch') {
+  if (!isCurrentBranch) {
     items.push(
       createBranchActionItem(
         'compareBranchWithCurrent',
@@ -722,18 +866,30 @@ function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
         await vscode.commands.executeCommand('gitBranchesPanel.mergeIntoCurrent', item);
       }),
       createBranchActionItem(
-        isStaleRemoteBranch ? 'removeStaleRemoteTrackingRef' : 'deleteBranch',
-        isStaleRemoteBranch ? '$(trash) Remove Stale Tracking Ref' : '$(trash) Delete Branch',
+        'cherryPickIntoCurrent',
+        '$(git-commit) Cherry-pick into Current Branch',
         async () => {
-          await vscode.commands.executeCommand(
-            isStaleRemoteBranch
-              ? 'gitBranchesPanel.removeStaleRemoteTrackingRef'
-              : 'gitBranchesPanel.deleteBranch',
-            item
-          );
+          await vscode.commands.executeCommand('gitBranchesPanel.cherryPickIntoCurrent', item);
         }
       )
     );
+
+    if (!isDeletionProtectedItem(item)) {
+      items.push(
+        createBranchActionItem(
+          isStaleRemoteBranch ? 'removeStaleRemoteTrackingRef' : 'deleteBranch',
+          isStaleRemoteBranch ? '$(trash) Remove Stale Tracking Ref' : '$(trash) Delete Branch',
+          async () => {
+            await vscode.commands.executeCommand(
+              isStaleRemoteBranch
+                ? 'gitBranchesPanel.removeStaleRemoteTrackingRef'
+                : 'gitBranchesPanel.deleteBranch',
+              item
+            );
+          }
+        )
+      );
+    }
   }
 
   return items;
@@ -757,17 +913,65 @@ function isBranchActionItem(item: BranchTreeItem | undefined): item is BranchTre
 
 function isSupportedBranchActionNodeType(
   nodeType: BranchTreeItem['nodeType']
-): nodeType is 'branch' | 'currentBranch' | 'remoteBranch' | 'staleRemoteBranch' {
+): nodeType is 'branch' | 'currentBranch' | 'remoteBranch' | 'staleRemoteBranch' | 'missingUpstreamBranch' {
   return (
     nodeType === 'branch' ||
     nodeType === 'currentBranch' ||
     nodeType === 'remoteBranch' ||
-    nodeType === 'staleRemoteBranch'
+    nodeType === 'staleRemoteBranch' ||
+    nodeType === 'missingUpstreamBranch'
   );
 }
 
 function isPublishableBranchItem(item: BranchTreeItem): boolean {
-  return item.contextValue === 'publishableBranch' || item.contextValue === 'publishableCurrentBranch';
+  if (item.branchInfo) {
+    return isPublishableBranch(item.branchInfo);
+  }
+
+  return (
+    item.contextValue === 'publishableBranch' ||
+    item.contextValue === 'publishableCurrentBranch' ||
+    item.contextValue === 'missingUpstreamBranch' ||
+    item.contextValue === 'busyPublishableBranch' ||
+    item.contextValue === 'busyPublishableCurrentBranch' ||
+    item.contextValue === 'busyMissingUpstreamBranch'
+  );
+}
+
+function canCreateWorktreeFromItem(item: BranchTreeItem): boolean {
+  return (
+    item.nodeType === 'branch' ||
+    item.nodeType === 'currentBranch' ||
+    item.nodeType === 'missingUpstreamBranch' ||
+    item.nodeType === 'remoteBranch' ||
+    item.nodeType === 'staleRemoteBranch'
+  );
+}
+
+function isDeletionProtectedItem(item: Pick<BranchTreeItem, 'branchName' | 'branchInfo' | 'nodeType'>): boolean {
+  if (!item.branchName) {
+    return false;
+  }
+
+  const scope =
+    item.branchInfo?.scope ??
+    (item.nodeType === 'remoteBranch' || item.nodeType === 'staleRemoteBranch'
+      ? 'remote'
+      : 'local');
+
+  return isBranchProtectedFromDeletion(
+    {
+      name: item.branchName,
+      scope,
+    },
+    getProtectedBranchNames()
+  );
+}
+
+function showProtectedBranchDeleteMessage(branchName: string): void {
+  vscode.window.showWarningMessage(
+    `Branch '${branchName}' is protected from deletion by 'gitBranchesPanel.protectedBranchNames'.`
+  );
 }
 
 function buildCompareResource(
@@ -955,6 +1159,11 @@ async function handleRemoveStaleRemoteTrackingRef(
   commandContext: CommandContext
 ): Promise<void> {
   if (!item.branchName || !item.repoRoot) {
+    return;
+  }
+
+  if (isDeletionProtectedItem(item)) {
+    showProtectedBranchDeleteMessage(item.branchName);
     return;
   }
 

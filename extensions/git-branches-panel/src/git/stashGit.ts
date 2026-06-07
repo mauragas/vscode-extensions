@@ -7,6 +7,7 @@ const STASH_OUTPUT_FORMAT = [
   '%gd',
   '%cr',
   '%ct',
+  '%H',
   '%gs',
 ].join(`${GIT_FIELD_SEPARATOR}`) + GIT_RECORD_SEPARATOR;
 
@@ -18,7 +19,13 @@ export async function getStashes(repoRoot: string): Promise<BranchInfo[]> {
     .map((record) => record.trim())
     .filter(Boolean)
     .map((record) => {
-      const [name = '', lastCommitDate = '', lastCommitTimestamp = '', lastCommit = ''] =
+      const [
+        name = '',
+        lastCommitDate = '',
+        lastCommitTimestamp = '',
+        stashRevision = '',
+        lastCommit = '',
+      ] =
         record.split(GIT_FIELD_SEPARATOR);
 
       return {
@@ -29,6 +36,7 @@ export async function getStashes(repoRoot: string): Promise<BranchInfo[]> {
         lastCommitTimestamp: Number.isFinite(Number(lastCommitTimestamp))
           ? Number(lastCommitTimestamp)
           : undefined,
+        stashRevision: stashRevision || undefined,
         lastCommit,
       } satisfies BranchInfo;
     });
