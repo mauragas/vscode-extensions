@@ -315,6 +315,10 @@ test('BranchTreeProvider refreshes status bar data and exposes tree items', asyn
       command: 'setContext',
       args: ['gitBranchesPanel.currentBranchNeedsPublish', false],
     },
+    {
+      command: 'setContext',
+      args: ['gitBranchesPanel.currentBranchBusy', false],
+    },
   ]);
   assert.equal(treeChangeCount, 1);
   assert.equal(context.subscriptions.includes(statusBarItem), true);
@@ -381,6 +385,76 @@ test('BranchTreeProvider uses the publish command for current branches that need
     {
       command: 'setContext',
       args: ['gitBranchesPanel.currentBranchNeedsPublish', true],
+    },
+    {
+      command: 'setContext',
+      args: ['gitBranchesPanel.currentBranchBusy', false],
+    },
+  ]);
+});
+
+test('BranchTreeProvider exposes a busy spinner action for syncing current branches', async () => {
+  const statusBarItem = createStatusBarItem();
+  const commandCalls = [];
+  const state = {
+    currentBranch: {
+      name: 'main',
+      isCurrent: true,
+      upstreamName: 'origin/main',
+      isSyncing: true,
+    },
+    treeData: [
+      {
+        kind: 'section',
+        label: 'Local',
+        path: 'section:local',
+        scope: 'local',
+        children: [],
+      },
+    ],
+    repoRoot: '/repo',
+    loadedSections: new Set(['local']),
+  };
+  const dataLoader = createDataLoader(state);
+  const { BranchTreeProvider } = loadFresh('../out/treeProvider.js', {
+    vscode: createVscodeMock(statusBarItem, commandCalls),
+    './git': {
+      fetchRemoteState() {},
+      getBranches() {},
+      getRemoteBranches() {},
+      getRepoRoot() {},
+      getStashes() {},
+      getWorktrees() {},
+      getTags() {},
+    },
+    './treeDataLoader': {
+      BranchDataLoader: class BranchDataLoader {},
+      getBranchSectionKey: (sectionPath) =>
+        sectionPath === 'section:local' ? 'local' : undefined,
+    },
+    './treeItem': createTreeItemMock(),
+    './treePresentation': {
+      buildStatusBarText: (branch) => (branch ? `busy:${branch.name}` : ''),
+      buildStatusBarTooltipContent: (branch) => `tooltip:${branch.name}`,
+      findContainerNode,
+      findDescendantBranches,
+    },
+  });
+
+  const provider = new BranchTreeProvider({ subscriptions: [] }, dataLoader);
+
+  await provider.refresh({ fetchRemoteState: false });
+
+  assert.equal(statusBarItem.text, 'busy:main');
+  assert.equal(statusBarItem.command, 'gitBranchesPanel.branchActionInProgress');
+  assert.deepEqual(commandCalls, [
+    {
+      command: 'setContext',
+      args: ['gitBranchesPanel.currentBranchNeedsPublish', false],
+    },
+    {
+      command: 'setContext',
+      args: ['gitBranchesPanel.currentBranchBusy', true],
     },
   ]);
 });
@@ -509,9 +583,13 @@ test('BranchTreeProvider loads nested container children and hides the status ba
   await provider.refresh();
 
   assert.ok(statusBarItem.hideCalls >= 1);
-  assert.deepEqual(commandCalls.at(-1), {
+  assert.deepEqual(commandCalls.at(-2), {
     command: 'setContext',
     args: ['gitBranchesPanel.currentBranchNeedsPublish', false],
+  });
+  assert.deepEqual(commandCalls.at(-1), {
+    command: 'setContext',
+    args: ['gitBranchesPanel.currentBranchBusy', false],
   });
 });
 
@@ -572,6 +650,10 @@ test('BranchTreeProvider hides the status bar branch action when the setting is 
     {
       command: 'setContext',
       args: ['gitBranchesPanel.currentBranchNeedsPublish', false],
+    },
+    {
+      command: 'setContext',
+      args: ['gitBranchesPanel.currentBranchBusy', false],
     },
   ]);
 });

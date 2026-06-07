@@ -311,13 +311,18 @@
           "group": "navigation@2"
         },
         {
+          "command": "gitBranchesPanel.branchActionInProgress",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showCurrentBranchAction && gitBranchesPanel.currentBranchBusy",
+          "group": "navigation@3"
+        },
+        {
           "command": "gitBranchesPanel.syncCurrentBranch",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showCurrentBranchAction && !gitBranchesPanel.currentBranchNeedsPublish",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showCurrentBranchAction && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
           "group": "navigation@3"
         },
         {
           "command": "gitBranchesPanel.publishCurrentBranch",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showCurrentBranchAction && gitBranchesPanel.currentBranchNeedsPublish",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showCurrentBranchAction && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
           "group": "navigation@3"
         },
         {

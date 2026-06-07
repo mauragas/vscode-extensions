@@ -153,10 +153,16 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
 
   private updateStatusBar(currentBranch: BranchInfo | undefined): void {
     const currentBranchNeedsPublish = Boolean(currentBranch && isPublishableBranch(currentBranch));
+    const currentBranchBusy = Boolean(currentBranch?.isSyncing);
     void vscode.commands.executeCommand(
       'setContext',
       'gitBranchesPanel.currentBranchNeedsPublish',
       currentBranchNeedsPublish
+    );
+    void vscode.commands.executeCommand(
+      'setContext',
+      'gitBranchesPanel.currentBranchBusy',
+      currentBranchBusy
     );
 
     const showStatusBarBranchAction = vscode.workspace
@@ -170,9 +176,11 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     }
 
     this.statusBarItem.text = statusBarText;
-    this.statusBarItem.command = currentBranchNeedsPublish
-      ? 'gitBranchesPanel.publishCurrentBranch'
-      : 'gitBranchesPanel.syncCurrentBranch';
+    this.statusBarItem.command = currentBranchBusy
+      ? 'gitBranchesPanel.branchActionInProgress'
+      : currentBranchNeedsPublish
+        ? 'gitBranchesPanel.publishCurrentBranch'
+        : 'gitBranchesPanel.syncCurrentBranch';
     this.statusBarItem.tooltip = new vscode.MarkdownString(
       buildStatusBarTooltipContent(currentBranch)
     );

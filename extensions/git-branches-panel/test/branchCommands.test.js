@@ -1379,3 +1379,66 @@ test('showBranchActions exposes actions for missing upstream branches', async ()
     },
   ]);
 });
+
+test('cherryPickIntoCurrent confirms, cherry-picks, and refreshes once', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Cherry-pick');
+  const cherryPickCalls = [];
+
+  const { commandContext } = createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async cherryPickRef(repoRoot, refName) {
+        cherryPickCalls.push({ repoRoot, refName });
+      },
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+  commandContext.state.currentBranch = {
+    name: 'main',
+    isCurrent: true,
+  };
+
+  await vscodeState.registeredCommands['gitBranchesPanel.cherryPickIntoCurrent']({
+    nodeType: 'branch',
+    branchName: 'feature/demo',
+    repoRoot: '/repo',
+  });
+
+  assert.deepEqual(cherryPickCalls, [{ repoRoot: '/repo', refName: 'feature/demo' }]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: "Cherry-picked 'feature/demo' into 'main'.",
+      options: { fetchRemoteState: false },
+    },
+  ]);
+});

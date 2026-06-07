@@ -137,6 +137,15 @@ test('buildStatusBar helpers format sync and publish guidance', () => {
     }),
     '$(git-branch) main 2↓ 1↑'
   );
+  assert.equal(
+    buildStatusBarText({
+      name: 'main',
+      isCurrent: true,
+      isSyncing: true,
+      aheadCount: 1,
+    }),
+    '$(sync~spin) main 1↑'
+  );
   assert.equal(buildStatusBarText(undefined), '');
 
   const syncTooltip = buildStatusBarTooltipContent({
@@ -152,6 +161,17 @@ test('buildStatusBar helpers format sync and publish guidance', () => {
     upstreamName: 'origin/main',
     upstreamMissing: true,
   });
+  const busySyncTooltip = buildStatusBarTooltipContent({
+    name: 'main',
+    isCurrent: true,
+    upstreamName: 'origin/main',
+    isSyncing: true,
+  });
+  const busyPublishTooltip = buildStatusBarTooltipContent({
+    name: 'feature/offline',
+    isCurrent: true,
+    isSyncing: true,
+  });
 
   assert.match(syncTooltip, /\*\*Current branch:\*\* main/);
   assert.match(syncTooltip, /Upstream: origin\/main/);
@@ -160,6 +180,9 @@ test('buildStatusBar helpers format sync and publish guidance', () => {
   assert.match(publishTooltip, /Publish target: origin\/main/);
   assert.match(publishTooltip, /_Tracked upstream no longer exists_/);
   assert.match(publishTooltip, /Click to publish the current branch to its remote\./);
+  assert.match(busySyncTooltip, /_Syncing current branch\.\.\._/);
+  assert.match(busyPublishTooltip, /Publish target: origin\/feature\/offline/);
+  assert.match(busyPublishTooltip, /_Publishing current branch\.\.\._/);
 });
 
 test('buildTreeItemPresentation maps sections, folders, and branch types consistently', () => {
