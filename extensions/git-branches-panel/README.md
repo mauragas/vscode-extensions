@@ -38,6 +38,7 @@ Remote, Stash, Worktree, and Tags stay collapsed until you expand them.
 - ☁️ **Publish actions** — publish local branches without an upstream, including the current branch and descendant folder actions
 - 🧭 **Classified remote-branch delete recovery** — remote deletion failures now distinguish local hook blocks, stale tracking refs, and remote-side rejections instead of offering a generic retry
 - 🧹 **Stale remote-tracking cleanup** — branches whose remote was removed are marked as stale, skip destructive remote-delete actions, and can be cleaned up locally in one click
+- ⚠️ **Missing upstream detection** — local branches whose tracked upstream no longer exists are shown with a warning color and the publish action instead of sync
 - 🆚 **Compare with current branch** — compare a local or remote branch against the currently checked out branch from the context menu
 - 📦 **Stash actions** — apply, pop, or drop a stash from the context menu
 - 🪟 **Worktree actions** — open, reveal, copy, or remove worktrees from the context menu

@@ -150,18 +150,18 @@ export function buildBranchTooltipContent(node: TreeBranch): string {
   if (!isRemoteBranch && !isTag) {
     if (node.info.upstreamName) {
       tooltipLines.push('', `Upstream: ${node.info.upstreamName}`);
+
+      if (node.info.upstreamMissing) {
+        tooltipLines.push('', '_Tracked upstream no longer exists_');
+      }
     } else if (isPublishableBranch(node.info)) {
       tooltipLines.push('', `Publish target: ${getPublishTargetName(node.info)}`);
+      tooltipLines.push('', '_Not published yet_');
     } else {
       tooltipLines.push('', '_No upstream configured yet_');
     }
 
-    if (isPublishableBranch(node.info)) {
-      tooltipLines.push(
-        '',
-        node.info.upstreamMissing ? '_Tracked upstream no longer exists_' : '_Not published yet_'
-      );
-    } else {
+    if (!node.info.upstreamMissing) {
       const syncStatus = formatSyncStatus(node.info);
       tooltipLines.push('', syncStatus ? `Sync state: ${syncStatus}` : 'Sync state: up to date');
     }
@@ -235,12 +235,15 @@ function resolveNodeType(info: BranchInfo): NodeType {
     case 'remote':
       return info.remoteTrackingState === 'stale' ? 'staleRemoteBranch' : 'remoteBranch';
     default:
+      if (info.upstreamMissing) {
+        return 'missingUpstreamBranch';
+      }
       return info.isCurrent ? 'currentBranch' : 'branch';
   }
 }
 
 function shouldShowSyncStatus(nodeType: NodeType): boolean {
-  return nodeType === 'branch' || nodeType === 'currentBranch';
+  return nodeType === 'branch' || nodeType === 'currentBranch' || nodeType === 'missingUpstreamBranch';
 }
 
 function buildTreeItemLabel(
@@ -260,6 +263,10 @@ function getItemContextValue(nodeType: NodeType, branch: BranchInfo): string {
     return branch.isCurrent ? 'currentWorktree' : 'worktree';
   }
 
+  if (nodeType === 'missingUpstreamBranch') {
+    return branch.isCurrent ? 'publishableCurrentBranch' : 'publishableBranch';
+  }
+
   if ((nodeType === 'branch' || nodeType === 'currentBranch') && isPublishableBranch(branch)) {
     return branch.isCurrent ? 'publishableCurrentBranch' : 'publishableBranch';
   }
@@ -273,6 +280,11 @@ function getItemIcon(nodeType: NodeType): TreeItemIconDescriptor {
       return {
         id: 'git-branch',
         colorId: 'gitDecoration.addedResourceForeground',
+      };
+    case 'missingUpstreamBranch':
+      return {
+        id: 'git-branch',
+        colorId: 'list.warningForeground',
       };
     case 'remoteBranch':
       return { id: 'cloud' };
@@ -293,5 +305,5 @@ function getItemIcon(nodeType: NodeType): TreeItemIconDescriptor {
 }
 
 function shouldActivateOnClick(nodeType: NodeType): boolean {
-  return nodeType === 'branch';
+  return nodeType === 'branch' || nodeType === 'missingUpstreamBranch';
 }

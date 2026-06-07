@@ -5,6 +5,7 @@ export type NodeType =
   | 'folder'
   | 'branch'
   | 'currentBranch'
+  | 'missingUpstreamBranch'
   | 'remoteBranch'
   | 'staleRemoteBranch'
   | 'tag'

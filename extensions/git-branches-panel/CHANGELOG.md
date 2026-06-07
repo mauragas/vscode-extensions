@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.0] - 2026-06-07
+
+- Local branches whose tracked upstream no longer exists are now shown with a warning color so they are visually distinct from healthy branches
+- Added **Prune Local Branches with Missing Upstream** command to the context menu for these warning-colored branches
+- Improved the branch tooltip to clearly separate "no upstream configured" from "tracked upstream was deleted" states
+
 ## [1.4.1] - 2026-06-06
 
 - Classified remote-branch delete failures so local `pre-push` hook blocks, stale remote-tracking refs, remote-side rejections, and generic auth/network problems no longer collapse into one generic error path
