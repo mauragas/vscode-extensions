@@ -431,7 +431,7 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(hookPresentation.icon.id, 'tools');
   assert.equal(hookPresentation.icon.colorId, 'gitDecoration.addedResourceForeground');
   assert.equal(hookPresentation.description, 'active • shared');
-  assert.equal(hookPresentation.command, undefined);
+  assert.equal(hookPresentation.command.command, 'gitBranchesPanel.activateHookItem');
 
   assert.equal(disabledHookPresentation.nodeType, 'hook');
   assert.equal(disabledHookPresentation.contextValue, 'disabledLocalHook');
@@ -448,6 +448,93 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(currentWorktreePresentation.nodeType, 'worktree');
   assert.equal(currentWorktreePresentation.label, '● git-branches-panel-main-worktree');
   assert.equal(currentWorktreePresentation.contextValue, 'currentWorktree');
+});
+
+test('buildTreeItemPresentation adjusts Hooks section context for bulk enable and disable actions', () => {
+  const enableOnlyPresentation = buildTreeItemPresentation({
+    kind: 'section',
+    label: 'Hooks',
+    path: 'section:hooks',
+    scope: 'hook',
+    children: [
+      {
+        kind: 'branch',
+        fullName: 'pre-commit · local',
+        label: 'pre-commit · local',
+        path: 'pre-commit · local',
+        info: {
+          name: 'pre-commit · local',
+          isCurrent: false,
+          scope: 'hook',
+          hookName: 'pre-commit',
+          hookSource: 'local',
+          hookEnabled: false,
+        },
+      },
+    ],
+  });
+  const disableOnlyPresentation = buildTreeItemPresentation({
+    kind: 'section',
+    label: 'Hooks',
+    path: 'section:hooks',
+    scope: 'hook',
+    children: [
+      {
+        kind: 'branch',
+        fullName: 'commit-msg · shared',
+        label: 'commit-msg · shared',
+        path: 'commit-msg · shared',
+        info: {
+          name: 'commit-msg · shared',
+          isCurrent: false,
+          scope: 'hook',
+          hookName: 'commit-msg',
+          hookSource: 'shared',
+          hookEnabled: true,
+        },
+      },
+    ],
+  });
+  const mixedPresentation = buildTreeItemPresentation({
+    kind: 'section',
+    label: 'Hooks',
+    path: 'section:hooks',
+    scope: 'hook',
+    children: [
+      {
+        kind: 'branch',
+        fullName: 'pre-commit · local',
+        label: 'pre-commit · local',
+        path: 'pre-commit · local',
+        info: {
+          name: 'pre-commit · local',
+          isCurrent: false,
+          scope: 'hook',
+          hookName: 'pre-commit',
+          hookSource: 'local',
+          hookEnabled: false,
+        },
+      },
+      {
+        kind: 'branch',
+        fullName: 'commit-msg · shared',
+        label: 'commit-msg · shared',
+        path: 'commit-msg · shared',
+        info: {
+          name: 'commit-msg · shared',
+          isCurrent: false,
+          scope: 'hook',
+          hookName: 'commit-msg',
+          hookSource: 'shared',
+          hookEnabled: true,
+        },
+      },
+    ],
+  });
+
+  assert.equal(enableOnlyPresentation.contextValue, 'hooksSection:hasDisabled');
+  assert.equal(disableOnlyPresentation.contextValue, 'hooksSection:hasEnabled');
+  assert.equal(mixedPresentation.contextValue, 'hooksSection:hasEnabled:hasDisabled');
 });
 
 test('buildTreeItemPresentation sets correct context value and icon for missing upstream branches', () => {

@@ -207,12 +207,12 @@ test('package manifest exposes the 1.7.0 branch-menu, worktree, stash, and hook 
   );
   assert.ok(
     sectionInlineMenus.some(
-      (item) => item.command === 'gitBranchesPanel.enableAllHooks' && item.when === 'viewItem == hooksSection' && item.group === 'inline@1'
+      (item) => item.command === 'gitBranchesPanel.enableAllHooks' && item.when === 'viewItem =~ /^hooksSection(?::hasEnabled)?(?::hasDisabled)$/' && item.group === 'inline@1'
     )
   );
   assert.ok(
     sectionInlineMenus.some(
-      (item) => item.command === 'gitBranchesPanel.disableAllHooks' && item.when === 'viewItem == hooksSection' && item.group === 'inline@2'
+      (item) => item.command === 'gitBranchesPanel.disableAllHooks' && item.when === 'viewItem =~ /^hooksSection:hasEnabled(?::hasDisabled)?$/' && item.group === 'inline@2'
     )
   );
   assert.ok(

@@ -25,7 +25,7 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
       nodeType: 'section',
       label: node.label,
       id: containerKey,
-      contextValue: getSectionContextValue(node.scope),
+      contextValue: getSectionContextValue(node),
       collapsibleState: getSectionCollapsibleState(node.scope),
       icon: { id: getSectionIconId(node.scope) },
       containerKey,
@@ -60,6 +60,7 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
     node.info.isCurrent,
     node.info.isPinned
   );
+  const activationCommand = resolveActivationCommand(nodeType, node.info.isCurrent);
 
   return {
     nodeType,
@@ -71,10 +72,10 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
     description,
     tooltip: buildBranchTooltipContent(node),
     branchName: node.fullName,
-    command: shouldActivateOnClick(nodeType, node.info.isCurrent)
+    command: activationCommand
       ? {
-          command: 'gitBranchesPanel.activateBranchItem',
-          title: 'Activate Branch Item',
+          command: activationCommand,
+          title: nodeType === 'hook' ? 'Activate Hook Item' : 'Activate Branch Item',
         }
       : undefined,
   };
@@ -208,8 +209,12 @@ function buildTreeItemDescription(branch: BranchInfo, syncStatus: string): strin
   return branch.lastCommitDate || undefined;
 }
 
-function getSectionContextValue(scope: TreeContainerScope): string {
-  switch (scope) {
+function getSectionContextValue(node: Extract<BranchTreeNode, { kind: 'section' }>): string {
+  if (node.scope === 'hook') {
+    return getHooksSectionContextValue(node.children);
+  }
+
+  switch (node.scope) {
     case 'local':
       return 'localSection';
     case 'remote':
@@ -218,8 +223,6 @@ function getSectionContextValue(scope: TreeContainerScope): string {
       return 'stashSection';
     case 'worktree':
       return 'worktreeSection';
-    case 'hook':
-      return 'hooksSection';
     case 'tag':
       return 'tagsSection';
     default:
@@ -417,11 +420,19 @@ function getItemIcon(nodeType: NodeType, branch?: BranchInfo): TreeItemIconDescr
   }
 }
 
-function shouldActivateOnClick(nodeType: NodeType, isCurrent: boolean): boolean {
-  if (nodeType === 'branch' || nodeType === 'missingUpstreamBranch') {
-    return !isCurrent;
+function resolveActivationCommand(
+  nodeType: NodeType,
+  isCurrent: boolean
+): string | undefined {
+  if (nodeType === 'hook') {
+    return 'gitBranchesPanel.activateHookItem';
   }
-  return false;
+
+  if (nodeType === 'branch' || nodeType === 'missingUpstreamBranch') {
+    return !isCurrent ? 'gitBranchesPanel.activateBranchItem' : undefined;
+  }
+
+  return undefined;
 }
 
 function capitalizeHookSource(source: BranchInfo['hookSource']): string {
@@ -440,4 +451,56 @@ function resolveHookStatusLabel(
   }
 
   return 'Disabled';
+}
+
+function getHooksSectionContextValue(children: readonly BranchTreeNode[]): string {
+  const state = summarizeHookChildren(children);
+
+  if (state.hasEnabled && state.hasDisabled) {
+    return 'hooksSection:hasEnabled:hasDisabled';
+  }
+
+  if (state.hasEnabled) {
+    return 'hooksSection:hasEnabled';
+  }
+
+  if (state.hasDisabled) {
+    return 'hooksSection:hasDisabled';
+  }
+
+  return 'hooksSection';
+}
+
+function summarizeHookChildren(
+  children: readonly BranchTreeNode[]
+): { hasEnabled: boolean; hasDisabled: boolean } {
+  let hasEnabled = false;
+  let hasDisabled = false;
+
+  for (const child of children) {
+    if (child.kind === 'branch') {
+      if (child.info.scope !== 'hook') {
+        continue;
+      }
+
+      if (child.info.hookEnabled) {
+        hasEnabled = true;
+      } else {
+        hasDisabled = true;
+      }
+    } else {
+      const nestedState = summarizeHookChildren(child.children);
+      hasEnabled ||= nestedState.hasEnabled;
+      hasDisabled ||= nestedState.hasDisabled;
+    }
+
+    if (hasEnabled && hasDisabled) {
+      break;
+    }
+  }
+
+  return {
+    hasEnabled,
+    hasDisabled,
+  };
 }

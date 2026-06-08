@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 - Added a **Hooks** section that appears only when the current repository has configured local `.git/hooks` scripts or shared hooks via `core.hooksPath`
 - Added hook state indicators plus **Enable Hook**, **Disable Hook**, and **Edit Hook** actions so configured hooks can be managed directly from the tree
 - Added **Enable All Hooks** and **Disable All Hooks** inline actions on the **Hooks** section header for one-click bulk hook toggling
+- Made the Hooks section bulk actions conditional, so **Enable All Hooks** only appears when something is disabled and **Disable All Hooks** only appears when something is enabled, and double-clicking a hook now opens **Edit Hook**
 - Added hook detection and coverage for local-vs-shared hook discovery, section visibility, hover/context-menu contributions, and hook command behavior
 - Added **Rename Worktree...** to linked worktree context menus so you can rename a specific worktree in place without removing and recreating it
 - Added a `renameWorktree` Git helper backed by `git worktree move`, plus command/test coverage for successful linked-worktree moves

@@ -60,6 +60,7 @@ function createVscodeMock(state) {
 
 function createCommandContext() {
   const state = {
+    activationDecisions: [],
     commandErrors: [],
     successRefreshes: [],
   };
@@ -68,7 +69,11 @@ function createCommandContext() {
     state,
     context: {
       provider: {},
-      activationTracker: {},
+      activationTracker: {
+        shouldCheckout() {
+          return state.activationDecisions.shift() ?? false;
+        },
+      },
       async refresh() {},
       async requireRepoRoot() {
         return '/repo';
@@ -146,6 +151,36 @@ test('editHook opens the selected hook file in the editor', async () => {
       options: { preview: false },
     },
   ]);
+});
+
+test('activateHookItem opens the hook only on the second activation', async () => {
+  const vscodeState = createVscodeState();
+
+  const { commandContext } = createHookCommandsModule({
+    vscodeState,
+    gitMock: {},
+  });
+  commandContext.state.activationDecisions.push(false, true);
+
+  const item = {
+    nodeType: 'hook',
+    branchName: 'pre-commit · local',
+    repoRoot: '/repo',
+    branchInfo: {
+      scope: 'hook',
+      hookName: 'pre-commit',
+      hookPath: '/repo/.git/hooks/pre-commit',
+    },
+  };
+
+  await vscodeState.registeredCommands['gitBranchesPanel.activateHookItem'](item);
+  await vscodeState.registeredCommands['gitBranchesPanel.activateHookItem'](item);
+
+  assert.equal(vscodeState.openedDocuments.length, 1);
+  assert.deepEqual(vscodeState.openedDocuments[0], {
+    fsPath: '/repo/.git/hooks/pre-commit',
+    path: '/repo/.git/hooks/pre-commit',
+  });
 });
 
 test('disableHook disables the selected hook and refreshes the Hooks section', async () => {

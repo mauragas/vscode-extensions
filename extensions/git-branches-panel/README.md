@@ -132,7 +132,7 @@ Remote, Stash, Worktree, Hooks, and Tags stay collapsed until you expand them.
 - **Remote** — **Fetch All**, **Fetch All (Prune)**
 - **Stash** — **Pop Latest Stash**, **Apply Latest Stash**
 - **Worktree** — **Create New Worktree...** (from the current branch)
-- **Hooks** — **Enable All Hooks**, **Disable All Hooks**
+- **Hooks** — **Enable All Hooks** appears when at least one hook is disabled, and **Disable All Hooks** appears when at least one hook is enabled
 - **Tags** — **Create Tag...** (on the current branch), **Push All Tags**
 
 For the Tags and Worktree section shortcuts, the extension uses the currently checked out branch as the source ref when you trigger the action from the section itself.
@@ -150,6 +150,7 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 ### Hook item actions
 
 - Hover a specific **hook** item to reveal **Enable Hook** or **Disable Hook**, plus **Edit Hook**.
+- Double-click a **hook** item to open **Edit Hook** directly.
 - Right-click a hook item to use the same actions from the context menu.
 - The **Hooks** section appears only when the current repository has configured local or shared hooks.
 - Shared hooks are read from the repository's configured `core.hooksPath`; if that path lives outside `.git/hooks`, use **Refresh** after editing those files elsewhere.

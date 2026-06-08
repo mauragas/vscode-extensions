@@ -522,12 +522,12 @@
         },
         {
           "command": "gitBranchesPanel.enableAllHooks",
-          "when": "viewItem == hooksSection",
+          "when": "viewItem =~ /^hooksSection(?::hasEnabled)?(?::hasDisabled)$/",
           "group": "inline@1"
         },
         {
           "command": "gitBranchesPanel.disableAllHooks",
-          "when": "viewItem == hooksSection",
+          "when": "viewItem =~ /^hooksSection:hasEnabled(?::hasDisabled)?$/",
           "group": "inline@2"
         },
         {

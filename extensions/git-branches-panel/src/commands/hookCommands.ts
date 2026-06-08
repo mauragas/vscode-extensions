@@ -9,6 +9,12 @@ export function registerHookCommands(
   commandContext: CommandContext
 ): void {
   const subscriptions = [
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.activateHookItem',
+      async (item: BranchTreeItem) => {
+        await handleHookItemActivation(item, commandContext);
+      }
+    ),
     vscode.commands.registerCommand('gitBranchesPanel.editHook', async (item: BranchTreeItem) => {
       await handleEditHook(item, commandContext);
     }),
@@ -33,6 +39,21 @@ export function registerHookCommands(
   ];
 
   context.subscriptions.push(...subscriptions);
+}
+
+async function handleHookItemActivation(
+  item: BranchTreeItem,
+  commandContext: CommandContext
+): Promise<void> {
+  if (!isActivatableHookItem(item)) {
+    return;
+  }
+
+  if (!commandContext.activationTracker.shouldCheckout(item)) {
+    return;
+  }
+
+  await handleEditHook(item, commandContext);
 }
 
 async function handleEditHook(
@@ -151,6 +172,19 @@ function isHookItem(
       item.branchInfo.hookName &&
       item.branchInfo.hookPath
   );
+}
+
+function isActivatableHookItem(
+  item: BranchTreeItem
+): item is BranchTreeItem & {
+  branchName: string;
+  repoRoot: string;
+  branchInfo: NonNullable<BranchTreeItem['branchInfo']> & {
+    hookName: string;
+    hookPath: string;
+  };
+} {
+  return Boolean(isHookItem(item) && item.branchName && item.repoRoot);
 }
 
 function isHooksSectionItem(item: BranchTreeItem): boolean {
