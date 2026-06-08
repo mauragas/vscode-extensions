@@ -34,6 +34,14 @@ export async function removeWorktree(
   await runGit(repoRoot, ['worktree', 'remove', ...(force ? ['--force'] : []), worktreePath]);
 }
 
+export async function renameWorktree(
+  repoRoot: string,
+  worktreePath: string,
+  newWorktreePath: string
+): Promise<void> {
+  await runGit(repoRoot, ['worktree', 'move', worktreePath, newWorktreePath]);
+}
+
 export async function createWorktree(
   repoRoot: string,
   worktreePath: string,

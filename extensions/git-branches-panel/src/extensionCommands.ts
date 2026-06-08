@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 import { registerBranchDomainCommands } from './commands/branchCommands';
 import { registerBulkActionCommands } from './commands/bulkActions';
+import { registerHookCommands } from './commands/hookCommands';
 import { registerItemCommands } from './commands/itemCommands';
 import { registerRepositoryCommands } from './commands/repositoryCommands';
 import { createCommandContext } from './commands/shared';
@@ -24,5 +25,6 @@ export function registerBranchCommands(
   registerBranchDomainCommands(context, commandContext);
   registerTagCommands(context, commandContext);
   registerStashCommands(context, commandContext);
+  registerHookCommands(context, commandContext);
   registerWorktreeCommands(context, commandContext);
 }

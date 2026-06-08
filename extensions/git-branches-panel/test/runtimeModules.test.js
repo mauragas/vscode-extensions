@@ -65,7 +65,7 @@ function createTreeItemMock() {
   return {
     BranchTreeItem: class BranchTreeItem {
       constructor(node, repoRoot) {
-        this.nodeType = node.kind === 'branch' ? 'branch' : node.kind;
+        this.nodeType = node.kind === 'branch' ? (node.info?.scope === 'hook' ? 'hook' : 'branch') : node.kind;
         this.containerKey =
           node.kind === 'branch'
             ? undefined
@@ -253,6 +253,7 @@ test('BranchTreeProvider refreshes current branch context and exposes tree items
     './git': {
       fetchRemoteState() {},
       getBranches() {},
+      getHooks() {},
       getRemoteBranches() {},
       getRepoRoot() {},
       getStashes() {},
@@ -327,6 +328,7 @@ test('BranchTreeProvider marks publishable current branches in context', async (
     './git': {
       fetchRemoteState() {},
       getBranches() {},
+      getHooks() {},
       getRemoteBranches() {},
       getRepoRoot() {},
       getStashes() {},
@@ -388,6 +390,7 @@ test('BranchTreeProvider marks busy current branches in context', async () => {
     './git': {
       fetchRemoteState() {},
       getBranches() {},
+      getHooks() {},
       getRemoteBranches() {},
       getRepoRoot() {},
       getStashes() {},
@@ -493,6 +496,7 @@ test('BranchTreeProvider loads nested container children and clears branch conte
     './git': {
       fetchRemoteState() {},
       getBranches() {},
+      getHooks() {},
       getRemoteBranches() {},
       getRepoRoot() {},
       getStashes() {},
@@ -529,7 +533,7 @@ test('BranchTreeProvider loads nested container children and clears branch conte
   const descendantBranches = provider.getDescendantBranches('folder:local:feature');
 
   assert.deepEqual(dataLoader.refreshCalls, [
-    { sections: ['local'], fetchRemoteState: false },
+    { sections: ['local', 'hooks'], fetchRemoteState: false },
     { sections: ['remote'], fetchRemoteState: false },
   ]);
   assert.equal(rootChildren.length, 2);

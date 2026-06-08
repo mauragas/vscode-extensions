@@ -24,6 +24,7 @@ function loadFresh(modulePath, mocks) {
 
 function createVscodeState() {
   return {
+    executedCommands: [],
     registeredCommands: {},
     infoMessages: [],
     inputBoxRequests: [],
@@ -40,6 +41,18 @@ function createVscodeMock(state) {
       registerCommand(name, callback) {
         state.registeredCommands[name] = callback;
         return { dispose() {} };
+      },
+      async executeCommand(command, ...args) {
+        state.executedCommands.push({ command, args });
+        return undefined;
+      },
+    },
+    Uri: {
+      file(value) {
+        return { fsPath: value, path: value };
+      },
+      from(value) {
+        return value;
       },
     },
     window: {
@@ -69,6 +82,7 @@ function createVscodeMock(state) {
 
 function createCommandContext() {
   const state = {
+    currentBranch: undefined,
     repoRoot: '/repo',
     successRefreshes: [],
     commandErrors: [],
@@ -84,7 +98,7 @@ function createCommandContext() {
         return state.repoRoot;
       },
       async requireCurrentBranch() {
-        return undefined;
+        return state.currentBranch;
       },
       async showSuccessAndRefresh(message, options = {}) {
         state.successRefreshes.push({ message, options });
@@ -104,10 +118,14 @@ function createBaseGitMock(overrides = {}) {
     async applyStash() {},
     async dropAllStashes() {},
     async dropStash() {},
+    async getDiffFilesBetweenRefs() {
+      return [];
+    },
     async getStashes() {
       return [];
     },
     async popStash() {},
+    async renameStash() {},
     async stashAllChanges() {
       return false;
     },
@@ -127,6 +145,7 @@ function createBaseGitMock(overrides = {}) {
 function createStashCommandsModule({
   vscodeState,
   gitMock,
+  getGitApiImpl,
   resolveRepoRootFromScmContextImpl,
 }) {
   const commandContext = createCommandContext();
@@ -137,6 +156,8 @@ function createStashCommandsModule({
       BranchTreeItem: class BranchTreeItem {},
     },
     './shared': {
+      getGitApi: getGitApiImpl ?? (async () => undefined),
+      NO_CURRENT_BRANCH_MESSAGE: 'No current branch',
       resolveRepoRootFromScmContext:
         resolveRepoRootFromScmContextImpl ?? (async () => undefined),
     },
@@ -445,6 +466,137 @@ test('applyLatestStash applies the latest stash from the stash section and refre
     {
       message: "Applied latest stash 'stash@{0}'.",
       options: { fetchRemoteState: false },
+    },
+  ]);
+});
+
+test('renameStash prompts for a new stash message and refreshes once', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.inputBoxResponse = 'Hotfix prep';
+  const renameCalls = [];
+
+  const { commandContext } = createStashCommandsModule({
+    vscodeState,
+    gitMock: {
+      async renameStash(repoRoot, stashIdentifier, message) {
+        renameCalls.push({ repoRoot, stashIdentifier, message });
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.renameStash']({
+    nodeType: 'stash',
+    branchName: 'stash@{1}',
+    repoRoot: '/repo',
+    branchInfo: {
+      lastCommit: 'On main: Release prep',
+      stashRevision: 'abc123',
+    },
+  });
+
+  assert.match(vscodeState.inputBoxRequests[0].prompt, /stash@\{1\}/);
+  assert.equal(vscodeState.inputBoxRequests[0].value, 'Release prep');
+  assert.equal(
+    await vscodeState.inputBoxRequests[0].validateInput('Release prep'),
+    'Please enter a different stash message.'
+  );
+  assert.equal(
+    await vscodeState.inputBoxRequests[0].validateInput('   '),
+    'Stash message cannot be empty.'
+  );
+  assert.deepEqual(renameCalls, [
+    {
+      repoRoot: '/repo',
+      stashIdentifier: 'abc123',
+      message: 'Hotfix prep',
+    },
+  ]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: "Renamed stash 'stash@{1}' to 'Hotfix prep'.",
+      options: { fetchRemoteState: false },
+    },
+  ]);
+});
+
+test('compareStashWithCurrent opens a multi diff editor for stash changes', async () => {
+  const vscodeState = createVscodeState();
+  const diffCalls = [];
+
+  const { commandContext } = createStashCommandsModule({
+    vscodeState,
+    getGitApiImpl: async () => ({
+      getRepository() {
+        return {
+          rootUri: {
+            fsPath: '/repo',
+            path: '/repo',
+          },
+        };
+      },
+      toGitUri(uri, ref) {
+        return {
+          fsPath: uri.fsPath,
+          path: `${uri.path}@${ref}`,
+          ref,
+        };
+      },
+    }),
+    gitMock: {
+      async getDiffFilesBetweenRefs(repoRoot, leftRef, rightRef) {
+        diffCalls.push({ repoRoot, leftRef, rightRef });
+        return [
+          { status: 'M', path: 'README.md' },
+          { status: 'A', path: 'stash-only.txt' },
+        ];
+      },
+    },
+  });
+  commandContext.state.currentBranch = {
+    name: 'main',
+    isCurrent: true,
+    scope: 'local',
+  };
+
+  await vscodeState.registeredCommands['gitBranchesPanel.compareStashWithCurrent']({
+    nodeType: 'stash',
+    branchName: 'stash@{0}',
+    repoRoot: '/repo',
+    branchInfo: {
+      stashRevision: 'stash-sha',
+    },
+  });
+
+  assert.deepEqual(diffCalls, [{ repoRoot: '/repo', leftRef: 'main', rightRef: 'stash-sha' }]);
+  assert.equal(vscodeState.executedCommands.length, 1);
+  assert.equal(vscodeState.executedCommands[0].command, '_workbench.openMultiDiffEditor');
+  assert.equal(
+    vscodeState.executedCommands[0].args[0].title,
+    "Compare stash 'stash@{0}' with current 'main'"
+  );
+  assert.equal(
+    vscodeState.executedCommands[0].args[0].multiDiffSourceUri.path,
+    '/repo/main..stash@{0}'
+  );
+  assert.deepEqual(vscodeState.executedCommands[0].args[0].resources, [
+    {
+      originalUri: {
+        fsPath: '/repo/README.md',
+        path: '/repo/README.md@main',
+        ref: 'main',
+      },
+      modifiedUri: {
+        fsPath: '/repo/README.md',
+        path: '/repo/README.md@stash-sha',
+        ref: 'stash-sha',
+      },
+    },
+    {
+      modifiedUri: {
+        fsPath: '/repo/stash-only.txt',
+        path: '/repo/stash-only.txt@stash-sha',
+        ref: 'stash-sha',
+      },
     },
   ]);
 });

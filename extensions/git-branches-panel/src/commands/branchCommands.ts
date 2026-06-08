@@ -752,10 +752,14 @@ async function promptForNewBranchName(
   options: NewBranchPromptOptions
 ): Promise<string | undefined> {
   const prefix = await promptForNewBranchPrefix();
+  const prefixedBranchName = prefix ? `${prefix}/` : undefined;
   const name = await vscode.window.showInputBox({
     prompt: options.prompt,
     placeHolder: NEW_BRANCH_PLACEHOLDER,
-    value: prefix ? `${prefix}/` : undefined,
+    value: prefixedBranchName,
+    valueSelection: prefixedBranchName
+      ? [prefixedBranchName.length, prefixedBranchName.length]
+      : undefined,
     validateInput: (value) =>
       validateNewBranchNameInput(value, options.currentName, {
         normalize: options.normalize,

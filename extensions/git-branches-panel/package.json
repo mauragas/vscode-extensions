@@ -2,7 +2,7 @@
   "name": "git-branches-panel",
   "displayName": "Git Branches Panel",
   "description": "Tree view for local and remote Git branches, stashes, worktrees, and tags with grouping, sync state, and quick actions.",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "publisher": "karolis-mauragas",
   "license": "MIT",
   "repository": {
@@ -262,6 +262,41 @@
         "icon": "$(trash)"
       },
       {
+        "command": "gitBranchesPanel.renameStash",
+        "title": "Rename Stash...",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "gitBranchesPanel.compareStashWithCurrent",
+        "title": "Show Stashed Changes vs Current Branch",
+        "icon": "$(diff-multiple)"
+      },
+      {
+        "command": "gitBranchesPanel.editHook",
+        "title": "Edit Hook",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "gitBranchesPanel.enableHook",
+        "title": "Enable Hook",
+        "icon": "$(play)"
+      },
+      {
+        "command": "gitBranchesPanel.disableHook",
+        "title": "Disable Hook",
+        "icon": "$(close)"
+      },
+      {
+        "command": "gitBranchesPanel.enableAllHooks",
+        "title": "Enable All Hooks",
+        "icon": "$(play)"
+      },
+      {
+        "command": "gitBranchesPanel.disableAllHooks",
+        "title": "Disable All Hooks",
+        "icon": "$(close)"
+      },
+      {
         "command": "gitBranchesPanel.openWorktree",
         "title": "Open Worktree",
         "icon": "$(folder-opened)"
@@ -279,6 +314,11 @@
         "command": "gitBranchesPanel.copyWorktreePath",
         "title": "Copy Worktree Path",
         "icon": "$(copy)"
+      },
+      {
+        "command": "gitBranchesPanel.renameWorktree",
+        "title": "Rename Worktree...",
+        "icon": "$(edit)"
       },
       {
         "command": "gitBranchesPanel.togglePinItem",
@@ -481,6 +521,16 @@
           "group": "inline@1"
         },
         {
+          "command": "gitBranchesPanel.enableAllHooks",
+          "when": "viewItem =~ /^hooksSection(?::hasEnabled)?(?::hasDisabled)$/",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitBranchesPanel.disableAllHooks",
+          "when": "viewItem =~ /^hooksSection:hasEnabled(?::hasDisabled)?$/",
+          "group": "inline@2"
+        },
+        {
           "command": "gitBranchesPanel.createTag",
           "when": "viewItem == tagsSection",
           "group": "inline@1"
@@ -499,6 +549,11 @@
           "command": "gitBranchesPanel.openWorktreeInNewWindow",
           "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/",
           "group": "inline@2"
+        },
+        {
+          "command": "gitBranchesPanel.removeWorktree",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree)$/",
+          "group": "inline@3"
         },
         {
           "command": "gitBranchesPanel.checkoutTag",
@@ -524,6 +579,26 @@
           "command": "gitBranchesPanel.dropStash",
           "when": "viewItem =~ /^(?:pinned:)?(?:stash)$/",
           "group": "inline@3"
+        },
+        {
+          "command": "gitBranchesPanel.renameStash",
+          "when": "viewItem =~ /^(?:pinned:)?(?:stash)$/",
+          "group": "inline@4"
+        },
+        {
+          "command": "gitBranchesPanel.disableHook",
+          "when": "viewItem =~ /^(?:localHook|sharedHook)$/",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitBranchesPanel.enableHook",
+          "when": "viewItem =~ /^(?:disabledLocalHook|disabledSharedHook)$/",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitBranchesPanel.editHook",
+          "when": "viewItem =~ /^(?:localHook|sharedHook|disabledLocalHook|disabledSharedHook)$/",
+          "group": "inline@2"
         },
         {
           "command": "gitBranchesPanel.syncBranch",
@@ -1401,6 +1476,31 @@
           "group": "1_stash@2"
         },
         {
+          "command": "gitBranchesPanel.compareStashWithCurrent",
+          "when": "viewItem =~ /^(?:pinned:)?(?:stash)$/",
+          "group": "1_stash@2.5"
+        },
+        {
+          "command": "gitBranchesPanel.renameStash",
+          "when": "viewItem =~ /^(?:pinned:)?(?:stash)$/",
+          "group": "1_stash@3"
+        },
+        {
+          "command": "gitBranchesPanel.editHook",
+          "when": "viewItem =~ /^(?:localHook|sharedHook|disabledLocalHook|disabledSharedHook)$/",
+          "group": "1_hook@1"
+        },
+        {
+          "command": "gitBranchesPanel.disableHook",
+          "when": "viewItem =~ /^(?:localHook|sharedHook)$/",
+          "group": "1_hook@2"
+        },
+        {
+          "command": "gitBranchesPanel.enableHook",
+          "when": "viewItem =~ /^(?:disabledLocalHook|disabledSharedHook)$/",
+          "group": "1_hook@2"
+        },
+        {
           "command": "gitBranchesPanel.dropStash",
           "when": "viewItem =~ /^(?:pinned:)?(?:stash)$/",
           "group": "2_stash@1"
@@ -1424,6 +1524,11 @@
           "command": "gitBranchesPanel.copyWorktreePath",
           "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/",
           "group": "1_worktree@4"
+        },
+        {
+          "command": "gitBranchesPanel.renameWorktree",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree)$/",
+          "group": "1_worktree@5"
         },
         {
           "command": "gitBranchesPanel.removeWorktree",

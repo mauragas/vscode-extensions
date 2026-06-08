@@ -1,4 +1,5 @@
 import { type BranchInfo } from '../branchModel';
+import { getErrorMessage } from '../errorUtils';
 import { runGit } from './shared';
 
 const GIT_RECORD_SEPARATOR = '\u001e';
@@ -58,6 +59,49 @@ export async function dropAllStashes(repoRoot: string): Promise<void> {
   await runGit(repoRoot, ['stash', 'clear']);
 }
 
+export async function renameStash(
+  repoRoot: string,
+  stashIdentifier: string,
+  newMessage: string
+): Promise<void> {
+  const normalizedMessage = newMessage.trim();
+  if (!normalizedMessage) {
+    throw new Error('Stash message cannot be empty.');
+  }
+
+  const stashes = await getStashes(repoRoot);
+  const targetStash = stashes.find(
+    (stash) => stash.name === stashIdentifier || stash.stashRevision === stashIdentifier
+  );
+  if (!targetStash?.stashRevision) {
+    throw new Error(`Stash '${stashIdentifier}' was not found.`);
+  }
+
+  const originalEntries = stashes.map(toStoredStashEntry);
+  const renamedEntries = originalEntries.map((entry) =>
+    entry.revision === targetStash.stashRevision
+      ? {
+          ...entry,
+          message: buildRenamedStashMessage(targetStash.lastCommit, normalizedMessage),
+        }
+      : entry
+  );
+
+  try {
+    await rebuildStashStack(repoRoot, renamedEntries);
+  } catch (error) {
+    try {
+      await rebuildStashStack(repoRoot, originalEntries);
+    } catch (restoreError) {
+      throw new Error(
+        `${getErrorMessage(error)}. Failed to restore original stashes: ${getErrorMessage(restoreError)}`
+      );
+    }
+
+    throw error;
+  }
+}
+
 export async function stashAllChanges(
   repoRoot: string,
   message?: string
@@ -90,6 +134,11 @@ interface CreateStashOptions {
   readonly includeUntracked?: boolean;
   readonly staged?: boolean;
   readonly message?: string;
+}
+
+interface StoredStashEntry {
+  readonly revision: string;
+  readonly message: string;
 }
 
 async function createStash(repoRoot: string, options: CreateStashOptions): Promise<boolean> {
@@ -128,4 +177,35 @@ async function hasWorkingTreeChanges(repoRoot: string): Promise<boolean> {
 async function hasStagedChanges(repoRoot: string): Promise<boolean> {
   const { stdout } = await runGit(repoRoot, ['diff', '--cached', '--name-only', '--no-ext-diff']);
   return Boolean(stdout.trim());
+}
+
+function toStoredStashEntry(stash: BranchInfo): StoredStashEntry {
+  if (!stash.stashRevision) {
+    throw new Error(`Stash '${stash.name}' is missing its revision.`);
+  }
+
+  return {
+    revision: stash.stashRevision,
+    message: stash.lastCommit || stash.name,
+  };
+}
+
+function buildRenamedStashMessage(currentMessage: string | undefined, newMessage: string): string {
+  const prefixMatch = currentMessage?.match(/^(?:WIP on|On) ([^:]+):/u);
+  if (prefixMatch?.[1]) {
+    return `On ${prefixMatch[1]}: ${newMessage}`;
+  }
+
+  return newMessage;
+}
+
+async function rebuildStashStack(
+  repoRoot: string,
+  entries: readonly StoredStashEntry[]
+): Promise<void> {
+  await runGit(repoRoot, ['stash', 'clear']);
+
+  for (const entry of [...entries].reverse()) {
+    await runGit(repoRoot, ['stash', 'store', '-m', entry.message, entry.revision]);
+  }
 }

@@ -133,6 +133,7 @@ test('createWorktreeFromRef creates a worktree from a local branch', async () =>
       async createWorktree(repoRoot, worktreePath, refName, options) {
         createWorktreeCalls.push({ repoRoot, worktreePath, refName, options });
       },
+      async renameWorktree() {},
       async removeWorktree() {},
     },
   });
@@ -171,6 +172,7 @@ test('createWorktreeFromRef creates a detached worktree from a tag', async () =>
       async createWorktree(repoRoot, worktreePath, refName, options) {
         createWorktreeCalls.push({ repoRoot, worktreePath, refName, options });
       },
+      async renameWorktree() {},
       async removeWorktree() {},
     },
   });
@@ -202,6 +204,7 @@ test('createWorktreeFromCurrentBranch creates a new worktree from the current br
       async createWorktree(repoRoot, worktreePath, refName, options) {
         createWorktreeCalls.push({ repoRoot, worktreePath, refName, options });
       },
+      async renameWorktree() {},
       async removeWorktree() {},
     },
   });
@@ -240,6 +243,7 @@ test('openWorktree opens the selected worktree in the current window', async () 
     vscodeState,
     gitMock: {
       async createWorktree() {},
+      async renameWorktree() {},
       async removeWorktree() {},
     },
   });
@@ -264,6 +268,7 @@ test('openWorktreeInNewWindow opens the selected worktree in a new window', asyn
     vscodeState,
     gitMock: {
       async createWorktree() {},
+      async renameWorktree() {},
       async removeWorktree() {},
     },
   });
@@ -279,4 +284,69 @@ test('openWorktreeInNewWindow opens the selected worktree in a new window', asyn
       args: [{ fsPath: '/tmp/repo-feature-demo', path: '/tmp/repo-feature-demo' }, true],
     },
   ]);
+});
+
+test('renameWorktree renames the selected linked worktree path', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.inputBoxResponse = '/tmp/repo-feature-renamed';
+  const renameWorktreeCalls = [];
+
+  const { commandContext } = createWorktreeCommandsModule({
+    vscodeState,
+    gitMock: {
+      async createWorktree() {},
+      async renameWorktree(repoRoot, worktreePath, newWorktreePath) {
+        renameWorktreeCalls.push({ repoRoot, worktreePath, newWorktreePath });
+      },
+      async removeWorktree() {},
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.renameWorktree']({
+    nodeType: 'worktree',
+    branchName: '/tmp/repo-feature-demo',
+    repoRoot: '/repo',
+  });
+
+  assert.match(vscodeState.inputBoxRequests[0].prompt, /repo-feature-demo/);
+  assert.equal(vscodeState.inputBoxRequests[0].value, '/tmp/repo-feature-demo');
+  assert.deepEqual(renameWorktreeCalls, [
+    {
+      repoRoot: '/repo',
+      worktreePath: '/tmp/repo-feature-demo',
+      newWorktreePath: '/tmp/repo-feature-renamed',
+    },
+  ]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: "Renamed worktree to 'repo-feature-renamed'.",
+      options: { fetchRemoteState: false },
+    },
+  ]);
+});
+
+test('renameWorktree ignores the current worktree', async () => {
+  const vscodeState = createVscodeState();
+
+  createWorktreeCommandsModule({
+    vscodeState,
+    gitMock: {
+      async createWorktree() {},
+      async renameWorktree() {
+        throw new Error('renameWorktree should not be called');
+      },
+      async removeWorktree() {},
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.renameWorktree']({
+    nodeType: 'worktree',
+    branchName: '/repo',
+    repoRoot: '/repo',
+    branchInfo: {
+      isCurrent: true,
+    },
+  });
+
+  assert.equal(vscodeState.inputBoxRequests.length, 0);
 });

@@ -880,7 +880,7 @@ function getAllLocalBranches(branches: readonly BranchInfo[]): BranchInfo[] {
   return branches.filter((branch) => resolveBranchScope(branch) === 'local');
 }
 
-function resolveBranchScope(branch: Pick<BranchInfo, 'scope'>): FolderActionScope | 'stash' | 'worktree' {
+function resolveBranchScope(branch: Pick<BranchInfo, 'scope'>): FolderActionScope | 'stash' | 'worktree' | 'hook' {
   return branch.scope ?? 'local';
 }
 

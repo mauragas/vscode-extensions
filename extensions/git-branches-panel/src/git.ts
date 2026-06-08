@@ -5,3 +5,4 @@ export * from './git/remoteGit';
 export * from './git/tagGit';
 export * from './git/stashGit';
 export * from './git/worktreeGit';
+export * from './git/hookGit';

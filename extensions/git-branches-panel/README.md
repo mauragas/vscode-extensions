@@ -1,7 +1,7 @@
 # Git Branches Panel
 
 `Git Branches Panel` is a Visual Studio Code extension that shows local and
-remote Git branches, stashes, worktrees, and tags in a dedicated tree view with folder grouping,
+remote Git branches, stashes, worktrees, hooks, and tags in a dedicated tree view with folder grouping,
 sync status, current-branch context, and quick actions.
 
 This extension lives in the [`vscode-extensions`](../..) repository under `extensions/git-branches-panel/`.
@@ -9,9 +9,9 @@ This extension lives in the [`vscode-extensions`](../..) repository under `exten
 ## Overview
 
 The panel keeps the active branch visible at the top, groups slash-separated
-branch names into folders, and separates Local, Remote, Stash, Worktree, and Tags into their own
+branch names into folders, and separates Local, Remote, Stash, Worktree, Hooks, and Tags into their own
 sections so common Git navigation feels fast and tidy. The Local section opens first, while
-Remote, Stash, Worktree, and Tags stay collapsed until you expand them.
+Remote, Stash, Worktree, Hooks, and Tags stay collapsed until you expand them.
 
 ![Git Branches Panel overview showing the current branch summary plus Local, Remote, and Tags sections.](https://raw.githubusercontent.com/mauragas/vscode-extensions/main/extensions/git-branches-panel/resources/git-branches-panel-overview.png)
 
@@ -21,6 +21,7 @@ Remote, Stash, Worktree, and Tags stay collapsed until you expand them.
 - 🧭 **Local and remote sections** — local branches are shown first, with remote branches listed in a separate group below them
 - 🧺 **Stash section** — stashes are shown between remote branches and tags so parked work stays close at hand
 - 🪵 **Worktree section** — worktrees are shown under stashes so additional checkouts are easy to find and manage
+- 🪝 **Hooks section** — appears only when the repository has configured Git hooks, showing local `.git/hooks` scripts and any shared hooks from `core.hooksPath` with active/disabled state
 - 🏷️ **Tags section** — tags are shown in their own section below remote branches, with version-like tags newest-first by default
 - 📁 **Folders first** — folders are listed before branch leaves inside each section
 - ⚡ **Faster first paint** — the tree loads Local branches first so the view opens quickly in larger repositories
@@ -50,15 +51,17 @@ Remote, Stash, Worktree, and Tags stay collapsed until you expand them.
 - 🧭 **Branch prefix picker** — optionally prefill new branch names from common folders like `feature/`, `bugfix/`, or `hotfix/`
 - 🆚 **Compare with current branch** — compare a local or remote branch against the currently checked out branch from the context menu
 - 📦 **Stash actions** — apply, pop, drop, or pop the latest stash from the Stash section context menu, plus stash all or staged changes from the Branches toolbar or built-in Changes view title bar
+- 🪝 **Hook actions** — enable/disable and edit configured Git hook scripts directly from the Hooks section hover buttons or context menu
 - 🏷️ **Tag hover quick actions** — checkout and delete a tag directly from the tag row hover buttons
 - 📦 **Stash hover quick actions** — pop, apply, or drop a stash directly from the stash row hover buttons
-- 🪟 **Worktree actions** — open, reveal, copy, or remove worktrees from the context menu, with open/open-in-new-window buttons now available directly on worktree item hover
+- 🪝 **Hook hover quick actions** — enable/disable a hook and open it in the editor directly from the hook row
+- 🪟 **Worktree actions** — open, rename, reveal, copy, or remove linked worktrees from the context menu, with open/open-in-new-window buttons now available directly on worktree item hover
 - ⚡ **Double-click checkout** — double-click a branch to switch instantly
 - 🔀 **Merge into current** — merge a selected branch into the current branch from the context menu
 - 🧰 **Context menu actions** — checkout, sync, publish, create tags, rename, merge into current, cherry-pick, compare with current, copy branch name, delete/cleanup, and open a codicon-based branch actions picker, all with settings-driven branch-menu ordering and visibility
-- 🧷 **Section context menu parity** — the new Local, Stash, Worktree, and Tags section hover actions are also available from those section context menus where that improves discoverability
+- 🧷 **Section context menu parity** — the new Local, Stash, Worktree, Hooks, and Tags section hover actions are also available from those section context menus where that improves discoverability
 - ➕ **Toolbar quick actions** — create a new branch, sync or publish the current branch, fetch all remotes, fetch all with prune, refresh, open advanced actions, and open extension settings from the panel title bar, with the stash shortcut moved out of the Branches toolbar by default
-- 🔄 **Targeted auto-refresh** — updates loaded sections when `.git/HEAD`, `.git/FETCH_HEAD`, `.git/packed-refs`, `.git/refs/heads/`, `.git/refs/remotes/`, `.git/refs/tags/`, `.git/refs/stash`, `.git/logs/refs/stash`, `.git/worktrees/`, workspace folders, or settings change
+- 🔄 **Targeted auto-refresh** — updates loaded sections when `.git/HEAD`, `.git/FETCH_HEAD`, `.git/config`, `.git/packed-refs`, `.git/refs/heads/`, `.git/refs/remotes/`, `.git/refs/tags/`, `.git/refs/stash`, `.git/logs/refs/stash`, `.git/hooks/`, `.git/worktrees/`, workspace folders, or settings change
 
 ## Commands
 
@@ -93,9 +96,15 @@ Remote, Stash, Worktree, and Tags stay collapsed until you expand them.
 | Pop Latest Stash | Pop the latest stash directly from the Stash section context menu |
 | Drop Stash | Delete the selected stash |
 | Drop All Stashes | Delete every stash entry from the Stash section |
+| Edit Hook | Open the selected hook script in the editor |
+| Enable Hook | Re-enable a disabled hook script |
+| Disable Hook | Disable the selected hook script |
+| Enable All Hooks | Re-enable every disabled hook shown in the Hooks section |
+| Disable All Hooks | Disable every enabled hook shown in the Hooks section |
 | Open Worktree | Open the selected worktree in the current window |
 | Create New Worktree... | Create a new worktree from the currently checked out branch directly from the Worktree section |
 | Open Worktree in New Window | Open the selected worktree in a new window |
+| Rename Worktree... | Rename a selected linked worktree by moving it to a new path |
 | Reveal Worktree in File Explorer | Reveal the selected worktree in the OS file browser |
 | Copy Worktree Path | Copy the selected worktree path to the clipboard |
 | Pin / Unpin Item | Toggle pinning for branches, stashes, and worktrees so pinned items stay at the top |
@@ -123,6 +132,7 @@ Remote, Stash, Worktree, and Tags stay collapsed until you expand them.
 - **Remote** — **Fetch All**, **Fetch All (Prune)**
 - **Stash** — **Pop Latest Stash**, **Apply Latest Stash**
 - **Worktree** — **Create New Worktree...** (from the current branch)
+- **Hooks** — **Enable All Hooks** appears when at least one hook is disabled, and **Disable All Hooks** appears when at least one hook is enabled
 - **Tags** — **Create Tag...** (on the current branch), **Push All Tags**
 
 For the Tags and Worktree section shortcuts, the extension uses the currently checked out branch as the source ref when you trigger the action from the section itself.
@@ -130,11 +140,20 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 ### Worktree item hover actions
 
 - Hover a specific worktree item to reveal **Open Worktree** and **Open Worktree in New Window** inline buttons.
+- Right-click a linked worktree item to **Rename Worktree...**, which moves that worktree to a new path without removing it first.
 
 ### Tag and stash item hover actions
 
 - Hover a specific **tag** item to reveal **Checkout Tag** and **Delete Tag**.
 - Hover a specific **stash** item to reveal **Pop Stash**, **Apply Stash**, and **Drop Stash**.
+
+### Hook item actions
+
+- Hover a specific **hook** item to reveal **Enable Hook** or **Disable Hook**, plus **Edit Hook**.
+- Double-click a **hook** item to open **Edit Hook** directly.
+- Right-click a hook item to use the same actions from the context menu.
+- The **Hooks** section appears only when the current repository has configured local or shared hooks.
+- Shared hooks are read from the repository's configured `core.hooksPath`; if that path lives outside `.git/hooks`, use **Refresh** after editing those files elsewhere.
 
 ### Remote delete behavior
 

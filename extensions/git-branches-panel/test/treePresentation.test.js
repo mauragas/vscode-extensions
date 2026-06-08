@@ -9,7 +9,7 @@ const {
   findContainerNode,
 } = require('../out/treePresentation.js');
 
-test('buildBranchTooltipContent describes local, remote, stash, tag, and worktree items', () => {
+test('buildBranchTooltipContent describes local, remote, stash, hook, tag, and worktree items', () => {
   const localTooltip = buildBranchTooltipContent({
     kind: 'branch',
     fullName: 'feature/demo',
@@ -87,6 +87,22 @@ test('buildBranchTooltipContent describes local, remote, stash, tag, and worktre
       lastCommit: 'WIP on main: stash support',
     },
   });
+  const hookTooltip = buildBranchTooltipContent({
+    kind: 'branch',
+    fullName: 'pre-commit · shared',
+    label: 'pre-commit · shared',
+    path: 'pre-commit · shared',
+    info: {
+      name: 'pre-commit · shared',
+      isCurrent: false,
+      scope: 'hook',
+      hookName: 'pre-commit',
+      hookSource: 'shared',
+      hookEnabled: true,
+      hookActive: true,
+      hookRelativePath: '.githooks/pre-commit',
+    },
+  });
   const worktreeTooltip = buildBranchTooltipContent({
     kind: 'branch',
     fullName: '/tmp/git-branches-panel-feature-worktree',
@@ -120,6 +136,10 @@ test('buildBranchTooltipContent describes local, remote, stash, tag, and worktre
   assert.match(stashTooltip, /_Stash_/);
   assert.match(stashTooltip, /Saved: 5 minutes ago/);
   assert.match(stashTooltip, /Message: WIP on main: stash support/);
+  assert.match(hookTooltip, /_Git hook_/);
+  assert.match(hookTooltip, /Source: Shared/);
+  assert.match(hookTooltip, /Status: Active/);
+  assert.match(hookTooltip, /Path: \.githooks\/pre-commit/);
   assert.match(worktreeTooltip, /_Worktree_/);
   assert.match(worktreeTooltip, /Reference: feature\/worktree/);
   assert.match(worktreeTooltip, /Locked: in use elsewhere/);
@@ -152,6 +172,13 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
     label: 'Worktree',
     path: 'section:worktree',
     scope: 'worktree',
+    children: [],
+  });
+  const hooksSectionPresentation = buildTreeItemPresentation({
+    kind: 'section',
+    label: 'Hooks',
+    path: 'section:hooks',
+    scope: 'hook',
     children: [],
   });
   const tagsSectionPresentation = buildTreeItemPresentation({
@@ -266,6 +293,38 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
       lastCommitDate: '5 minutes ago',
     },
   });
+  const hookPresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'pre-commit · shared',
+    label: 'pre-commit · shared',
+    path: 'pre-commit · shared',
+    info: {
+      name: 'pre-commit · shared',
+      isCurrent: false,
+      scope: 'hook',
+      hookName: 'pre-commit',
+      hookSource: 'shared',
+      hookEnabled: true,
+      hookActive: true,
+      hookRelativePath: '.githooks/pre-commit',
+    },
+  });
+  const disabledHookPresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'commit-msg · local',
+    label: 'commit-msg · local',
+    path: 'commit-msg · local',
+    info: {
+      name: 'commit-msg · local',
+      isCurrent: false,
+      scope: 'hook',
+      hookName: 'commit-msg',
+      hookSource: 'local',
+      hookEnabled: false,
+      hookActive: false,
+      hookRelativePath: '.git/hooks/commit-msg.disabled',
+    },
+  });
   const worktreePresentation = buildTreeItemPresentation({
     kind: 'branch',
     fullName: '/tmp/git-branches-panel-feature-worktree',
@@ -311,6 +370,10 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(worktreeSectionPresentation.nodeType, 'section');
   assert.equal(worktreeSectionPresentation.icon.id, 'folder');
   assert.equal(worktreeSectionPresentation.contextValue, 'worktreeSection');
+
+  assert.equal(hooksSectionPresentation.nodeType, 'section');
+  assert.equal(hooksSectionPresentation.icon.id, 'tools');
+  assert.equal(hooksSectionPresentation.contextValue, 'hooksSection');
 
   assert.equal(tagsSectionPresentation.nodeType, 'section');
   assert.equal(tagsSectionPresentation.contextValue, 'tagsSection');
@@ -363,6 +426,19 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(stashPresentation.description, 'WIP on main: stash support • 5 minutes ago');
   assert.equal(stashPresentation.command, undefined);
 
+  assert.equal(hookPresentation.nodeType, 'hook');
+  assert.equal(hookPresentation.contextValue, 'sharedHook');
+  assert.equal(hookPresentation.icon.id, 'tools');
+  assert.equal(hookPresentation.icon.colorId, 'gitDecoration.addedResourceForeground');
+  assert.equal(hookPresentation.description, 'active • shared');
+  assert.equal(hookPresentation.command.command, 'gitBranchesPanel.activateHookItem');
+
+  assert.equal(disabledHookPresentation.nodeType, 'hook');
+  assert.equal(disabledHookPresentation.contextValue, 'disabledLocalHook');
+  assert.equal(disabledHookPresentation.icon.id, 'tools');
+  assert.equal(disabledHookPresentation.icon.colorId, 'disabledForeground');
+  assert.equal(disabledHookPresentation.description, 'disabled • local');
+
   assert.equal(worktreePresentation.nodeType, 'worktree');
   assert.equal(worktreePresentation.contextValue, 'worktree');
   assert.equal(worktreePresentation.icon.id, 'folder');
@@ -372,6 +448,93 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(currentWorktreePresentation.nodeType, 'worktree');
   assert.equal(currentWorktreePresentation.label, '● git-branches-panel-main-worktree');
   assert.equal(currentWorktreePresentation.contextValue, 'currentWorktree');
+});
+
+test('buildTreeItemPresentation adjusts Hooks section context for bulk enable and disable actions', () => {
+  const enableOnlyPresentation = buildTreeItemPresentation({
+    kind: 'section',
+    label: 'Hooks',
+    path: 'section:hooks',
+    scope: 'hook',
+    children: [
+      {
+        kind: 'branch',
+        fullName: 'pre-commit · local',
+        label: 'pre-commit · local',
+        path: 'pre-commit · local',
+        info: {
+          name: 'pre-commit · local',
+          isCurrent: false,
+          scope: 'hook',
+          hookName: 'pre-commit',
+          hookSource: 'local',
+          hookEnabled: false,
+        },
+      },
+    ],
+  });
+  const disableOnlyPresentation = buildTreeItemPresentation({
+    kind: 'section',
+    label: 'Hooks',
+    path: 'section:hooks',
+    scope: 'hook',
+    children: [
+      {
+        kind: 'branch',
+        fullName: 'commit-msg · shared',
+        label: 'commit-msg · shared',
+        path: 'commit-msg · shared',
+        info: {
+          name: 'commit-msg · shared',
+          isCurrent: false,
+          scope: 'hook',
+          hookName: 'commit-msg',
+          hookSource: 'shared',
+          hookEnabled: true,
+        },
+      },
+    ],
+  });
+  const mixedPresentation = buildTreeItemPresentation({
+    kind: 'section',
+    label: 'Hooks',
+    path: 'section:hooks',
+    scope: 'hook',
+    children: [
+      {
+        kind: 'branch',
+        fullName: 'pre-commit · local',
+        label: 'pre-commit · local',
+        path: 'pre-commit · local',
+        info: {
+          name: 'pre-commit · local',
+          isCurrent: false,
+          scope: 'hook',
+          hookName: 'pre-commit',
+          hookSource: 'local',
+          hookEnabled: false,
+        },
+      },
+      {
+        kind: 'branch',
+        fullName: 'commit-msg · shared',
+        label: 'commit-msg · shared',
+        path: 'commit-msg · shared',
+        info: {
+          name: 'commit-msg · shared',
+          isCurrent: false,
+          scope: 'hook',
+          hookName: 'commit-msg',
+          hookSource: 'shared',
+          hookEnabled: true,
+        },
+      },
+    ],
+  });
+
+  assert.equal(enableOnlyPresentation.contextValue, 'hooksSection:hasDisabled');
+  assert.equal(disableOnlyPresentation.contextValue, 'hooksSection:hasEnabled');
+  assert.equal(mixedPresentation.contextValue, 'hooksSection:hasEnabled:hasDisabled');
 });
 
 test('buildTreeItemPresentation sets correct context value and icon for missing upstream branches', () => {

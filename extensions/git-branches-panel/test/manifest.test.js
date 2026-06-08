@@ -25,8 +25,8 @@ function getInlineViewItemContextCommands() {
   )];
 }
 
-test('package manifest exposes the 1.6.0 branch-menu and stash contributions', () => {
-  assert.equal(packageJson.version, '1.6.0');
+test('package manifest exposes the 1.7.0 branch-menu, worktree, stash, and hook contributions', () => {
+  assert.equal(packageJson.version, '1.7.0');
   assert.equal(getCommand('gitBranchesPanel.stashSilently').title, 'Stash all changes silently');
   assert.equal(
     getCommand('gitBranchesPanel.stashStagedSilently').title,
@@ -40,6 +40,23 @@ test('package manifest exposes the 1.6.0 branch-menu and stash contributions', (
   assert.equal(getCommand('gitBranchesPanel.fetchAllPrune').icon, '$(clear-all)');
   assert.notEqual(getCommand('gitBranchesPanel.fetchAll').icon, getCommand('gitBranchesPanel.fetchAllPrune').icon);
   assert.equal(getCommand('gitBranchesPanel.applyLatestStash').title, 'Apply Latest Stash');
+  assert.equal(getCommand('gitBranchesPanel.renameStash').title, 'Rename Stash...');
+  assert.equal(getCommand('gitBranchesPanel.renameStash').icon, '$(edit)');
+  assert.equal(
+    getCommand('gitBranchesPanel.compareStashWithCurrent').title,
+    'Show Stashed Changes vs Current Branch'
+  );
+  assert.equal(getCommand('gitBranchesPanel.compareStashWithCurrent').icon, '$(diff-multiple)');
+  assert.equal(getCommand('gitBranchesPanel.editHook').title, 'Edit Hook');
+  assert.equal(getCommand('gitBranchesPanel.editHook').icon, '$(edit)');
+  assert.equal(getCommand('gitBranchesPanel.enableHook').title, 'Enable Hook');
+  assert.equal(getCommand('gitBranchesPanel.enableHook').icon, '$(play)');
+  assert.equal(getCommand('gitBranchesPanel.disableHook').title, 'Disable Hook');
+  assert.equal(getCommand('gitBranchesPanel.disableHook').icon, '$(close)');
+  assert.equal(getCommand('gitBranchesPanel.enableAllHooks').title, 'Enable All Hooks');
+  assert.equal(getCommand('gitBranchesPanel.enableAllHooks').icon, '$(play)');
+  assert.equal(getCommand('gitBranchesPanel.disableAllHooks').title, 'Disable All Hooks');
+  assert.equal(getCommand('gitBranchesPanel.disableAllHooks').icon, '$(close)');
   assert.equal(
     getCommand('gitBranchesPanel.createWorktreeFromCurrentBranch').title,
     'Create New Worktree...'
@@ -48,6 +65,8 @@ test('package manifest exposes the 1.6.0 branch-menu and stash contributions', (
   assert.equal(getCommand('gitBranchesPanel.unpinItem').title, 'Unpin');
   assert.equal(getCommand('gitBranchesPanel.pinItem').icon, '$(pin)');
   assert.equal(getCommand('gitBranchesPanel.unpinItem').icon, '$(pinned)');
+  assert.equal(getCommand('gitBranchesPanel.renameWorktree').title, 'Rename Worktree...');
+  assert.equal(getCommand('gitBranchesPanel.renameWorktree').icon, '$(edit)');
 
   const scmTitleMenus = packageJson.contributes.menus['scm/title'];
   assert.deepEqual(
@@ -188,12 +207,32 @@ test('package manifest exposes the 1.6.0 branch-menu and stash contributions', (
   );
   assert.ok(
     sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.enableAllHooks' && item.when === 'viewItem =~ /^hooksSection(?::hasEnabled)?(?::hasDisabled)$/' && item.group === 'inline@1'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.disableAllHooks' && item.when === 'viewItem =~ /^hooksSection:hasEnabled(?::hasDisabled)?$/' && item.group === 'inline@2'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
       (item) => item.command === 'gitBranchesPanel.openWorktree' && item.when === 'viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/' && item.group === 'inline@1'
     )
   );
   assert.ok(
     sectionInlineMenus.some(
       (item) => item.command === 'gitBranchesPanel.openWorktreeInNewWindow' && item.when === 'viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/' && item.group === 'inline@2'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.removeWorktree' && item.when === 'viewItem =~ /^(?:pinned:)?(?:worktree)$/' && item.group === 'inline@3'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.renameWorktree' && item.when === 'viewItem =~ /^(?:pinned:)?(?:worktree)$/' && item.group === '1_worktree@5'
     )
   );
   assert.ok(
@@ -219,6 +258,51 @@ test('package manifest exposes the 1.6.0 branch-menu and stash contributions', (
   assert.ok(
     sectionInlineMenus.some(
       (item) => item.command === 'gitBranchesPanel.dropStash' && item.when === 'viewItem =~ /^(?:pinned:)?(?:stash)$/' && item.group === 'inline@3'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.renameStash' && item.when === 'viewItem =~ /^(?:pinned:)?(?:stash)$/' && item.group === 'inline@4'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.disableHook' && item.when === 'viewItem =~ /^(?:localHook|sharedHook)$/' && item.group === 'inline@1'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.enableHook' && item.when === 'viewItem =~ /^(?:disabledLocalHook|disabledSharedHook)$/' && item.group === 'inline@1'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.editHook' && item.when === 'viewItem =~ /^(?:localHook|sharedHook|disabledLocalHook|disabledSharedHook)$/' && item.group === 'inline@2'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.compareStashWithCurrent' && item.when === 'viewItem =~ /^(?:pinned:)?(?:stash)$/' && item.group === '1_stash@2.5'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.renameStash' && item.when === 'viewItem =~ /^(?:pinned:)?(?:stash)$/' && item.group === '1_stash@3'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.editHook' && item.when === 'viewItem =~ /^(?:localHook|sharedHook|disabledLocalHook|disabledSharedHook)$/' && item.group === '1_hook@1'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.disableHook' && item.when === 'viewItem =~ /^(?:localHook|sharedHook)$/' && item.group === '1_hook@2'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.enableHook' && item.when === 'viewItem =~ /^(?:disabledLocalHook|disabledSharedHook)$/' && item.group === '1_hook@2'
     )
   );
   assert.ok(

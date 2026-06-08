@@ -10,6 +10,7 @@ export type NodeType =
   | 'staleRemoteBranch'
   | 'tag'
   | 'stash'
+  | 'hook'
   | 'worktree';
 
 export type TreeItemCollapsibleKind = 'expanded' | 'collapsed' | 'none';

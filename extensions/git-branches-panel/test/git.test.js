@@ -1,8 +1,17 @@
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
-const { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
+const {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} = require('node:fs');
 const { tmpdir } = require('node:os');
-const { join } = require('node:path');
+const { dirname, join } = require('node:path');
 const test = require('node:test');
 
 const {
@@ -22,6 +31,7 @@ const {
   fetchRemoteState,
   getDiffFilesBetweenRefs,
   getBranches,
+  getHooks,
   getRemoteBranchTrackingState,
   getRemotes,
   getRemoteBranches,
@@ -32,7 +42,10 @@ const {
   popStash,
   pushBranch,
   pushAllTags,
+  renameStash,
+  setHookEnabled,
   removeWorktree,
+  renameWorktree,
   stashAllChanges,
   stashStagedChanges,
   stashSilently,
@@ -421,6 +434,143 @@ test('dropAllStashes clears every stash entry', async (t) => {
   assert.equal((await getStashes(repoRoot)).length, 0);
 });
 
+test('renameStash updates the selected stash message while preserving stack order', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  writeFileSync(join(repoRoot, 'README.md'), '# Test repo\nthird\n');
+  await stashAllChanges(repoRoot, 'First stash');
+  writeFileSync(join(repoRoot, 'README.md'), '# Test repo\nfourth\n');
+  await stashAllChanges(repoRoot, 'Second stash');
+
+  const stashesBeforeRename = await getStashes(repoRoot);
+  assert.equal(stashesBeforeRename.length, 2);
+  assert.ok(stashesBeforeRename[1].stashRevision);
+
+  await renameStash(repoRoot, stashesBeforeRename[1].stashRevision, 'Renamed first stash');
+
+  const stashesAfterRename = await getStashes(repoRoot);
+
+  assert.equal(stashesAfterRename.length, 2);
+  assert.equal(stashesAfterRename[0].stashRevision, stashesBeforeRename[0].stashRevision);
+  assert.equal(stashesAfterRename[1].stashRevision, stashesBeforeRename[1].stashRevision);
+  assert.match(stashesAfterRename[0].lastCommit, /Second stash/);
+  assert.match(stashesAfterRename[1].lastCommit, /Renamed first stash/);
+});
+
+test('getHooks lists local and shared hooks while distinguishing active state', async (t) => {
+  const repoRoot = createTempRepository(t);
+  const localHookPath = join(repoRoot, '.git', 'hooks', 'post-commit');
+  const sharedHooksRoot = join(repoRoot, '.githooks');
+  const sharedHookPath = join(sharedHooksRoot, 'pre-commit');
+  const disabledSharedHookPath = join(sharedHooksRoot, 'commit-msg.disabled');
+
+  mkdirSync(sharedHooksRoot, { recursive: true });
+  writeFileSync(localHookPath, '#!/bin/sh\nexit 0\n');
+  chmodSync(localHookPath, 0o755);
+  writeFileSync(sharedHookPath, '#!/bin/sh\necho shared\n');
+  chmodSync(sharedHookPath, 0o755);
+  writeFileSync(disabledSharedHookPath, '#!/bin/sh\nexit 0\n');
+  runGit(repoRoot, ['config', 'core.hooksPath', '.githooks']);
+
+  const hooks = await getHooks(repoRoot);
+  const localHook = hooks.find(
+    (hook) => hook.hookName === 'post-commit' && hook.hookSource === 'local'
+  );
+  const sharedHook = hooks.find(
+    (hook) => hook.hookName === 'pre-commit' && hook.hookSource === 'shared'
+  );
+  const disabledSharedHook = hooks.find(
+    (hook) => hook.hookName === 'commit-msg' && hook.hookSource === 'shared'
+  );
+
+  assert.ok(localHook);
+  assert.equal(localHook.hookEnabled, true);
+  assert.equal(localHook.hookActive, false);
+  assert.equal(localHook.hookOverridden, true);
+  assert.equal(localHook.hookRelativePath, '.git/hooks/post-commit');
+
+  assert.ok(sharedHook);
+  assert.equal(sharedHook.hookEnabled, true);
+  assert.equal(sharedHook.hookActive, true);
+  assert.equal(sharedHook.hookRelativePath, '.githooks/pre-commit');
+
+  assert.ok(disabledSharedHook);
+  assert.equal(disabledSharedHook.hookEnabled, false);
+  assert.equal(disabledSharedHook.hookActive, false);
+  assert.equal(disabledSharedHook.hookPath, disabledSharedHookPath);
+});
+
+test('getHooks finds local hooks from a linked worktree workspace', async (t) => {
+  const { repoRoot, worktreeRoot } = createRepositoryWithLinkedWorktree(t);
+  const localHookPath = join(repoRoot, '.git', 'hooks', 'post-checkout');
+
+  writeFileSync(localHookPath, '#!/bin/sh\nexit 0\n');
+  chmodSync(localHookPath, 0o755);
+
+  const hooks = await getHooks(worktreeRoot);
+  const localHook = hooks.find(
+    (hook) => hook.hookName === 'post-checkout' && hook.hookSource === 'local'
+  );
+
+  assert.ok(localHook);
+  assert.equal(localHook.hookEnabled, true);
+  assert.equal(localHook.hookActive, true);
+  assert.equal(localHook.hookPath, localHookPath);
+});
+
+test('setHookEnabled toggles executable bits for standard git hooks', async (t) => {
+  const repoRoot = createTempRepository(t);
+  const hookPath = join(repoRoot, '.git', 'hooks', 'pre-commit');
+
+  writeFileSync(hookPath, '#!/bin/sh\nexit 0\n');
+  chmodSync(hookPath, 0o755);
+
+  await setHookEnabled(
+    {
+      hookEnabled: true,
+      hookPath,
+    },
+    false
+  );
+
+  assert.equal(statSync(hookPath).mode & 0o111, 0);
+
+  await setHookEnabled(
+    {
+      hookEnabled: false,
+      hookPath,
+    },
+    true
+  );
+
+  assert.notEqual(statSync(hookPath).mode & 0o111, 0);
+});
+
+test('setHookEnabled restores .disabled hook files back into place', async (t) => {
+  const repoRoot = createTempRepository(t);
+  const sharedHooksRoot = join(repoRoot, '.githooks');
+  const hookPath = join(sharedHooksRoot, 'pre-push');
+  const disabledHookPath = `${hookPath}.disabled`;
+
+  mkdirSync(sharedHooksRoot, { recursive: true });
+  writeFileSync(disabledHookPath, '#!/bin/sh\nexit 0\n');
+
+  await setHookEnabled(
+    {
+      hookEnabled: false,
+      hookPath: disabledHookPath,
+    },
+    true
+  );
+
+  assert.equal(existsSync(hookPath), true);
+  assert.equal(existsSync(disabledHookPath), false);
+
+  if (process.platform !== 'win32') {
+    assert.notEqual(statSync(hookPath).mode & 0o111, 0);
+  }
+});
+
 test('getWorktrees lists the current and linked worktrees', async (t) => {
   const { repoRoot, worktreeRoot } = createRepositoryWithLinkedWorktree(t);
 
@@ -459,6 +609,20 @@ test('removeWorktree removes a linked worktree path', async (t) => {
 
   assert.equal(existsSync(worktreeRoot), false);
   assert.equal((await getWorktrees(repoRoot)).some((worktree) => worktree.worktreePath === worktreeRoot), false);
+});
+
+test('renameWorktree moves a linked worktree to its new path', async (t) => {
+  const { repoRoot, worktreeRoot } = createRepositoryWithLinkedWorktree(t);
+  const renamedWorktreeRoot = join(dirname(worktreeRoot), 'feature-worktree-renamed');
+
+  await renameWorktree(repoRoot, worktreeRoot, renamedWorktreeRoot);
+
+  assert.equal(existsSync(worktreeRoot), false);
+  assert.equal(existsSync(renamedWorktreeRoot), true);
+  const worktrees = await getWorktrees(repoRoot);
+  assert.equal(worktrees.some((worktree) => worktree.worktreePath === worktreeRoot), false);
+  assert.equal(worktrees.some((worktree) => worktree.worktreePath === renamedWorktreeRoot), true);
+  assert.equal(runGit(renamedWorktreeRoot, ['rev-parse', '--abbrev-ref', 'HEAD']), 'feature/worktree');
 });
 
 test('fetchAllRemotes keeps stale remote refs while fetchRemoteState prunes them', async (t) => {
