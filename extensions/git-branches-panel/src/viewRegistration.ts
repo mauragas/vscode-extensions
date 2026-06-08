@@ -37,7 +37,7 @@ function updateTreeViewMessages(
   provider: BranchTreeProvider
 ): void {
   const configuration = vscode.workspace.getConfiguration('gitBranchesPanel');
-  const showCurrentBranchInfo = configuration.get<boolean>('showCurrentBranchInfo', true);
+  const showCurrentBranchInfo = configuration.get<boolean>('showCurrentBranchInfo', false);
   const message = buildCurrentBranchMessage(
     provider.getCurrentBranch(),
     showCurrentBranchInfo

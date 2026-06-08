@@ -222,7 +222,7 @@ export function looksLikeMergeSafetyError(message: string): boolean {
 
 export function buildCurrentBranchMessage(
   currentBranch: BranchInfo | undefined,
-  showCurrentBranchInfo = true
+  showCurrentBranchInfo = false
 ): string {
   if (!showCurrentBranchInfo || !currentBranch) {
     return '';

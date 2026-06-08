@@ -68,6 +68,7 @@ function createVscodeMock(state) {
 
 function createCommandContext() {
   const state = {
+    currentBranch: undefined,
     successRefreshes: [],
     commandErrors: [],
   };
@@ -82,7 +83,7 @@ function createCommandContext() {
         return '/repo';
       },
       async requireCurrentBranch() {
-        return undefined;
+        return state.currentBranch;
       },
       async showSuccessAndRefresh(message, options = {}) {
         state.successRefreshes.push({ message, options });
@@ -184,6 +185,48 @@ test('createWorktreeFromRef creates a detached worktree from a tag', async () =>
       worktreePath: '/tmp/repo-v1.0.0',
       refName: 'refs/tags/v1.0.0',
       options: { detach: true },
+    },
+  ]);
+});
+
+test('createWorktreeFromCurrentBranch creates a new worktree from the current branch when triggered from the Worktree section', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.inputBoxResponse = '/tmp/repo-feature-main';
+  const createWorktreeCalls = [];
+
+  const { commandContext } = createWorktreeCommandsModule({
+    vscodeState,
+    gitMock: {
+      async createWorktree(repoRoot, worktreePath, refName, options) {
+        createWorktreeCalls.push({ repoRoot, worktreePath, refName, options });
+      },
+      async removeWorktree() {},
+    },
+  });
+  commandContext.state.currentBranch = {
+    name: 'main',
+    isCurrent: true,
+  };
+
+  await vscodeState.registeredCommands['gitBranchesPanel.createWorktreeFromCurrentBranch']({
+    nodeType: 'section',
+    containerPath: 'section:worktree',
+    repoRoot: '/repo',
+  });
+
+  assert.match(vscodeState.inputBoxRequests[0].prompt, /current branch 'main'/);
+  assert.deepEqual(createWorktreeCalls, [
+    {
+      repoRoot: '/repo',
+      worktreePath: '/tmp/repo-feature-main',
+      refName: 'main',
+      options: { detach: false },
+    },
+  ]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: "Created worktree 'repo-feature-main' from current branch 'main'.",
+      options: { fetchRemoteState: false },
     },
   ]);
 });

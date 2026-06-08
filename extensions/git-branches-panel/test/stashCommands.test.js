@@ -326,6 +326,29 @@ test('popLatestStash shows an info message when there are no stashes', async () 
   assert.deepEqual(vscodeState.infoMessages, ['No stashes were found to pop.']);
 });
 
+test('applyLatestStash shows an info message when there are no stashes', async () => {
+  const vscodeState = createVscodeState();
+  const applyCalls = [];
+
+  createStashCommandsModule({
+    vscodeState,
+    gitMock: {
+      async applyStash(repoRoot, stashName) {
+        applyCalls.push({ repoRoot, stashName });
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.applyLatestStash']({
+    nodeType: 'section',
+    containerScope: 'stash',
+    repoRoot: '/repo',
+  });
+
+  assert.deepEqual(applyCalls, []);
+  assert.deepEqual(vscodeState.infoMessages, ['No stashes were found to apply.']);
+});
+
 test('popLatestStash pops the latest stash from the stash section and refreshes once', async () => {
   const vscodeState = createVscodeState();
   const popCalls = [];
@@ -355,6 +378,40 @@ test('popLatestStash pops the latest stash from the stash section and refreshes 
   assert.deepEqual(commandContext.state.successRefreshes, [
     {
       message: "Popped latest stash 'stash@{0}'.",
+      options: { fetchRemoteState: false },
+    },
+  ]);
+});
+
+test('applyLatestStash applies the latest stash from the stash section and refreshes once', async () => {
+  const vscodeState = createVscodeState();
+  const applyCalls = [];
+
+  const { commandContext } = createStashCommandsModule({
+    vscodeState,
+    gitMock: {
+      async applyStash(repoRoot, stashName) {
+        applyCalls.push({ repoRoot, stashName });
+      },
+      async getStashes() {
+        return [
+          { name: 'stash@{0}', isCurrent: false, scope: 'stash' },
+          { name: 'stash@{1}', isCurrent: false, scope: 'stash' },
+        ];
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.applyLatestStash']({
+    nodeType: 'section',
+    containerScope: 'stash',
+    repoRoot: '/repo',
+  });
+
+  assert.deepEqual(applyCalls, [{ repoRoot: '/repo', stashName: 'stash@{0}' }]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: "Applied latest stash 'stash@{0}'.",
       options: { fetchRemoteState: false },
     },
   ]);

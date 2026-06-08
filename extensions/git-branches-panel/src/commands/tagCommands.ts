@@ -9,14 +9,14 @@ import {
 } from '../git';
 import { validateTagName } from '../extensionHelpers';
 import { BranchTreeItem } from '../treeProvider';
-import type { CommandContext } from './shared';
+import { NO_CURRENT_BRANCH_MESSAGE, type CommandContext } from './shared';
 
 export function registerTagCommands(
   context: vscode.ExtensionContext,
   commandContext: CommandContext
 ): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('gitBranchesPanel.createTag', async (item: BranchTreeItem) => {
+    vscode.commands.registerCommand('gitBranchesPanel.createTag', async (item?: BranchTreeItem) => {
       await handleCreateTag(item, commandContext);
     }),
     vscode.commands.registerCommand('gitBranchesPanel.checkoutTag', async (item: BranchTreeItem) => {
@@ -35,19 +35,16 @@ export function registerTagCommands(
 }
 
 async function handleCreateTag(
-  item: BranchTreeItem,
+  item: BranchTreeItem | undefined,
   commandContext: CommandContext
 ): Promise<void> {
-  if (
-    !item.branchName ||
-    !item.repoRoot ||
-    (item.nodeType !== 'branch' && item.nodeType !== 'currentBranch')
-  ) {
+  const source = await resolveTagSource(item, commandContext);
+  if (!source) {
     return;
   }
 
   const name = await vscode.window.showInputBox({
-    prompt: `Enter a name for the new tag on '${item.branchName}'`,
+    prompt: `Enter a name for the new tag on '${source.branchName}'`,
     placeHolder: 'v1.2.3 or release/2026-06-05',
     validateInput: (value) => validateTagName(value),
   });
@@ -58,13 +55,13 @@ async function handleCreateTag(
   const tagName = name.trim();
 
   try {
-    await createTag(item.repoRoot, tagName, item.branchName);
+    await createTag(source.repoRoot, tagName, source.branchName);
     await commandContext.showSuccessAndRefresh(
-      `Created tag '${tagName}' on '${item.branchName}'.`,
+      `Created tag '${tagName}' on '${source.branchName}'.`,
       { fetchRemoteState: false }
     );
   } catch (error) {
-    commandContext.showCommandError(`Failed to create tag '${tagName}' on '${item.branchName}'`, error);
+    commandContext.showCommandError(`Failed to create tag '${tagName}' on '${source.branchName}'`, error);
   }
 }
 
@@ -161,4 +158,45 @@ async function handlePushAllTags(
   } catch (error) {
     commandContext.showCommandError('Failed to push all tags', error);
   }
+}
+
+async function resolveTagSource(
+  item: BranchTreeItem | undefined,
+  commandContext: CommandContext
+): Promise<
+  | {
+      branchName: string;
+      repoRoot: string;
+    }
+  | undefined
+> {
+  if (
+    item?.branchName &&
+    item.repoRoot &&
+    (item.nodeType === 'branch' || item.nodeType === 'currentBranch')
+  ) {
+    return {
+      branchName: item.branchName,
+      repoRoot: item.repoRoot,
+    };
+  }
+
+  if (item && (item.nodeType !== 'section' || item.containerPath !== 'section:tags')) {
+    return undefined;
+  }
+
+  const repoRoot = item?.repoRoot ?? (await commandContext.requireRepoRoot());
+  if (!repoRoot) {
+    return undefined;
+  }
+
+  const currentBranch = await commandContext.requireCurrentBranch(NO_CURRENT_BRANCH_MESSAGE);
+  if (!currentBranch) {
+    return undefined;
+  }
+
+  return {
+    branchName: currentBranch.name,
+    repoRoot,
+  };
 }

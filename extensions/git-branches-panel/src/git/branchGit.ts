@@ -147,6 +147,54 @@ export async function syncBranch(
   };
 }
 
+export async function pullBranchChanges(
+  repoRoot: string,
+  branchName: string,
+  options: SyncBranchOptions = {}
+): Promise<SyncBranchResult> {
+  if (options.refreshRemoteState ?? true) {
+    await fetchRemoteState(repoRoot);
+  }
+
+  const { branch, syncTarget, remoteBranchExists, syncCounts } = await resolveBranchRemoteState(
+    repoRoot,
+    branchName
+  );
+
+  if (!branch.upstreamName) {
+    throw new Error(`Branch '${branch.name}' is not tracking a remote branch yet. Publish it first.`);
+  }
+
+  if (!isTrackedBranch(branch) || !remoteBranchExists) {
+    throw new Error(
+      `Tracked upstream '${syncTarget.upstreamName}' for '${branch.name}' no longer exists. Publish the branch again to recreate it.`
+    );
+  }
+
+  const shouldPull = syncCounts.behindCount > 0;
+
+  if (shouldPull) {
+    if (branch.isCurrent) {
+      await pullBranch(repoRoot, syncTarget, syncCounts.aheadCount > 0, true);
+    } else {
+      await syncNonCurrentBranch(repoRoot, branch.name, syncTarget, {
+        shouldPull: true,
+        shouldPush: false,
+        hasOutgoingCommits: syncCounts.aheadCount > 0,
+        shouldSetUpstream: false,
+      });
+    }
+  }
+
+  return {
+    branchName: branch.name,
+    upstreamName: syncTarget.upstreamName,
+    didPull: shouldPull,
+    didPush: false,
+    publishedUpstream: false,
+  };
+}
+
 export async function pushBranch(
   repoRoot: string,
   branchName: string,

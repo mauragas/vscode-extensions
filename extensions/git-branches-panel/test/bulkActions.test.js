@@ -527,6 +527,170 @@ test('syncFolderBranches counts failed tracked branches in the processed summary
   assert.match(vscodeState.warningMessages.at(-1).message, /2 failed/);
 });
 
+test('syncAllBranches syncs every tracked local branch from the Local section and skips unpublished branches', async () => {
+  const vscodeState = createVscodeState();
+  const fetchRemoteStateCalls = [];
+  const syncBranchCalls = [];
+
+  const { commandContext } = createBulkActionsModule({
+    vscodeState,
+    gitMock: {
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async deleteTag() {},
+      async fetchRemoteState(repoRoot) {
+        fetchRemoteStateCalls.push(repoRoot);
+      },
+      async getBranches() {
+        return [
+          {
+            name: 'main',
+            isCurrent: true,
+            upstreamName: 'origin/main',
+            upstreamMissing: false,
+          },
+          {
+            name: 'feature/one',
+            isCurrent: false,
+            upstreamName: 'origin/feature/one',
+            upstreamMissing: false,
+          },
+          {
+            name: 'feature/publish',
+            isCurrent: false,
+          },
+        ];
+      },
+      async pullBranchChanges() {
+        throw new Error('pullBranchChanges should not be called in this test');
+      },
+      async pushBranch() {
+        throw new Error('pushBranch should not be called in this test');
+      },
+      async syncBranch(repoRoot, branchName, options) {
+        syncBranchCalls.push({ repoRoot, branchName, options });
+        return {
+          branchName,
+          upstreamName: `origin/${branchName}`,
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.syncAllBranches']({
+    nodeType: 'section',
+    containerScope: 'local',
+    containerPath: 'section:local',
+    repoRoot: '/repo',
+    label: 'Local',
+  });
+
+  assert.deepEqual(fetchRemoteStateCalls, ['/repo']);
+  assert.deepEqual(syncBranchCalls, [
+    {
+      repoRoot: '/repo',
+      branchName: 'main',
+      options: { refreshRemoteState: false },
+    },
+    {
+      repoRoot: '/repo',
+      branchName: 'feature/one',
+      options: { refreshRemoteState: false },
+    },
+  ]);
+  assert.deepEqual(commandContext.state.refreshCalls, [
+    { fetchRemoteState: false, forceFetchRemoteState: false },
+  ]);
+  assert.match(vscodeState.warningMessages.at(-1).message, /Processed 2 tracked local branches under 'Local'/);
+  assert.match(vscodeState.warningMessages.at(-1).message, /Needs publishing: feature\/publish/);
+});
+
+test('pullAllLocalBranches pulls tracked branches from the Local section and reports skipped unpublished branches', async () => {
+  const vscodeState = createVscodeState();
+  const fetchRemoteStateCalls = [];
+  const pullBranchCalls = [];
+
+  const { commandContext } = createBulkActionsModule({
+    vscodeState,
+    gitMock: {
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async deleteTag() {},
+      async fetchRemoteState(repoRoot) {
+        fetchRemoteStateCalls.push(repoRoot);
+      },
+      async getBranches() {
+        return [
+          {
+            name: 'main',
+            isCurrent: true,
+            upstreamName: 'origin/main',
+            upstreamMissing: false,
+          },
+          {
+            name: 'feature/behind',
+            isCurrent: false,
+            upstreamName: 'origin/feature/behind',
+            upstreamMissing: false,
+          },
+          {
+            name: 'feature/publish',
+            isCurrent: false,
+          },
+        ];
+      },
+      async pullBranchChanges(repoRoot, branchName, options) {
+        pullBranchCalls.push({ repoRoot, branchName, options });
+        return {
+          branchName,
+          upstreamName: `origin/${branchName}`,
+          didPull: branchName === 'feature/behind',
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async pushBranch() {
+        throw new Error('pushBranch should not be called in this test');
+      },
+      async syncBranch() {
+        throw new Error('syncBranch should not be called in this test');
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.pullAllLocalBranches']({
+    nodeType: 'section',
+    containerScope: 'local',
+    containerPath: 'section:local',
+    repoRoot: '/repo',
+    label: 'Local',
+  });
+
+  assert.deepEqual(fetchRemoteStateCalls, ['/repo']);
+  assert.deepEqual(pullBranchCalls, [
+    {
+      repoRoot: '/repo',
+      branchName: 'main',
+      options: { refreshRemoteState: false },
+    },
+    {
+      repoRoot: '/repo',
+      branchName: 'feature/behind',
+      options: { refreshRemoteState: false },
+    },
+  ]);
+  assert.deepEqual(commandContext.state.refreshCalls, [
+    { fetchRemoteState: false },
+  ]);
+  assert.match(vscodeState.warningMessages.at(-1).message, /Processed 2 tracked local branches under 'Local'/);
+  assert.match(vscodeState.warningMessages.at(-1).message, /1 pulled/);
+  assert.match(vscodeState.warningMessages.at(-1).message, /1 already up to date/);
+  assert.match(vscodeState.warningMessages.at(-1).message, /Needs publishing: feature\/publish/);
+});
+
 test('pushFolderBranches pushes tracked branches and publishes unpublished descendants', async () => {
   const vscodeState = createVscodeState();
   vscodeState.warningResponses.push('Push');

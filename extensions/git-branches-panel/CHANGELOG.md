@@ -9,6 +9,9 @@ All notable changes to this project will be documented in this file.
 - Moved the default stash shortcut out of the Branches view toolbar and into the built-in **Changes** view title bar through the stable `scm/title` menu contribution point
 - Added three optional stash commands/buttons, disabled by default: **Stash staged changes silently**, **Stash all changes**, and **Stash staged changes**
 - Added optional-message prompts for the non-silent stash commands and SCM-aware repository resolution so stash buttons target the correct Git repository in multi-repository workspaces
+- Added inline hover actions for the **Local**, **Remote**, **Stash**, **Worktree**, and **Tags** section headers, including **Sync All Branches**, **Pull All Branch Changes**, **Apply Latest Stash**, and section-level tag/worktree creation shortcuts
+- Added matching section context-menu entries where that improved discoverability for the new hover actions
+- Changed `gitBranchesPanel.showCurrentBranchInfo` to default to `false`, so the current-branch banner starts hidden unless you opt back in
 - Documented the stable-API limitation that prevents custom buttons from being placed directly inside the built-in Commit button row, so the implementation uses the Changes view title bar instead
 - Removed the duplicate current-branch indicator from the VS Code status bar so the extension no longer repeats VS Code's built-in branch label
 

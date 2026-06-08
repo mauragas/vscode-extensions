@@ -4,7 +4,7 @@ import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 import { getErrorMessage } from '../errorUtils';
 import { createWorktree, removeWorktree } from '../git';
 import { BranchTreeItem } from '../treeProvider';
-import type { CommandContext } from './shared';
+import { NO_CURRENT_BRANCH_MESSAGE, type CommandContext } from './shared';
 
 const WORKTREE_PATH_PLACEHOLDER = '/path/to/your-worktree';
 
@@ -13,6 +13,12 @@ export function registerWorktreeCommands(
   commandContext: CommandContext
 ): void {
   context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.createWorktreeFromCurrentBranch',
+      async (item?: BranchTreeItem) => {
+        await handleCreateWorktreeFromCurrentBranch(item, commandContext);
+      }
+    ),
     vscode.commands.registerCommand(
       'gitBranchesPanel.createWorktreeFromRef',
       async (item: BranchTreeItem) => {
@@ -47,42 +53,81 @@ async function handleCreateWorktreeFromRef(
   item: BranchTreeItem,
   commandContext: CommandContext
 ): Promise<void> {
-  if (!item.branchName || !item.repoRoot || !isWorktreeSourceItem(item)) {
+  const source = resolveWorktreeSourceFromItem(item);
+  if (!source) {
     return;
   }
 
-  const shouldDetach = shouldDetachWorktreeSource(item);
+  await promptAndCreateWorktree(source, commandContext);
+}
 
+async function handleCreateWorktreeFromCurrentBranch(
+  item: BranchTreeItem | undefined,
+  commandContext: CommandContext
+): Promise<void> {
+  if (item && (item.nodeType !== 'section' || item.containerPath !== 'section:worktree')) {
+    return;
+  }
+
+  const repoRoot = item?.repoRoot ?? (await commandContext.requireRepoRoot());
+  if (!repoRoot) {
+    return;
+  }
+
+  const currentBranch = await commandContext.requireCurrentBranch(NO_CURRENT_BRANCH_MESSAGE);
+  if (!currentBranch) {
+    return;
+  }
+
+  await promptAndCreateWorktree(
+    {
+      branchName: currentBranch.name,
+      prompt: `Enter a path for the new worktree from current branch '${currentBranch.name}'`,
+      refName: currentBranch.name,
+      repoRoot,
+      shouldDetach: false,
+      successMessage: (worktreeLabel) =>
+        `Created worktree '${worktreeLabel}' from current branch '${currentBranch.name}'.`,
+    },
+    commandContext
+  );
+}
+
+interface WorktreeCreationSource {
+  readonly branchName: string;
+  readonly prompt: string;
+  readonly refName: string;
+  readonly repoRoot: string;
+  readonly shouldDetach: boolean;
+  successMessage(worktreeLabel: string): string;
+}
+
+async function promptAndCreateWorktree(
+  source: WorktreeCreationSource,
+  commandContext: CommandContext
+): Promise<void> {
   const worktreePathInput = await vscode.window.showInputBox({
-    prompt: buildCreateWorktreePrompt(item, shouldDetach),
+    prompt: source.prompt,
     placeHolder: WORKTREE_PATH_PLACEHOLDER,
-    value: buildSuggestedWorktreePath(item.repoRoot, item.branchName),
-    validateInput: (value) => validateWorktreePath(value, item.repoRoot ?? ''),
+    value: buildSuggestedWorktreePath(source.repoRoot, source.branchName),
+    validateInput: (value) => validateWorktreePath(value, source.repoRoot),
   });
   if (!worktreePathInput) {
     return;
   }
 
-  const worktreePath = resolveWorktreePath(item.repoRoot, worktreePathInput);
+  const worktreePath = resolveWorktreePath(source.repoRoot, worktreePathInput);
   const worktreeLabel = basename(worktreePath) || worktreePath;
 
   try {
-    await createWorktree(item.repoRoot, worktreePath, resolveWorktreeRef(item), {
-      detach: shouldDetach,
+    await createWorktree(source.repoRoot, worktreePath, source.refName, {
+      detach: source.shouldDetach,
     });
-    await commandContext.showSuccessAndRefresh(
-      shouldDetach
-        ? `Created detached worktree '${worktreeLabel}' from '${item.branchName}'.`
-        : `Created worktree '${worktreeLabel}' from '${item.branchName}'.`,
-      {
-        fetchRemoteState: false,
-      }
-    );
+    await commandContext.showSuccessAndRefresh(source.successMessage(worktreeLabel), {
+      fetchRemoteState: false,
+    });
   } catch (error) {
-    commandContext.showCommandError(
-      `Failed to create a worktree from '${item.branchName}'`,
-      error
-    );
+    commandContext.showCommandError(`Failed to create a worktree from '${source.branchName}'`, error);
   }
 }
 
@@ -197,6 +242,28 @@ function shouldDetachWorktreeSource(item: BranchTreeItem): boolean {
     item.nodeType === 'remoteBranch' ||
     item.nodeType === 'staleRemoteBranch'
   );
+}
+
+function resolveWorktreeSourceFromItem(
+  item: BranchTreeItem
+): WorktreeCreationSource | undefined {
+  if (!item.branchName || !item.repoRoot || !isWorktreeSourceItem(item)) {
+    return undefined;
+  }
+
+  const shouldDetach = shouldDetachWorktreeSource(item);
+
+  return {
+    branchName: item.branchName,
+    prompt: buildCreateWorktreePrompt(item, shouldDetach),
+    refName: resolveWorktreeRef(item),
+    repoRoot: item.repoRoot,
+    shouldDetach,
+    successMessage: (worktreeLabel) =>
+      shouldDetach
+        ? `Created detached worktree '${worktreeLabel}' from '${item.branchName}'.`
+        : `Created worktree '${worktreeLabel}' from '${item.branchName}'.`,
+  };
 }
 
 function buildCreateWorktreePrompt(item: BranchTreeItem, shouldDetach: boolean): string {

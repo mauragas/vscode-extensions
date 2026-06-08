@@ -20,93 +20,83 @@ export function registerStashCommands(
   context: vscode.ExtensionContext,
   commandContext: CommandContext
 ): void {
-  context.subscriptions.push(
+  const subscriptions = [
     vscode.commands.registerCommand('gitBranchesPanel.stashSilently', async (target?: unknown) => {
       await handleStashSilently(commandContext, target);
-    })
-  );
-  context.subscriptions.push(
+    }),
     vscode.commands.registerCommand(
       'gitBranchesPanel.stashStagedSilently',
       async (target?: unknown) => {
         await handleStashStagedSilently(commandContext, target);
       }
-    )
-  );
-  context.subscriptions.push(
+    ),
     vscode.commands.registerCommand('gitBranchesPanel.stashAllChanges', async (target?: unknown) => {
       await handleStashAllChanges(commandContext, target);
-    })
-  );
-  context.subscriptions.push(
+    }),
     vscode.commands.registerCommand(
       'gitBranchesPanel.stashStagedChanges',
       async (target?: unknown) => {
         await handleStashStagedChanges(commandContext, target);
       }
-    )
-  );
-  context.subscriptions.push(
+    ),
     vscode.commands.registerCommand('gitBranchesPanel.applyStash', async (item: BranchTreeItem) => {
       await handleApplyStash(item, commandContext);
-    })
-  );
-  context.subscriptions.push(
+    }),
     vscode.commands.registerCommand('gitBranchesPanel.popStash', async (item: BranchTreeItem) => {
       await handlePopStash(item, commandContext);
-    })
-  );
-  context.subscriptions.push(
+    }),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.applyLatestStash',
+      async (item?: BranchTreeItem) => {
+        await handleApplyLatestStash(item, commandContext);
+      }
+    ),
     vscode.commands.registerCommand(
       'gitBranchesPanel.popLatestStash',
       async (item?: BranchTreeItem) => {
         await handlePopLatestStash(item, commandContext);
       }
-    )
-  );
-  context.subscriptions.push(
+    ),
     vscode.commands.registerCommand('gitBranchesPanel.dropStash', async (item: BranchTreeItem) => {
       await handleDropStash(item, commandContext);
-    })
-  );
-  context.subscriptions.push(
+    }),
     vscode.commands.registerCommand(
       'gitBranchesPanel.dropAllStashes',
       async (item?: BranchTreeItem) => {
         await handleDropAllStashes(item, commandContext);
       }
-    )
-  );
+    ),
+  ];
+
+  context.subscriptions.push(...subscriptions);
 }
 
 async function handlePopLatestStash(
   item: BranchTreeItem | undefined,
   commandContext: CommandContext
 ): Promise<void> {
-  if (item && (item.nodeType !== 'section' || item.containerScope !== 'stash')) {
-    return;
-  }
+  await handleLatestStashAction(item, commandContext, {
+    emptyMessage: 'No stashes were found to pop.',
+    failureMessage: 'Failed to pop the latest stash',
+    run: async (repoRoot, stashName) => {
+      await popStash(repoRoot, stashName);
+    },
+    successMessage: (stashName) => `Popped latest stash '${stashName}'.`,
+  });
+}
 
-  const repoRoot = item?.repoRoot ?? (await commandContext.requireRepoRoot());
-  if (!repoRoot) {
-    return;
-  }
-
-  try {
-    const stashes = await getStashes(repoRoot);
-    const latestStash = stashes[0];
-    if (!latestStash?.name) {
-      vscode.window.showInformationMessage('No stashes were found to pop.');
-      return;
-    }
-
-    await popStash(repoRoot, latestStash.name);
-    await commandContext.showSuccessAndRefresh(`Popped latest stash '${latestStash.name}'.`, {
-      fetchRemoteState: false,
-    });
-  } catch (error) {
-    commandContext.showCommandError('Failed to pop the latest stash', error);
-  }
+async function handleApplyLatestStash(
+  item: BranchTreeItem | undefined,
+  commandContext: CommandContext
+): Promise<void> {
+  await handleLatestStashAction(item, commandContext, {
+    emptyMessage: 'No stashes were found to apply.',
+    failureMessage: 'Failed to apply the latest stash',
+    run: async (repoRoot, stashName) => {
+      await applyStash(repoRoot, stashName);
+    },
+    successMessage: (stashName) => `Applied latest stash '${stashName}'.`,
+  });
 }
 
 async function handleStashSilently(
@@ -312,4 +302,42 @@ async function promptForOptionalStashMessage(prompt: string): Promise<string | u
     placeHolder: 'Optional stash message',
     value: '',
   });
+}
+
+interface LatestStashActionOptions {
+  readonly emptyMessage: string;
+  readonly failureMessage: string;
+  run(repoRoot: string, stashName: string): Promise<void>;
+  successMessage(stashName: string): string;
+}
+
+async function handleLatestStashAction(
+  item: BranchTreeItem | undefined,
+  commandContext: CommandContext,
+  options: LatestStashActionOptions
+): Promise<void> {
+  if (item && (item.nodeType !== 'section' || item.containerScope !== 'stash')) {
+    return;
+  }
+
+  const repoRoot = item?.repoRoot ?? (await commandContext.requireRepoRoot());
+  if (!repoRoot) {
+    return;
+  }
+
+  try {
+    const stashes = await getStashes(repoRoot);
+    const latestStash = stashes[0];
+    if (!latestStash?.name) {
+      vscode.window.showInformationMessage(options.emptyMessage);
+      return;
+    }
+
+    await options.run(repoRoot, latestStash.name);
+    await commandContext.showSuccessAndRefresh(options.successMessage(latestStash.name), {
+      fetchRemoteState: false,
+    });
+  } catch (error) {
+    commandContext.showCommandError(options.failureMessage, error);
+  }
 }

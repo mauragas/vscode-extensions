@@ -20,6 +20,13 @@ test('package manifest exposes the 1.6.0 branch-menu and stash contributions', (
   );
   assert.equal(getCommand('gitBranchesPanel.stashAllChanges').title, 'Stash all changes');
   assert.equal(getCommand('gitBranchesPanel.stashStagedChanges').title, 'Stash staged changes');
+  assert.equal(getCommand('gitBranchesPanel.syncAllBranches').title, 'Sync All Branches');
+  assert.equal(getCommand('gitBranchesPanel.pullAllLocalBranches').title, 'Pull All Branch Changes');
+  assert.equal(getCommand('gitBranchesPanel.applyLatestStash').title, 'Apply Latest Stash');
+  assert.equal(
+    getCommand('gitBranchesPanel.createWorktreeFromCurrentBranch').title,
+    'Create New Worktree...'
+  );
 
   const scmTitleMenus = packageJson.contributes.menus['scm/title'];
   assert.deepEqual(
@@ -48,6 +55,7 @@ test('package manifest exposes the 1.6.0 branch-menu and stash contributions', (
     'cherryPickIntoCurrent',
     'deleteOrCleanup',
   ]);
+  assert.equal(settings['gitBranchesPanel.showCurrentBranchInfo'].default, false);
   assert.equal(settings['gitBranchesPanel.toolbar.showStashSilently'].default, false);
   assert.equal(settings['gitBranchesPanel.changesView.showStashAllChangesSilently'].default, true);
   assert.equal(settings['gitBranchesPanel.changesView.showStashStagedChangesSilently'].default, false);
@@ -61,6 +69,58 @@ test('package manifest exposes the 1.6.0 branch-menu and stash contributions', (
   assert.ok(
     packageJson.contributes.menus['view/item/context'].some(
       (item) => item.command === 'gitBranchesPanel.showBranchActions' && item.group === '2_more@1'
+    )
+  );
+
+  const sectionInlineMenus = packageJson.contributes.menus['view/item/context'];
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.newBranch' && item.when === 'viewItem == localSection' && item.group === 'inline@1'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.syncAllBranches' && item.when === 'viewItem == localSection' && item.group === 'inline@2'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.pullAllLocalBranches' && item.when === 'viewItem == localSection' && item.group === 'inline@3'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.fetchAll' && item.when === 'viewItem == remoteSection' && item.group === 'inline@1'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.fetchAllPrune' && item.when === 'viewItem == remoteSection' && item.group === 'inline@2'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.popLatestStash' && item.when === 'viewItem == stashSection' && item.group === 'inline@1'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.applyLatestStash' && item.when === 'viewItem == stashSection' && item.group === 'inline@2'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.createWorktreeFromCurrentBranch' && item.when === 'viewItem == worktreeSection' && item.group === 'inline@1'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.createTag' && item.when === 'viewItem == tagsSection' && item.group === 'inline@1'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.pushAllTags' && item.when === 'viewItem == tagsSection' && item.group === 'inline@2'
     )
   );
 });

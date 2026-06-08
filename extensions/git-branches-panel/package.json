@@ -142,6 +142,11 @@
         "icon": "$(new-folder)"
       },
       {
+        "command": "gitBranchesPanel.createWorktreeFromCurrentBranch",
+        "title": "Create New Worktree...",
+        "icon": "$(new-folder)"
+      },
+      {
         "command": "gitBranchesPanel.syncBranch",
         "title": "Sync Branch",
         "icon": "$(sync)"
@@ -240,6 +245,11 @@
         "icon": "$(arrow-up)"
       },
       {
+        "command": "gitBranchesPanel.applyLatestStash",
+        "title": "Apply Latest Stash",
+        "icon": "$(arrow-down)"
+      },
+      {
         "command": "gitBranchesPanel.dropStash",
         "title": "Drop Stash",
         "icon": "$(trash)"
@@ -276,6 +286,16 @@
         "command": "gitBranchesPanel.removeWorktree",
         "title": "Remove Worktree",
         "icon": "$(trash)"
+      },
+      {
+        "command": "gitBranchesPanel.syncAllBranches",
+        "title": "Sync All Branches",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "gitBranchesPanel.pullAllLocalBranches",
+        "title": "Pull All Branch Changes",
+        "icon": "$(repo-pull)"
       },
       {
         "command": "gitBranchesPanel.syncFolderBranches",
@@ -401,6 +421,56 @@
           "command": "gitBranchesPanel.deleteBranch",
           "when": "viewItem == branch || viewItem == publishableBranch || viewItem == missingUpstreamBranch",
           "group": "inline@5"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "viewItem == localSection",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitBranchesPanel.syncAllBranches",
+          "when": "viewItem == localSection",
+          "group": "inline@2"
+        },
+        {
+          "command": "gitBranchesPanel.pullAllLocalBranches",
+          "when": "viewItem == localSection",
+          "group": "inline@3"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "viewItem == remoteSection",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "viewItem == remoteSection",
+          "group": "inline@2"
+        },
+        {
+          "command": "gitBranchesPanel.popLatestStash",
+          "when": "viewItem == stashSection",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitBranchesPanel.applyLatestStash",
+          "when": "viewItem == stashSection",
+          "group": "inline@2"
+        },
+        {
+          "command": "gitBranchesPanel.createWorktreeFromCurrentBranch",
+          "when": "viewItem == worktreeSection",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitBranchesPanel.createTag",
+          "when": "viewItem == tagsSection",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitBranchesPanel.pushAllTags",
+          "when": "viewItem == tagsSection",
+          "group": "inline@2"
         },
         {
           "command": "gitBranchesPanel.syncBranch",
@@ -1333,14 +1403,24 @@
           "group": "2_folder@3"
         },
         {
-          "command": "gitBranchesPanel.syncFolderBranches",
+          "command": "gitBranchesPanel.newBranch",
           "when": "viewItem == localSection",
           "group": "1_local@1"
         },
         {
-          "command": "gitBranchesPanel.pruneMissingUpstreamBranches",
+          "command": "gitBranchesPanel.syncAllBranches",
           "when": "viewItem == localSection",
           "group": "1_local@2"
+        },
+        {
+          "command": "gitBranchesPanel.pullAllLocalBranches",
+          "when": "viewItem == localSection",
+          "group": "1_local@3"
+        },
+        {
+          "command": "gitBranchesPanel.pruneMissingUpstreamBranches",
+          "when": "viewItem == localSection",
+          "group": "1_local@4"
         },
         {
           "command": "gitBranchesPanel.fetchAll",
@@ -1353,14 +1433,29 @@
           "group": "1_remote@2"
         },
         {
+          "command": "gitBranchesPanel.popLatestStash",
+          "when": "viewItem == stashSection",
+          "group": "1_stash@1"
+        },
+        {
+          "command": "gitBranchesPanel.applyLatestStash",
+          "when": "viewItem == stashSection",
+          "group": "1_stash@1.5"
+        },
+        {
           "command": "gitBranchesPanel.dropAllStashes",
           "when": "viewItem == stashSection",
           "group": "1_stash@2"
         },
         {
-          "command": "gitBranchesPanel.popLatestStash",
-          "when": "viewItem == stashSection",
-          "group": "1_stash@1"
+          "command": "gitBranchesPanel.createWorktreeFromCurrentBranch",
+          "when": "viewItem == worktreeSection",
+          "group": "1_worktree@0.5"
+        },
+        {
+          "command": "gitBranchesPanel.createTag",
+          "when": "viewItem == tagsSection",
+          "group": "1_tags@0.5"
         },
         {
           "command": "gitBranchesPanel.pushAllTags",
@@ -1474,7 +1569,7 @@
         },
         "gitBranchesPanel.showCurrentBranchInfo": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "description": "Show the current branch summary above the branches tree views."
         },
         "gitBranchesPanel.showStatusBarBranchAction": {
