@@ -53,6 +53,10 @@ test('package manifest exposes the 1.7.0 branch-menu, worktree, stash, and hook 
   assert.equal(getCommand('gitBranchesPanel.enableHook').icon, '$(play)');
   assert.equal(getCommand('gitBranchesPanel.disableHook').title, 'Disable Hook');
   assert.equal(getCommand('gitBranchesPanel.disableHook').icon, '$(close)');
+  assert.equal(getCommand('gitBranchesPanel.enableAllHooks').title, 'Enable All Hooks');
+  assert.equal(getCommand('gitBranchesPanel.enableAllHooks').icon, '$(play)');
+  assert.equal(getCommand('gitBranchesPanel.disableAllHooks').title, 'Disable All Hooks');
+  assert.equal(getCommand('gitBranchesPanel.disableAllHooks').icon, '$(close)');
   assert.equal(
     getCommand('gitBranchesPanel.createWorktreeFromCurrentBranch').title,
     'Create New Worktree...'
@@ -199,6 +203,16 @@ test('package manifest exposes the 1.7.0 branch-menu, worktree, stash, and hook 
   assert.ok(
     sectionInlineMenus.some(
       (item) => item.command === 'gitBranchesPanel.createWorktreeFromCurrentBranch' && item.when === 'viewItem == worktreeSection' && item.group === 'inline@1'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.enableAllHooks' && item.when === 'viewItem == hooksSection' && item.group === 'inline@1'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.disableAllHooks' && item.when === 'viewItem == hooksSection' && item.group === 'inline@2'
     )
   );
   assert.ok(

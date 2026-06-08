@@ -59,7 +59,7 @@ Remote, Stash, Worktree, Hooks, and Tags stay collapsed until you expand them.
 - ⚡ **Double-click checkout** — double-click a branch to switch instantly
 - 🔀 **Merge into current** — merge a selected branch into the current branch from the context menu
 - 🧰 **Context menu actions** — checkout, sync, publish, create tags, rename, merge into current, cherry-pick, compare with current, copy branch name, delete/cleanup, and open a codicon-based branch actions picker, all with settings-driven branch-menu ordering and visibility
-- 🧷 **Section context menu parity** — the new Local, Stash, Worktree, and Tags section hover actions are also available from those section context menus where that improves discoverability
+- 🧷 **Section context menu parity** — the new Local, Stash, Worktree, Hooks, and Tags section hover actions are also available from those section context menus where that improves discoverability
 - ➕ **Toolbar quick actions** — create a new branch, sync or publish the current branch, fetch all remotes, fetch all with prune, refresh, open advanced actions, and open extension settings from the panel title bar, with the stash shortcut moved out of the Branches toolbar by default
 - 🔄 **Targeted auto-refresh** — updates loaded sections when `.git/HEAD`, `.git/FETCH_HEAD`, `.git/config`, `.git/packed-refs`, `.git/refs/heads/`, `.git/refs/remotes/`, `.git/refs/tags/`, `.git/refs/stash`, `.git/logs/refs/stash`, `.git/hooks/`, `.git/worktrees/`, workspace folders, or settings change
 
@@ -99,6 +99,8 @@ Remote, Stash, Worktree, Hooks, and Tags stay collapsed until you expand them.
 | Edit Hook | Open the selected hook script in the editor |
 | Enable Hook | Re-enable a disabled hook script |
 | Disable Hook | Disable the selected hook script |
+| Enable All Hooks | Re-enable every disabled hook shown in the Hooks section |
+| Disable All Hooks | Disable every enabled hook shown in the Hooks section |
 | Open Worktree | Open the selected worktree in the current window |
 | Create New Worktree... | Create a new worktree from the currently checked out branch directly from the Worktree section |
 | Open Worktree in New Window | Open the selected worktree in a new window |
@@ -130,6 +132,7 @@ Remote, Stash, Worktree, Hooks, and Tags stay collapsed until you expand them.
 - **Remote** — **Fetch All**, **Fetch All (Prune)**
 - **Stash** — **Pop Latest Stash**, **Apply Latest Stash**
 - **Worktree** — **Create New Worktree...** (from the current branch)
+- **Hooks** — **Enable All Hooks**, **Disable All Hooks**
 - **Tags** — **Create Tag...** (on the current branch), **Push All Tags**
 
 For the Tags and Worktree section shortcuts, the extension uses the currently checked out branch as the source ref when you trigger the action from the section itself.

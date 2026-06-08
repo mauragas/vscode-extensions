@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { setHookEnabled } from '../git';
+import { getHooks, setHookEnabled } from '../git';
 import { BranchTreeItem } from '../treeProvider';
 import type { CommandContext } from './shared';
 
@@ -8,7 +8,7 @@ export function registerHookCommands(
   context: vscode.ExtensionContext,
   commandContext: CommandContext
 ): void {
-  context.subscriptions.push(
+  const subscriptions = [
     vscode.commands.registerCommand('gitBranchesPanel.editHook', async (item: BranchTreeItem) => {
       await handleEditHook(item, commandContext);
     }),
@@ -17,8 +17,22 @@ export function registerHookCommands(
     }),
     vscode.commands.registerCommand('gitBranchesPanel.disableHook', async (item: BranchTreeItem) => {
       await handleSetHookEnabled(item, false, commandContext);
-    })
-  );
+    }),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.enableAllHooks',
+      async (item?: BranchTreeItem) => {
+        await handleSetAllHooksEnabled(item, true, commandContext);
+      }
+    ),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.disableAllHooks',
+      async (item?: BranchTreeItem) => {
+        await handleSetAllHooksEnabled(item, false, commandContext);
+      }
+    ),
+  ];
+
+  context.subscriptions.push(...subscriptions);
 }
 
 async function handleEditHook(
@@ -76,6 +90,53 @@ async function handleSetHookEnabled(
   }
 }
 
+async function handleSetAllHooksEnabled(
+  item: BranchTreeItem | undefined,
+  enabled: boolean,
+  commandContext: CommandContext
+): Promise<void> {
+  if (item && !isHooksSectionItem(item)) {
+    return;
+  }
+
+  const repoRoot = item?.repoRoot ?? (await commandContext.requireRepoRoot());
+  if (!repoRoot) {
+    return;
+  }
+
+  try {
+    const hooksToUpdate = (await getHooks(repoRoot)).filter(
+      (hook) => hook.scope === 'hook' && hook.hookPath && Boolean(hook.hookEnabled) !== enabled
+    );
+    if (hooksToUpdate.length === 0) {
+      return;
+    }
+
+    await Promise.all(
+      hooksToUpdate.map((hook) =>
+        setHookEnabled(
+          {
+            hookEnabled: hook.hookEnabled,
+            hookPath: hook.hookPath ?? '',
+          },
+          enabled
+        )
+      )
+    );
+
+    await commandContext.showSuccessAndRefresh(
+      `${enabled ? 'Enabled' : 'Disabled'} ${hooksToUpdate.length} ${pluralizeHook(hooksToUpdate.length)}.`,
+      {
+        sections: ['hooks'],
+        fetchRemoteState: false,
+        onlyIfLoaded: true,
+      }
+    );
+  } catch (error) {
+    commandContext.showCommandError(`Failed to ${enabled ? 'enable' : 'disable'} all hooks`, error);
+  }
+}
+
 function isHookItem(
   item: BranchTreeItem
 ): item is BranchTreeItem & {
@@ -90,4 +151,12 @@ function isHookItem(
       item.branchInfo.hookName &&
       item.branchInfo.hookPath
   );
+}
+
+function isHooksSectionItem(item: BranchTreeItem): boolean {
+  return item.nodeType === 'section' && item.containerScope === 'hook';
+}
+
+function pluralizeHook(count: number): string {
+  return count === 1 ? 'hook' : 'hooks';
 }

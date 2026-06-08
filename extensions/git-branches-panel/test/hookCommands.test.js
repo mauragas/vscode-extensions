@@ -94,6 +94,9 @@ function createHookCommandsModule({ vscodeState, gitMock }) {
   const hookCommands = loadFresh('../out/commands/hookCommands.js', {
     vscode: createVscodeMock(vscodeState),
     '../git': {
+      async getHooks() {
+        return [];
+      },
       async setHookEnabled() {},
       ...gitMock,
     },
@@ -220,6 +223,123 @@ test('enableHook enables the selected disabled hook and refreshes the Hooks sect
   assert.deepEqual(commandContext.state.successRefreshes, [
     {
       message: "Enabled hook 'commit-msg'.",
+      options: { sections: ['hooks'], fetchRemoteState: false, onlyIfLoaded: true },
+    },
+  ]);
+});
+
+test('enableAllHooks enables only disabled hooks from the Hooks section', async () => {
+  const vscodeState = createVscodeState();
+  const hookToggleCalls = [];
+
+  const { commandContext } = createHookCommandsModule({
+    vscodeState,
+    gitMock: {
+      async getHooks() {
+        return [
+          {
+            name: 'pre-commit · local',
+            scope: 'hook',
+            hookEnabled: false,
+            hookPath: '/repo/.git/hooks/pre-commit.disabled',
+          },
+          {
+            name: 'commit-msg · shared',
+            scope: 'hook',
+            hookEnabled: true,
+            hookPath: '/repo/.githooks/commit-msg',
+          },
+        ];
+      },
+      async setHookEnabled(target, enabled) {
+        hookToggleCalls.push({ target, enabled });
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.enableAllHooks']({
+    nodeType: 'section',
+    containerScope: 'hook',
+    repoRoot: '/repo',
+  });
+
+  assert.deepEqual(hookToggleCalls, [
+    {
+      target: {
+        hookEnabled: false,
+        hookPath: '/repo/.git/hooks/pre-commit.disabled',
+      },
+      enabled: true,
+    },
+  ]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: 'Enabled 1 hook.',
+      options: { sections: ['hooks'], fetchRemoteState: false, onlyIfLoaded: true },
+    },
+  ]);
+});
+
+test('disableAllHooks disables only enabled hooks from the Hooks section', async () => {
+  const vscodeState = createVscodeState();
+  const hookToggleCalls = [];
+
+  const { commandContext } = createHookCommandsModule({
+    vscodeState,
+    gitMock: {
+      async getHooks() {
+        return [
+          {
+            name: 'pre-commit · local',
+            scope: 'hook',
+            hookEnabled: true,
+            hookPath: '/repo/.git/hooks/pre-commit',
+          },
+          {
+            name: 'post-commit · local',
+            scope: 'hook',
+            hookEnabled: false,
+            hookPath: '/repo/.git/hooks/post-commit.disabled',
+          },
+          {
+            name: 'prepare-commit-msg · shared',
+            scope: 'hook',
+            hookEnabled: true,
+            hookPath: '/repo/.githooks/prepare-commit-msg',
+          },
+        ];
+      },
+      async setHookEnabled(target, enabled) {
+        hookToggleCalls.push({ target, enabled });
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.disableAllHooks']({
+    nodeType: 'section',
+    containerScope: 'hook',
+    repoRoot: '/repo',
+  });
+
+  assert.deepEqual(hookToggleCalls, [
+    {
+      target: {
+        hookEnabled: true,
+        hookPath: '/repo/.git/hooks/pre-commit',
+      },
+      enabled: false,
+    },
+    {
+      target: {
+        hookEnabled: true,
+        hookPath: '/repo/.githooks/prepare-commit-msg',
+      },
+      enabled: false,
+    },
+  ]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: 'Disabled 2 hooks.',
       options: { sections: ['hooks'], fetchRemoteState: false, onlyIfLoaded: true },
     },
   ]);
