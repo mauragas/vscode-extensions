@@ -215,8 +215,8 @@ async function listDirectoryEntries(directoryPath: string): Promise<string[]> {
 }
 
 async function getGitDirectory(repoRoot: string): Promise<string> {
-  const { stdout } = await runGit(repoRoot, ['rev-parse', '--absolute-git-dir']);
-  return stdout.trim();
+  const { stdout } = await runGit(repoRoot, ['rev-parse', '--git-common-dir']);
+  return resolveGitPath(repoRoot, stdout.trim());
 }
 
 async function getActiveHooksPath(repoRoot: string): Promise<string> {

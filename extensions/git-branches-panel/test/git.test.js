@@ -500,6 +500,24 @@ test('getHooks lists local and shared hooks while distinguishing active state', 
   assert.equal(disabledSharedHook.hookPath, disabledSharedHookPath);
 });
 
+test('getHooks finds local hooks from a linked worktree workspace', async (t) => {
+  const { repoRoot, worktreeRoot } = createRepositoryWithLinkedWorktree(t);
+  const localHookPath = join(repoRoot, '.git', 'hooks', 'post-checkout');
+
+  writeFileSync(localHookPath, '#!/bin/sh\nexit 0\n');
+  chmodSync(localHookPath, 0o755);
+
+  const hooks = await getHooks(worktreeRoot);
+  const localHook = hooks.find(
+    (hook) => hook.hookName === 'post-checkout' && hook.hookSource === 'local'
+  );
+
+  assert.ok(localHook);
+  assert.equal(localHook.hookEnabled, true);
+  assert.equal(localHook.hookActive, true);
+  assert.equal(localHook.hookPath, localHookPath);
+});
+
 test('setHookEnabled toggles executable bits for standard git hooks', async (t) => {
   const repoRoot = createTempRepository(t);
   const hookPath = join(repoRoot, '.git', 'hooks', 'pre-commit');

@@ -94,7 +94,7 @@ export async function renameStash(
       await rebuildStashStack(repoRoot, originalEntries);
     } catch (restoreError) {
       throw new Error(
-        `${getErrorMessage(error)} Failed to restore original stashes: ${getErrorMessage(restoreError)}`
+        `${getErrorMessage(error)}. Failed to restore original stashes: ${getErrorMessage(restoreError)}`
       );
     }
 
