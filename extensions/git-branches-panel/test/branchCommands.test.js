@@ -431,6 +431,7 @@ test('newBranch prefills the selected configured branch prefix before creating t
 
   assert.equal(vscodeState.quickPickRequests.length, 1);
   assert.equal(vscodeState.inputBoxRequests[0].value, 'bugfix/');
+  assert.deepEqual(vscodeState.inputBoxRequests[0].valueSelection, [7, 7]);
   assert.deepEqual(createBranchCalls, [{ repoRoot: '/repo', branchName: 'bugfix/issue-123' }]);
 });
 
