@@ -158,6 +158,12 @@ async function enableHook(target: HookToggleTarget): Promise<void> {
   if (target.hookPath.endsWith(DISABLED_HOOK_SUFFIX)) {
     const restoredPath = target.hookPath.slice(0, -DISABLED_HOOK_SUFFIX.length);
     await rename(target.hookPath, restoredPath);
+
+    if (shouldToggleHookByRename()) {
+      return;
+    }
+
+    await ensureHookIsExecutable(restoredPath);
     return;
   }
 
@@ -165,8 +171,7 @@ async function enableHook(target: HookToggleTarget): Promise<void> {
     return;
   }
 
-  const hookStats = await stat(target.hookPath);
-  await chmod(target.hookPath, hookStats.mode | 0o111);
+  await ensureHookIsExecutable(target.hookPath);
 }
 
 async function disableHook(target: HookToggleTarget): Promise<void> {
@@ -181,6 +186,11 @@ async function disableHook(target: HookToggleTarget): Promise<void> {
 
   const hookStats = await stat(target.hookPath);
   await chmod(target.hookPath, hookStats.mode & ~0o111);
+}
+
+async function ensureHookIsExecutable(hookPath: string): Promise<void> {
+  const hookStats = await stat(hookPath);
+  await chmod(hookPath, hookStats.mode | 0o111);
 }
 
 async function hasHookArtifacts(directoryPath: string): Promise<boolean> {

@@ -547,6 +547,10 @@ test('setHookEnabled restores .disabled hook files back into place', async (t) =
 
   assert.equal(existsSync(hookPath), true);
   assert.equal(existsSync(disabledHookPath), false);
+
+  if (process.platform !== 'win32') {
+    assert.notEqual(statSync(hookPath).mode & 0o111, 0);
+  }
 });
 
 test('getWorktrees lists the current and linked worktrees', async (t) => {
