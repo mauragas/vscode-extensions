@@ -506,6 +506,11 @@
           "group": "inline@2"
         },
         {
+          "command": "gitBranchesPanel.removeWorktree",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree)$/",
+          "group": "inline@3"
+        },
+        {
           "command": "gitBranchesPanel.checkoutTag",
           "when": "viewItem == tag",
           "group": "inline@1"

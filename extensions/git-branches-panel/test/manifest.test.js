@@ -200,6 +200,11 @@ test('package manifest exposes the 1.7.0 branch-menu, worktree rename, and stash
   );
   assert.ok(
     sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.removeWorktree' && item.when === 'viewItem =~ /^(?:pinned:)?(?:worktree)$/' && item.group === 'inline@3'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
       (item) => item.command === 'gitBranchesPanel.renameWorktree' && item.when === 'viewItem =~ /^(?:pinned:)?(?:worktree)$/' && item.group === '1_worktree@5'
     )
   );
