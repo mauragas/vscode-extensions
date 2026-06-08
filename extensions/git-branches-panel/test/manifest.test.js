@@ -94,11 +94,12 @@ test('package manifest exposes the 1.6.0 branch-menu and stash contributions', (
     (item) => item.group === '1_branchCustom@1'
   );
   assert.ok(branchMenuSlots.some((item) => item.when.includes("gitBranchesPanel.branchContextMenu.slot1")));
-  assert.ok(
-    packageJson.contributes.menus['view/item/context'].some(
-      (item) => item.command === 'gitBranchesPanel.showBranchActions' && item.group === '2_more@1'
-    )
+  assert.ok(branchMenuSlots.some((item) => item.when.includes('(?:pinned:)?')));
+  const showBranchActionsMenu = packageJson.contributes.menus['view/item/context'].find(
+    (item) => item.command === 'gitBranchesPanel.showBranchActions' && item.group === '2_more@1'
   );
+  assert.ok(showBranchActionsMenu);
+  assert.ok(showBranchActionsMenu.when.includes('(?:pinned:)?'));
 
   const sectionInlineMenus = packageJson.contributes.menus['view/item/context'];
   const [pinInlineMenu] = getViewItemContextMenuItems('gitBranchesPanel.pinItem');
@@ -106,24 +107,34 @@ test('package manifest exposes the 1.6.0 branch-menu and stash contributions', (
 
   assert.equal(pinInlineMenu.group, 'inline@4');
   assert.equal(unpinInlineMenu.group, 'inline@4');
-  assert.ok(pinInlineMenu.when.includes('viewItem == branch'));
-  assert.ok(unpinInlineMenu.when.includes('viewItem == branch'));
   assert.ok(pinInlineMenu.when.includes('view == gitBranchesPanel'));
   assert.ok(pinInlineMenu.when.includes('view == gitBranchesSCM'));
   assert.ok(unpinInlineMenu.when.includes('view == gitBranchesPanel'));
   assert.ok(unpinInlineMenu.when.includes('view == gitBranchesSCM'));
-  assert.ok(pinInlineMenu.when.includes('!gitBranchesPanel.branchesViewSelectedItemPinned'));
-  assert.ok(pinInlineMenu.when.includes('!gitBranchesPanel.scmViewSelectedItemPinned'));
-  assert.ok(unpinInlineMenu.when.includes('gitBranchesPanel.branchesViewSelectedItemPinned'));
-  assert.ok(unpinInlineMenu.when.includes('gitBranchesPanel.scmViewSelectedItemPinned'));
-  assert.equal(
-    pinInlineMenu.when
-      .replace(' && ((view == gitBranchesPanel && !gitBranchesPanel.branchesViewSelectedItemPinned) || (view == gitBranchesSCM && !gitBranchesPanel.scmViewSelectedItemPinned))', ''),
-    unpinInlineMenu.when
-      .replace(' && ((view == gitBranchesPanel && gitBranchesPanel.branchesViewSelectedItemPinned) || (view == gitBranchesSCM && gitBranchesPanel.scmViewSelectedItemPinned))', '')
+  assert.ok(
+    pinInlineMenu.when.includes(
+      'viewItem =~ /^(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|remoteBranch|staleRemoteBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch|stash|worktree|currentWorktree)$/'
+    )
   );
   assert.ok(
+    unpinInlineMenu.when.includes(
+      'viewItem =~ /^pinned:(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|remoteBranch|staleRemoteBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch|stash|worktree|currentWorktree)$/'
+    )
+  );
+  assert.ok(!pinInlineMenu.when.includes('branchesViewSelectedItemPinned'));
+  assert.ok(!pinInlineMenu.when.includes('scmViewSelectedItemPinned'));
+  assert.ok(!unpinInlineMenu.when.includes('branchesViewSelectedItemPinned'));
+  assert.ok(!unpinInlineMenu.when.includes('scmViewSelectedItemPinned'));
+  assert.ok(
     !sectionInlineMenus.some((item) => item.command === 'gitBranchesPanel.togglePinItem')
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) =>
+        item.command === 'gitBranchesPanel.syncBranch' &&
+        item.group === 'inline@1' &&
+        item.when === 'viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)$/'
+    )
   );
 
   assert.ok(
@@ -168,12 +179,12 @@ test('package manifest exposes the 1.6.0 branch-menu and stash contributions', (
   );
   assert.ok(
     sectionInlineMenus.some(
-      (item) => item.command === 'gitBranchesPanel.openWorktree' && item.when === 'viewItem == worktree || viewItem == currentWorktree' && item.group === 'inline@1'
+      (item) => item.command === 'gitBranchesPanel.openWorktree' && item.when === 'viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/' && item.group === 'inline@1'
     )
   );
   assert.ok(
     sectionInlineMenus.some(
-      (item) => item.command === 'gitBranchesPanel.openWorktreeInNewWindow' && item.when === 'viewItem == worktree || viewItem == currentWorktree' && item.group === 'inline@2'
+      (item) => item.command === 'gitBranchesPanel.openWorktreeInNewWindow' && item.when === 'viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/' && item.group === 'inline@2'
     )
   );
   assert.ok(
@@ -188,17 +199,17 @@ test('package manifest exposes the 1.6.0 branch-menu and stash contributions', (
   );
   assert.ok(
     sectionInlineMenus.some(
-      (item) => item.command === 'gitBranchesPanel.popStash' && item.when === 'viewItem == stash' && item.group === 'inline@1'
+      (item) => item.command === 'gitBranchesPanel.popStash' && item.when === 'viewItem =~ /^(?:pinned:)?(?:stash)$/' && item.group === 'inline@1'
     )
   );
   assert.ok(
     sectionInlineMenus.some(
-      (item) => item.command === 'gitBranchesPanel.applyStash' && item.when === 'viewItem == stash' && item.group === 'inline@2'
+      (item) => item.command === 'gitBranchesPanel.applyStash' && item.when === 'viewItem =~ /^(?:pinned:)?(?:stash)$/' && item.group === 'inline@2'
     )
   );
   assert.ok(
     sectionInlineMenus.some(
-      (item) => item.command === 'gitBranchesPanel.dropStash' && item.when === 'viewItem == stash' && item.group === 'inline@3'
+      (item) => item.command === 'gitBranchesPanel.dropStash' && item.when === 'viewItem =~ /^(?:pinned:)?(?:stash)$/' && item.group === 'inline@3'
     )
   );
   assert.ok(

@@ -402,42 +402,42 @@
       "view/item/context": [
         {
           "command": "gitBranchesPanel.branchActionInProgress",
-          "when": "viewItem == busyBranch || viewItem == busyCurrentBranch || viewItem == busyPublishableBranch || viewItem == busyPublishableCurrentBranch || viewItem == busyMissingUpstreamBranch",
+          "when": "viewItem =~ /^(?:pinned:)?(?:busyBranch|busyCurrentBranch|busyPublishableBranch|busyPublishableCurrentBranch|busyMissingUpstreamBranch)$/",
           "group": "inline@1"
         },
         {
           "command": "gitBranchesPanel.syncBranch",
-          "when": "viewItem == branch || viewItem == currentBranch || viewItem == protectedBranch",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)$/",
           "group": "inline@1"
         },
         {
           "command": "gitBranchesPanel.publishBranch",
-          "when": "viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch",
+          "when": "viewItem =~ /^(?:pinned:)?(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "inline@1"
         },
         {
           "command": "gitBranchesPanel.checkout",
-          "when": "viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "inline@2"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelectedAndCheckout",
-          "when": "viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "inline@3"
         },
         {
           "command": "gitBranchesPanel.pinItem",
-          "when": "(viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch || viewItem == stash || viewItem == worktree || viewItem == currentWorktree) && ((view == gitBranchesPanel && !gitBranchesPanel.branchesViewSelectedItemPinned) || (view == gitBranchesSCM && !gitBranchesPanel.scmViewSelectedItemPinned))",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && viewItem =~ /^(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|remoteBranch|staleRemoteBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch|stash|worktree|currentWorktree)$/",
           "group": "inline@4"
         },
         {
           "command": "gitBranchesPanel.unpinItem",
-          "when": "(viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch || viewItem == stash || viewItem == worktree || viewItem == currentWorktree) && ((view == gitBranchesPanel && gitBranchesPanel.branchesViewSelectedItemPinned) || (view == gitBranchesSCM && gitBranchesPanel.scmViewSelectedItemPinned))",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && viewItem =~ /^pinned:(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|remoteBranch|staleRemoteBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch|stash|worktree|currentWorktree)$/",
           "group": "inline@4"
         },
         {
           "command": "gitBranchesPanel.deleteBranch",
-          "when": "viewItem == branch || viewItem == publishableBranch || viewItem == missingUpstreamBranch",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|missingUpstreamBranch)$/",
           "group": "inline@5"
         },
         {
@@ -492,12 +492,12 @@
         },
         {
           "command": "gitBranchesPanel.openWorktree",
-          "when": "viewItem == worktree || viewItem == currentWorktree",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/",
           "group": "inline@1"
         },
         {
           "command": "gitBranchesPanel.openWorktreeInNewWindow",
-          "when": "viewItem == worktree || viewItem == currentWorktree",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/",
           "group": "inline@2"
         },
         {
@@ -512,862 +512,862 @@
         },
         {
           "command": "gitBranchesPanel.popStash",
-          "when": "viewItem == stash",
+          "when": "viewItem =~ /^(?:pinned:)?(?:stash)$/",
           "group": "inline@1"
         },
         {
           "command": "gitBranchesPanel.applyStash",
-          "when": "viewItem == stash",
+          "when": "viewItem =~ /^(?:pinned:)?(?:stash)$/",
           "group": "inline@2"
         },
         {
           "command": "gitBranchesPanel.dropStash",
-          "when": "viewItem == stash",
+          "when": "viewItem =~ /^(?:pinned:)?(?:stash)$/",
           "group": "inline@3"
         },
         {
           "command": "gitBranchesPanel.syncBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'syncOrPublish' && (viewItem == branch || viewItem == currentBranch || viewItem == protectedBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'syncOrPublish' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)$/",
           "group": "1_branchCustom@1"
         },
         {
           "command": "gitBranchesPanel.publishBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'syncOrPublish' && (viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'syncOrPublish' && viewItem =~ /^(?:pinned:)?(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@1"
         },
         {
           "command": "gitBranchesPanel.checkout",
-          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'checkout' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'checkout' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@1"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelected",
-          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'newBranchFromSelected' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'newBranchFromSelected' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@1"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelectedAndCheckout",
-          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'newBranchFromSelectedAndCheckout' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'newBranchFromSelectedAndCheckout' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@1"
         },
         {
           "command": "gitBranchesPanel.createWorktreeFromRef",
-          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'createWorktree' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'createWorktree' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@1"
         },
         {
           "command": "gitBranchesPanel.renameBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'renameBranch' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'renameBranch' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@1"
         },
         {
           "command": "gitBranchesPanel.createTag",
-          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'createTag' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'createTag' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@1"
         },
         {
           "command": "gitBranchesPanel.copyBranchName",
-          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'copyBranchName' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'copyBranchName' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@1"
         },
         {
           "command": "gitBranchesPanel.compareBranchWithCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'compareWithCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'compareWithCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@1"
         },
         {
           "command": "gitBranchesPanel.mergeIntoCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'mergeIntoCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'mergeIntoCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@1"
         },
         {
           "command": "gitBranchesPanel.cherryPickIntoCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'cherryPickIntoCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'cherryPickIntoCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@1"
         },
         {
           "command": "gitBranchesPanel.deleteBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'deleteOrCleanup' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == missingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|missingUpstreamBranch)$/",
           "group": "1_branchCustom@1"
         },
         {
           "command": "gitBranchesPanel.removeStaleRemoteTrackingRef",
-          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'deleteOrCleanup' && viewItem == staleRemoteBranch",
+          "when": "gitBranchesPanel.branchContextMenu.slot1 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:staleRemoteBranch)$/",
           "group": "1_branchCustom@1"
         },
         {
           "command": "gitBranchesPanel.syncBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'syncOrPublish' && (viewItem == branch || viewItem == currentBranch || viewItem == protectedBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'syncOrPublish' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)$/",
           "group": "1_branchCustom@2"
         },
         {
           "command": "gitBranchesPanel.publishBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'syncOrPublish' && (viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'syncOrPublish' && viewItem =~ /^(?:pinned:)?(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@2"
         },
         {
           "command": "gitBranchesPanel.checkout",
-          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'checkout' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'checkout' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@2"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelected",
-          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'newBranchFromSelected' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'newBranchFromSelected' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@2"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelectedAndCheckout",
-          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'newBranchFromSelectedAndCheckout' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'newBranchFromSelectedAndCheckout' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@2"
         },
         {
           "command": "gitBranchesPanel.createWorktreeFromRef",
-          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'createWorktree' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'createWorktree' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@2"
         },
         {
           "command": "gitBranchesPanel.renameBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'renameBranch' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'renameBranch' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@2"
         },
         {
           "command": "gitBranchesPanel.createTag",
-          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'createTag' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'createTag' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@2"
         },
         {
           "command": "gitBranchesPanel.copyBranchName",
-          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'copyBranchName' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'copyBranchName' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@2"
         },
         {
           "command": "gitBranchesPanel.compareBranchWithCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'compareWithCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'compareWithCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@2"
         },
         {
           "command": "gitBranchesPanel.mergeIntoCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'mergeIntoCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'mergeIntoCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@2"
         },
         {
           "command": "gitBranchesPanel.cherryPickIntoCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'cherryPickIntoCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'cherryPickIntoCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@2"
         },
         {
           "command": "gitBranchesPanel.deleteBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'deleteOrCleanup' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == missingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|missingUpstreamBranch)$/",
           "group": "1_branchCustom@2"
         },
         {
           "command": "gitBranchesPanel.removeStaleRemoteTrackingRef",
-          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'deleteOrCleanup' && viewItem == staleRemoteBranch",
+          "when": "gitBranchesPanel.branchContextMenu.slot2 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:staleRemoteBranch)$/",
           "group": "1_branchCustom@2"
         },
         {
           "command": "gitBranchesPanel.syncBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'syncOrPublish' && (viewItem == branch || viewItem == currentBranch || viewItem == protectedBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'syncOrPublish' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)$/",
           "group": "1_branchCustom@3"
         },
         {
           "command": "gitBranchesPanel.publishBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'syncOrPublish' && (viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'syncOrPublish' && viewItem =~ /^(?:pinned:)?(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@3"
         },
         {
           "command": "gitBranchesPanel.checkout",
-          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'checkout' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'checkout' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@3"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelected",
-          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'newBranchFromSelected' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'newBranchFromSelected' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@3"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelectedAndCheckout",
-          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'newBranchFromSelectedAndCheckout' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'newBranchFromSelectedAndCheckout' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@3"
         },
         {
           "command": "gitBranchesPanel.createWorktreeFromRef",
-          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'createWorktree' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'createWorktree' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@3"
         },
         {
           "command": "gitBranchesPanel.renameBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'renameBranch' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'renameBranch' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@3"
         },
         {
           "command": "gitBranchesPanel.createTag",
-          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'createTag' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'createTag' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@3"
         },
         {
           "command": "gitBranchesPanel.copyBranchName",
-          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'copyBranchName' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'copyBranchName' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@3"
         },
         {
           "command": "gitBranchesPanel.compareBranchWithCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'compareWithCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'compareWithCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@3"
         },
         {
           "command": "gitBranchesPanel.mergeIntoCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'mergeIntoCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'mergeIntoCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@3"
         },
         {
           "command": "gitBranchesPanel.cherryPickIntoCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'cherryPickIntoCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'cherryPickIntoCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@3"
         },
         {
           "command": "gitBranchesPanel.deleteBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'deleteOrCleanup' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == missingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|missingUpstreamBranch)$/",
           "group": "1_branchCustom@3"
         },
         {
           "command": "gitBranchesPanel.removeStaleRemoteTrackingRef",
-          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'deleteOrCleanup' && viewItem == staleRemoteBranch",
+          "when": "gitBranchesPanel.branchContextMenu.slot3 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:staleRemoteBranch)$/",
           "group": "1_branchCustom@3"
         },
         {
           "command": "gitBranchesPanel.syncBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'syncOrPublish' && (viewItem == branch || viewItem == currentBranch || viewItem == protectedBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'syncOrPublish' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)$/",
           "group": "1_branchCustom@4"
         },
         {
           "command": "gitBranchesPanel.publishBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'syncOrPublish' && (viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'syncOrPublish' && viewItem =~ /^(?:pinned:)?(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@4"
         },
         {
           "command": "gitBranchesPanel.checkout",
-          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'checkout' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'checkout' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@4"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelected",
-          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'newBranchFromSelected' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'newBranchFromSelected' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@4"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelectedAndCheckout",
-          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'newBranchFromSelectedAndCheckout' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'newBranchFromSelectedAndCheckout' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@4"
         },
         {
           "command": "gitBranchesPanel.createWorktreeFromRef",
-          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'createWorktree' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'createWorktree' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@4"
         },
         {
           "command": "gitBranchesPanel.renameBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'renameBranch' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'renameBranch' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@4"
         },
         {
           "command": "gitBranchesPanel.createTag",
-          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'createTag' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'createTag' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@4"
         },
         {
           "command": "gitBranchesPanel.copyBranchName",
-          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'copyBranchName' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'copyBranchName' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@4"
         },
         {
           "command": "gitBranchesPanel.compareBranchWithCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'compareWithCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'compareWithCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@4"
         },
         {
           "command": "gitBranchesPanel.mergeIntoCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'mergeIntoCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'mergeIntoCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@4"
         },
         {
           "command": "gitBranchesPanel.cherryPickIntoCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'cherryPickIntoCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'cherryPickIntoCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@4"
         },
         {
           "command": "gitBranchesPanel.deleteBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'deleteOrCleanup' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == missingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|missingUpstreamBranch)$/",
           "group": "1_branchCustom@4"
         },
         {
           "command": "gitBranchesPanel.removeStaleRemoteTrackingRef",
-          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'deleteOrCleanup' && viewItem == staleRemoteBranch",
+          "when": "gitBranchesPanel.branchContextMenu.slot4 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:staleRemoteBranch)$/",
           "group": "1_branchCustom@4"
         },
         {
           "command": "gitBranchesPanel.syncBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'syncOrPublish' && (viewItem == branch || viewItem == currentBranch || viewItem == protectedBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'syncOrPublish' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)$/",
           "group": "1_branchCustom@5"
         },
         {
           "command": "gitBranchesPanel.publishBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'syncOrPublish' && (viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'syncOrPublish' && viewItem =~ /^(?:pinned:)?(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@5"
         },
         {
           "command": "gitBranchesPanel.checkout",
-          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'checkout' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'checkout' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@5"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelected",
-          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'newBranchFromSelected' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'newBranchFromSelected' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@5"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelectedAndCheckout",
-          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'newBranchFromSelectedAndCheckout' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'newBranchFromSelectedAndCheckout' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@5"
         },
         {
           "command": "gitBranchesPanel.createWorktreeFromRef",
-          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'createWorktree' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'createWorktree' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@5"
         },
         {
           "command": "gitBranchesPanel.renameBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'renameBranch' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'renameBranch' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@5"
         },
         {
           "command": "gitBranchesPanel.createTag",
-          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'createTag' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'createTag' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@5"
         },
         {
           "command": "gitBranchesPanel.copyBranchName",
-          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'copyBranchName' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'copyBranchName' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@5"
         },
         {
           "command": "gitBranchesPanel.compareBranchWithCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'compareWithCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'compareWithCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@5"
         },
         {
           "command": "gitBranchesPanel.mergeIntoCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'mergeIntoCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'mergeIntoCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@5"
         },
         {
           "command": "gitBranchesPanel.cherryPickIntoCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'cherryPickIntoCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'cherryPickIntoCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@5"
         },
         {
           "command": "gitBranchesPanel.deleteBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'deleteOrCleanup' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == missingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|missingUpstreamBranch)$/",
           "group": "1_branchCustom@5"
         },
         {
           "command": "gitBranchesPanel.removeStaleRemoteTrackingRef",
-          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'deleteOrCleanup' && viewItem == staleRemoteBranch",
+          "when": "gitBranchesPanel.branchContextMenu.slot5 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:staleRemoteBranch)$/",
           "group": "1_branchCustom@5"
         },
         {
           "command": "gitBranchesPanel.syncBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'syncOrPublish' && (viewItem == branch || viewItem == currentBranch || viewItem == protectedBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'syncOrPublish' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)$/",
           "group": "1_branchCustom@6"
         },
         {
           "command": "gitBranchesPanel.publishBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'syncOrPublish' && (viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'syncOrPublish' && viewItem =~ /^(?:pinned:)?(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@6"
         },
         {
           "command": "gitBranchesPanel.checkout",
-          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'checkout' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'checkout' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@6"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelected",
-          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'newBranchFromSelected' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'newBranchFromSelected' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@6"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelectedAndCheckout",
-          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'newBranchFromSelectedAndCheckout' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'newBranchFromSelectedAndCheckout' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@6"
         },
         {
           "command": "gitBranchesPanel.createWorktreeFromRef",
-          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'createWorktree' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'createWorktree' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@6"
         },
         {
           "command": "gitBranchesPanel.renameBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'renameBranch' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'renameBranch' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@6"
         },
         {
           "command": "gitBranchesPanel.createTag",
-          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'createTag' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'createTag' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@6"
         },
         {
           "command": "gitBranchesPanel.copyBranchName",
-          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'copyBranchName' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'copyBranchName' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@6"
         },
         {
           "command": "gitBranchesPanel.compareBranchWithCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'compareWithCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'compareWithCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@6"
         },
         {
           "command": "gitBranchesPanel.mergeIntoCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'mergeIntoCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'mergeIntoCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@6"
         },
         {
           "command": "gitBranchesPanel.cherryPickIntoCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'cherryPickIntoCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'cherryPickIntoCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@6"
         },
         {
           "command": "gitBranchesPanel.deleteBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'deleteOrCleanup' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == missingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|missingUpstreamBranch)$/",
           "group": "1_branchCustom@6"
         },
         {
           "command": "gitBranchesPanel.removeStaleRemoteTrackingRef",
-          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'deleteOrCleanup' && viewItem == staleRemoteBranch",
+          "when": "gitBranchesPanel.branchContextMenu.slot6 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:staleRemoteBranch)$/",
           "group": "1_branchCustom@6"
         },
         {
           "command": "gitBranchesPanel.syncBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'syncOrPublish' && (viewItem == branch || viewItem == currentBranch || viewItem == protectedBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'syncOrPublish' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)$/",
           "group": "1_branchCustom@7"
         },
         {
           "command": "gitBranchesPanel.publishBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'syncOrPublish' && (viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'syncOrPublish' && viewItem =~ /^(?:pinned:)?(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@7"
         },
         {
           "command": "gitBranchesPanel.checkout",
-          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'checkout' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'checkout' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@7"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelected",
-          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'newBranchFromSelected' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'newBranchFromSelected' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@7"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelectedAndCheckout",
-          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'newBranchFromSelectedAndCheckout' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'newBranchFromSelectedAndCheckout' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@7"
         },
         {
           "command": "gitBranchesPanel.createWorktreeFromRef",
-          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'createWorktree' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'createWorktree' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@7"
         },
         {
           "command": "gitBranchesPanel.renameBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'renameBranch' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'renameBranch' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@7"
         },
         {
           "command": "gitBranchesPanel.createTag",
-          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'createTag' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'createTag' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@7"
         },
         {
           "command": "gitBranchesPanel.copyBranchName",
-          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'copyBranchName' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'copyBranchName' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@7"
         },
         {
           "command": "gitBranchesPanel.compareBranchWithCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'compareWithCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'compareWithCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@7"
         },
         {
           "command": "gitBranchesPanel.mergeIntoCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'mergeIntoCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'mergeIntoCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@7"
         },
         {
           "command": "gitBranchesPanel.cherryPickIntoCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'cherryPickIntoCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'cherryPickIntoCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@7"
         },
         {
           "command": "gitBranchesPanel.deleteBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'deleteOrCleanup' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == missingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|missingUpstreamBranch)$/",
           "group": "1_branchCustom@7"
         },
         {
           "command": "gitBranchesPanel.removeStaleRemoteTrackingRef",
-          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'deleteOrCleanup' && viewItem == staleRemoteBranch",
+          "when": "gitBranchesPanel.branchContextMenu.slot7 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:staleRemoteBranch)$/",
           "group": "1_branchCustom@7"
         },
         {
           "command": "gitBranchesPanel.syncBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'syncOrPublish' && (viewItem == branch || viewItem == currentBranch || viewItem == protectedBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'syncOrPublish' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)$/",
           "group": "1_branchCustom@8"
         },
         {
           "command": "gitBranchesPanel.publishBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'syncOrPublish' && (viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'syncOrPublish' && viewItem =~ /^(?:pinned:)?(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@8"
         },
         {
           "command": "gitBranchesPanel.checkout",
-          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'checkout' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'checkout' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@8"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelected",
-          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'newBranchFromSelected' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'newBranchFromSelected' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@8"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelectedAndCheckout",
-          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'newBranchFromSelectedAndCheckout' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'newBranchFromSelectedAndCheckout' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@8"
         },
         {
           "command": "gitBranchesPanel.createWorktreeFromRef",
-          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'createWorktree' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'createWorktree' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@8"
         },
         {
           "command": "gitBranchesPanel.renameBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'renameBranch' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'renameBranch' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@8"
         },
         {
           "command": "gitBranchesPanel.createTag",
-          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'createTag' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'createTag' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@8"
         },
         {
           "command": "gitBranchesPanel.copyBranchName",
-          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'copyBranchName' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'copyBranchName' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@8"
         },
         {
           "command": "gitBranchesPanel.compareBranchWithCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'compareWithCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'compareWithCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@8"
         },
         {
           "command": "gitBranchesPanel.mergeIntoCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'mergeIntoCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'mergeIntoCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@8"
         },
         {
           "command": "gitBranchesPanel.cherryPickIntoCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'cherryPickIntoCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'cherryPickIntoCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@8"
         },
         {
           "command": "gitBranchesPanel.deleteBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'deleteOrCleanup' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == missingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|missingUpstreamBranch)$/",
           "group": "1_branchCustom@8"
         },
         {
           "command": "gitBranchesPanel.removeStaleRemoteTrackingRef",
-          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'deleteOrCleanup' && viewItem == staleRemoteBranch",
+          "when": "gitBranchesPanel.branchContextMenu.slot8 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:staleRemoteBranch)$/",
           "group": "1_branchCustom@8"
         },
         {
           "command": "gitBranchesPanel.syncBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'syncOrPublish' && (viewItem == branch || viewItem == currentBranch || viewItem == protectedBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'syncOrPublish' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)$/",
           "group": "1_branchCustom@9"
         },
         {
           "command": "gitBranchesPanel.publishBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'syncOrPublish' && (viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'syncOrPublish' && viewItem =~ /^(?:pinned:)?(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@9"
         },
         {
           "command": "gitBranchesPanel.checkout",
-          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'checkout' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'checkout' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@9"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelected",
-          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'newBranchFromSelected' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'newBranchFromSelected' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@9"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelectedAndCheckout",
-          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'newBranchFromSelectedAndCheckout' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'newBranchFromSelectedAndCheckout' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@9"
         },
         {
           "command": "gitBranchesPanel.createWorktreeFromRef",
-          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'createWorktree' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'createWorktree' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@9"
         },
         {
           "command": "gitBranchesPanel.renameBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'renameBranch' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'renameBranch' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@9"
         },
         {
           "command": "gitBranchesPanel.createTag",
-          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'createTag' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'createTag' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@9"
         },
         {
           "command": "gitBranchesPanel.copyBranchName",
-          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'copyBranchName' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'copyBranchName' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@9"
         },
         {
           "command": "gitBranchesPanel.compareBranchWithCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'compareWithCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'compareWithCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@9"
         },
         {
           "command": "gitBranchesPanel.mergeIntoCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'mergeIntoCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'mergeIntoCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@9"
         },
         {
           "command": "gitBranchesPanel.cherryPickIntoCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'cherryPickIntoCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'cherryPickIntoCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@9"
         },
         {
           "command": "gitBranchesPanel.deleteBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'deleteOrCleanup' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == missingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|missingUpstreamBranch)$/",
           "group": "1_branchCustom@9"
         },
         {
           "command": "gitBranchesPanel.removeStaleRemoteTrackingRef",
-          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'deleteOrCleanup' && viewItem == staleRemoteBranch",
+          "when": "gitBranchesPanel.branchContextMenu.slot9 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:staleRemoteBranch)$/",
           "group": "1_branchCustom@9"
         },
         {
           "command": "gitBranchesPanel.syncBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'syncOrPublish' && (viewItem == branch || viewItem == currentBranch || viewItem == protectedBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'syncOrPublish' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)$/",
           "group": "1_branchCustom@10"
         },
         {
           "command": "gitBranchesPanel.publishBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'syncOrPublish' && (viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'syncOrPublish' && viewItem =~ /^(?:pinned:)?(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@10"
         },
         {
           "command": "gitBranchesPanel.checkout",
-          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'checkout' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'checkout' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@10"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelected",
-          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'newBranchFromSelected' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'newBranchFromSelected' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@10"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelectedAndCheckout",
-          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'newBranchFromSelectedAndCheckout' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'newBranchFromSelectedAndCheckout' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@10"
         },
         {
           "command": "gitBranchesPanel.createWorktreeFromRef",
-          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'createWorktree' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'createWorktree' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@10"
         },
         {
           "command": "gitBranchesPanel.renameBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'renameBranch' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'renameBranch' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@10"
         },
         {
           "command": "gitBranchesPanel.createTag",
-          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'createTag' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'createTag' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@10"
         },
         {
           "command": "gitBranchesPanel.copyBranchName",
-          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'copyBranchName' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'copyBranchName' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@10"
         },
         {
           "command": "gitBranchesPanel.compareBranchWithCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'compareWithCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'compareWithCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@10"
         },
         {
           "command": "gitBranchesPanel.mergeIntoCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'mergeIntoCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'mergeIntoCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@10"
         },
         {
           "command": "gitBranchesPanel.cherryPickIntoCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'cherryPickIntoCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'cherryPickIntoCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@10"
         },
         {
           "command": "gitBranchesPanel.deleteBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'deleteOrCleanup' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == missingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|missingUpstreamBranch)$/",
           "group": "1_branchCustom@10"
         },
         {
           "command": "gitBranchesPanel.removeStaleRemoteTrackingRef",
-          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'deleteOrCleanup' && viewItem == staleRemoteBranch",
+          "when": "gitBranchesPanel.branchContextMenu.slot10 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:staleRemoteBranch)$/",
           "group": "1_branchCustom@10"
         },
         {
           "command": "gitBranchesPanel.syncBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'syncOrPublish' && (viewItem == branch || viewItem == currentBranch || viewItem == protectedBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'syncOrPublish' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)$/",
           "group": "1_branchCustom@11"
         },
         {
           "command": "gitBranchesPanel.publishBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'syncOrPublish' && (viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'syncOrPublish' && viewItem =~ /^(?:pinned:)?(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@11"
         },
         {
           "command": "gitBranchesPanel.checkout",
-          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'checkout' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'checkout' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@11"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelected",
-          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'newBranchFromSelected' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'newBranchFromSelected' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@11"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelectedAndCheckout",
-          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'newBranchFromSelectedAndCheckout' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'newBranchFromSelectedAndCheckout' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@11"
         },
         {
           "command": "gitBranchesPanel.createWorktreeFromRef",
-          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'createWorktree' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'createWorktree' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@11"
         },
         {
           "command": "gitBranchesPanel.renameBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'renameBranch' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'renameBranch' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@11"
         },
         {
           "command": "gitBranchesPanel.createTag",
-          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'createTag' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'createTag' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@11"
         },
         {
           "command": "gitBranchesPanel.copyBranchName",
-          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'copyBranchName' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'copyBranchName' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@11"
         },
         {
           "command": "gitBranchesPanel.compareBranchWithCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'compareWithCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'compareWithCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@11"
         },
         {
           "command": "gitBranchesPanel.mergeIntoCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'mergeIntoCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'mergeIntoCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@11"
         },
         {
           "command": "gitBranchesPanel.cherryPickIntoCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'cherryPickIntoCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'cherryPickIntoCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@11"
         },
         {
           "command": "gitBranchesPanel.deleteBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'deleteOrCleanup' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == missingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|missingUpstreamBranch)$/",
           "group": "1_branchCustom@11"
         },
         {
           "command": "gitBranchesPanel.removeStaleRemoteTrackingRef",
-          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'deleteOrCleanup' && viewItem == staleRemoteBranch",
+          "when": "gitBranchesPanel.branchContextMenu.slot11 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:staleRemoteBranch)$/",
           "group": "1_branchCustom@11"
         },
         {
           "command": "gitBranchesPanel.syncBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'syncOrPublish' && (viewItem == branch || viewItem == currentBranch || viewItem == protectedBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'syncOrPublish' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)$/",
           "group": "1_branchCustom@12"
         },
         {
           "command": "gitBranchesPanel.publishBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'syncOrPublish' && (viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'syncOrPublish' && viewItem =~ /^(?:pinned:)?(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@12"
         },
         {
           "command": "gitBranchesPanel.checkout",
-          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'checkout' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'checkout' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@12"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelected",
-          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'newBranchFromSelected' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'newBranchFromSelected' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@12"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelectedAndCheckout",
-          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'newBranchFromSelectedAndCheckout' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'newBranchFromSelectedAndCheckout' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@12"
         },
         {
           "command": "gitBranchesPanel.createWorktreeFromRef",
-          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'createWorktree' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'createWorktree' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@12"
         },
         {
           "command": "gitBranchesPanel.renameBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'renameBranch' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'renameBranch' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@12"
         },
         {
           "command": "gitBranchesPanel.createTag",
-          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'createTag' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'createTag' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@12"
         },
         {
           "command": "gitBranchesPanel.copyBranchName",
-          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'copyBranchName' && (viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'copyBranchName' && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@12"
         },
         {
           "command": "gitBranchesPanel.compareBranchWithCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'compareWithCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'compareWithCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@12"
         },
         {
           "command": "gitBranchesPanel.mergeIntoCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'mergeIntoCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'mergeIntoCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@12"
         },
         {
           "command": "gitBranchesPanel.cherryPickIntoCurrent",
-          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'cherryPickIntoCurrent' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'cherryPickIntoCurrent' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "1_branchCustom@12"
         },
         {
           "command": "gitBranchesPanel.deleteBranch",
-          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'deleteOrCleanup' && (viewItem == branch || viewItem == publishableBranch || viewItem == remoteBranch || viewItem == missingUpstreamBranch)",
+          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|missingUpstreamBranch)$/",
           "group": "1_branchCustom@12"
         },
         {
           "command": "gitBranchesPanel.removeStaleRemoteTrackingRef",
-          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'deleteOrCleanup' && viewItem == staleRemoteBranch",
+          "when": "gitBranchesPanel.branchContextMenu.slot12 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:staleRemoteBranch)$/",
           "group": "1_branchCustom@12"
         },
         {
           "command": "gitBranchesPanel.showBranchActions",
-          "when": "viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == missingUpstreamBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "2_more@1"
         },
         {
@@ -1392,42 +1392,42 @@
         },
         {
           "command": "gitBranchesPanel.applyStash",
-          "when": "viewItem == stash",
+          "when": "viewItem =~ /^(?:pinned:)?(?:stash)$/",
           "group": "1_stash@1"
         },
         {
           "command": "gitBranchesPanel.popStash",
-          "when": "viewItem == stash",
+          "when": "viewItem =~ /^(?:pinned:)?(?:stash)$/",
           "group": "1_stash@2"
         },
         {
           "command": "gitBranchesPanel.dropStash",
-          "when": "viewItem == stash",
+          "when": "viewItem =~ /^(?:pinned:)?(?:stash)$/",
           "group": "2_stash@1"
         },
         {
           "command": "gitBranchesPanel.openWorktree",
-          "when": "viewItem == worktree || viewItem == currentWorktree",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/",
           "group": "1_worktree@1"
         },
         {
           "command": "gitBranchesPanel.openWorktreeInNewWindow",
-          "when": "viewItem == worktree || viewItem == currentWorktree",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/",
           "group": "1_worktree@2"
         },
         {
           "command": "gitBranchesPanel.revealWorktree",
-          "when": "viewItem == worktree || viewItem == currentWorktree",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/",
           "group": "1_worktree@3"
         },
         {
           "command": "gitBranchesPanel.copyWorktreePath",
-          "when": "viewItem == worktree || viewItem == currentWorktree",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/",
           "group": "1_worktree@4"
         },
         {
           "command": "gitBranchesPanel.removeWorktree",
-          "when": "viewItem == worktree",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree)$/",
           "group": "2_worktree@1"
         },
         {
