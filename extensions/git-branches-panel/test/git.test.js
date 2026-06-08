@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
 const { tmpdir } = require('node:os');
-const { join } = require('node:path');
+const { dirname, join } = require('node:path');
 const test = require('node:test');
 
 const {
@@ -33,6 +33,7 @@ const {
   pushBranch,
   pushAllTags,
   removeWorktree,
+  renameWorktree,
   stashAllChanges,
   stashStagedChanges,
   stashSilently,
@@ -459,6 +460,20 @@ test('removeWorktree removes a linked worktree path', async (t) => {
 
   assert.equal(existsSync(worktreeRoot), false);
   assert.equal((await getWorktrees(repoRoot)).some((worktree) => worktree.worktreePath === worktreeRoot), false);
+});
+
+test('renameWorktree moves a linked worktree to its new path', async (t) => {
+  const { repoRoot, worktreeRoot } = createRepositoryWithLinkedWorktree(t);
+  const renamedWorktreeRoot = join(dirname(worktreeRoot), 'feature-worktree-renamed');
+
+  await renameWorktree(repoRoot, worktreeRoot, renamedWorktreeRoot);
+
+  assert.equal(existsSync(worktreeRoot), false);
+  assert.equal(existsSync(renamedWorktreeRoot), true);
+  const worktrees = await getWorktrees(repoRoot);
+  assert.equal(worktrees.some((worktree) => worktree.worktreePath === worktreeRoot), false);
+  assert.equal(worktrees.some((worktree) => worktree.worktreePath === renamedWorktreeRoot), true);
+  assert.equal(runGit(renamedWorktreeRoot, ['rev-parse', '--abbrev-ref', 'HEAD']), 'feature/worktree');
 });
 
 test('fetchAllRemotes keeps stale remote refs while fetchRemoteState prunes them', async (t) => {

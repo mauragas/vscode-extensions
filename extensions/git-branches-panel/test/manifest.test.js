@@ -25,8 +25,8 @@ function getInlineViewItemContextCommands() {
   )];
 }
 
-test('package manifest exposes the 1.6.0 branch-menu and stash contributions', () => {
-  assert.equal(packageJson.version, '1.6.0');
+test('package manifest exposes the 1.7.0 branch-menu, worktree rename, and stash contributions', () => {
+  assert.equal(packageJson.version, '1.7.0');
   assert.equal(getCommand('gitBranchesPanel.stashSilently').title, 'Stash all changes silently');
   assert.equal(
     getCommand('gitBranchesPanel.stashStagedSilently').title,
@@ -48,6 +48,8 @@ test('package manifest exposes the 1.6.0 branch-menu and stash contributions', (
   assert.equal(getCommand('gitBranchesPanel.unpinItem').title, 'Unpin');
   assert.equal(getCommand('gitBranchesPanel.pinItem').icon, '$(pin)');
   assert.equal(getCommand('gitBranchesPanel.unpinItem').icon, '$(pinned)');
+  assert.equal(getCommand('gitBranchesPanel.renameWorktree').title, 'Rename Worktree...');
+  assert.equal(getCommand('gitBranchesPanel.renameWorktree').icon, '$(edit)');
 
   const scmTitleMenus = packageJson.contributes.menus['scm/title'];
   assert.deepEqual(
@@ -194,6 +196,11 @@ test('package manifest exposes the 1.6.0 branch-menu and stash contributions', (
   assert.ok(
     sectionInlineMenus.some(
       (item) => item.command === 'gitBranchesPanel.openWorktreeInNewWindow' && item.when === 'viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/' && item.group === 'inline@2'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.renameWorktree' && item.when === 'viewItem =~ /^(?:pinned:)?(?:worktree)$/' && item.group === '1_worktree@5'
     )
   );
   assert.ok(

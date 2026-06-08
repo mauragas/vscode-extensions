@@ -52,7 +52,7 @@ Remote, Stash, Worktree, and Tags stay collapsed until you expand them.
 - 📦 **Stash actions** — apply, pop, drop, or pop the latest stash from the Stash section context menu, plus stash all or staged changes from the Branches toolbar or built-in Changes view title bar
 - 🏷️ **Tag hover quick actions** — checkout and delete a tag directly from the tag row hover buttons
 - 📦 **Stash hover quick actions** — pop, apply, or drop a stash directly from the stash row hover buttons
-- 🪟 **Worktree actions** — open, reveal, copy, or remove worktrees from the context menu, with open/open-in-new-window buttons now available directly on worktree item hover
+- 🪟 **Worktree actions** — open, rename, reveal, copy, or remove linked worktrees from the context menu, with open/open-in-new-window buttons now available directly on worktree item hover
 - ⚡ **Double-click checkout** — double-click a branch to switch instantly
 - 🔀 **Merge into current** — merge a selected branch into the current branch from the context menu
 - 🧰 **Context menu actions** — checkout, sync, publish, create tags, rename, merge into current, cherry-pick, compare with current, copy branch name, delete/cleanup, and open a codicon-based branch actions picker, all with settings-driven branch-menu ordering and visibility
@@ -96,6 +96,7 @@ Remote, Stash, Worktree, and Tags stay collapsed until you expand them.
 | Open Worktree | Open the selected worktree in the current window |
 | Create New Worktree... | Create a new worktree from the currently checked out branch directly from the Worktree section |
 | Open Worktree in New Window | Open the selected worktree in a new window |
+| Rename Worktree... | Rename a selected linked worktree by moving it to a new path |
 | Reveal Worktree in File Explorer | Reveal the selected worktree in the OS file browser |
 | Copy Worktree Path | Copy the selected worktree path to the clipboard |
 | Pin / Unpin Item | Toggle pinning for branches, stashes, and worktrees so pinned items stay at the top |
@@ -130,6 +131,7 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 ### Worktree item hover actions
 
 - Hover a specific worktree item to reveal **Open Worktree** and **Open Worktree in New Window** inline buttons.
+- Right-click a linked worktree item to **Rename Worktree...**, which moves that worktree to a new path without removing it first.
 
 ### Tag and stash item hover actions
 

@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 
 import { getErrorMessage } from '../errorUtils';
-import { createWorktree, removeWorktree } from '../git';
+import { createWorktree, removeWorktree, renameWorktree } from '../git';
 import { BranchTreeItem } from '../treeProvider';
 import { NO_CURRENT_BRANCH_MESSAGE, type CommandContext } from './shared';
 
@@ -43,6 +43,9 @@ export function registerWorktreeCommands(
         await handleCopyWorktreePath(item);
       }
     ),
+    vscode.commands.registerCommand('gitBranchesPanel.renameWorktree', async (item: BranchTreeItem) => {
+      await handleRenameWorktree(item, commandContext);
+    }),
     vscode.commands.registerCommand('gitBranchesPanel.removeWorktree', async (item: BranchTreeItem) => {
       await handleRemoveWorktree(item, commandContext);
     })
@@ -161,6 +164,46 @@ async function handleCopyWorktreePath(item: BranchTreeItem): Promise<void> {
 
   await vscode.env.clipboard.writeText(item.branchName);
   vscode.window.showInformationMessage(`Copied worktree path '${item.branchName}' to the clipboard.`);
+}
+
+async function handleRenameWorktree(
+  item: BranchTreeItem,
+  commandContext: CommandContext
+): Promise<void> {
+  if (!item.branchName || !item.repoRoot || item.nodeType !== 'worktree') {
+    return;
+  }
+
+  const currentWorktreePath = item.branchName;
+  const repoRoot = item.repoRoot;
+
+  if (item.branchInfo?.isCurrent) {
+    vscode.window.showInformationMessage('Cannot rename the current worktree.');
+    return;
+  }
+
+  const worktreeLabel = basename(currentWorktreePath) || currentWorktreePath;
+  const newWorktreePathInput = await vscode.window.showInputBox({
+    prompt: `Enter a new path for worktree '${worktreeLabel}'`,
+    placeHolder: WORKTREE_PATH_PLACEHOLDER,
+    value: currentWorktreePath,
+    validateInput: (value) => validateRenamedWorktreePath(value, currentWorktreePath, repoRoot),
+  });
+  if (!newWorktreePathInput) {
+    return;
+  }
+
+  const newWorktreePath = resolveRenamedWorktreePath(currentWorktreePath, newWorktreePathInput);
+  const newWorktreeLabel = basename(newWorktreePath) || newWorktreePath;
+
+  try {
+    await renameWorktree(repoRoot, currentWorktreePath, newWorktreePath);
+    await commandContext.showSuccessAndRefresh(`Renamed worktree to '${newWorktreeLabel}'.`, {
+      fetchRemoteState: false,
+    });
+  } catch (error) {
+    commandContext.showCommandError(`Failed to rename worktree '${worktreeLabel}'`, error);
+  }
 }
 
 async function handleRemoveWorktree(
@@ -307,6 +350,34 @@ function validateWorktreePath(value: string, repoRoot: string): string | undefin
   return undefined;
 }
 
+function validateRenamedWorktreePath(
+  value: string,
+  currentWorktreePath: string,
+  repoRoot: string
+): string | undefined {
+  const trimmedValue = value.trim();
+  if (!trimmedValue) {
+    return 'Worktree path cannot be empty.';
+  }
+
+  const resolvedPath = resolveRenamedWorktreePath(currentWorktreePath, trimmedValue);
+  if (resolvedPath === currentWorktreePath) {
+    return 'Worktree path must be different from the current path.';
+  }
+
+  if (resolvedPath === repoRoot) {
+    return 'Worktree path must be different from the repository root.';
+  }
+
+  return undefined;
+}
+
 function resolveWorktreePath(repoRoot: string, worktreePath: string): string {
   return isAbsolute(worktreePath) ? worktreePath : resolve(repoRoot, worktreePath);
+}
+
+function resolveRenamedWorktreePath(currentWorktreePath: string, worktreePath: string): string {
+  return isAbsolute(worktreePath)
+    ? worktreePath
+    : resolve(dirname(currentWorktreePath), worktreePath);
 }

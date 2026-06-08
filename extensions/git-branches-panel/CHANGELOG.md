@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.0] - 2026-06-08
+
+- Added **Rename Worktree...** to linked worktree context menus so you can rename a specific worktree in place without removing and recreating it
+- Added a `renameWorktree` Git helper backed by `git worktree move`, plus command/test coverage for successful linked-worktree moves
+- Kept the rename action unavailable for the current worktree, matching Git's own limitations around moving the actively open worktree
+
 ## [1.6.0] - 2026-06-08
 
 - Added `gitBranchesPanel.branchContextMenu.primaryActions` so branch right-click actions can be reordered or hidden from settings, while **More Branch Actions...** still remains the full fallback picker

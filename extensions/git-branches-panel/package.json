@@ -2,7 +2,7 @@
   "name": "git-branches-panel",
   "displayName": "Git Branches Panel",
   "description": "Tree view for local and remote Git branches, stashes, worktrees, and tags with grouping, sync state, and quick actions.",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "publisher": "karolis-mauragas",
   "license": "MIT",
   "repository": {
@@ -279,6 +279,11 @@
         "command": "gitBranchesPanel.copyWorktreePath",
         "title": "Copy Worktree Path",
         "icon": "$(copy)"
+      },
+      {
+        "command": "gitBranchesPanel.renameWorktree",
+        "title": "Rename Worktree...",
+        "icon": "$(edit)"
       },
       {
         "command": "gitBranchesPanel.togglePinItem",
@@ -1424,6 +1429,11 @@
           "command": "gitBranchesPanel.copyWorktreePath",
           "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/",
           "group": "1_worktree@4"
+        },
+        {
+          "command": "gitBranchesPanel.renameWorktree",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree)$/",
+          "group": "1_worktree@5"
         },
         {
           "command": "gitBranchesPanel.removeWorktree",
