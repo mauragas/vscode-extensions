@@ -262,6 +262,16 @@
         "icon": "$(trash)"
       },
       {
+        "command": "gitBranchesPanel.renameStash",
+        "title": "Rename Stash...",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "gitBranchesPanel.compareStashWithCurrent",
+        "title": "Show Stashed Changes vs Current Branch",
+        "icon": "$(diff-multiple)"
+      },
+      {
         "command": "gitBranchesPanel.openWorktree",
         "title": "Open Worktree",
         "icon": "$(folder-opened)"
@@ -534,6 +544,11 @@
           "command": "gitBranchesPanel.dropStash",
           "when": "viewItem =~ /^(?:pinned:)?(?:stash)$/",
           "group": "inline@3"
+        },
+        {
+          "command": "gitBranchesPanel.renameStash",
+          "when": "viewItem =~ /^(?:pinned:)?(?:stash)$/",
+          "group": "inline@4"
         },
         {
           "command": "gitBranchesPanel.syncBranch",
@@ -1409,6 +1424,16 @@
           "command": "gitBranchesPanel.popStash",
           "when": "viewItem =~ /^(?:pinned:)?(?:stash)$/",
           "group": "1_stash@2"
+        },
+        {
+          "command": "gitBranchesPanel.compareStashWithCurrent",
+          "when": "viewItem =~ /^(?:pinned:)?(?:stash)$/",
+          "group": "1_stash@2.5"
+        },
+        {
+          "command": "gitBranchesPanel.renameStash",
+          "when": "viewItem =~ /^(?:pinned:)?(?:stash)$/",
+          "group": "1_stash@3"
         },
         {
           "command": "gitBranchesPanel.dropStash",

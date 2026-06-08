@@ -1,20 +1,29 @@
 import * as vscode from 'vscode';
+import { join } from 'node:path';
 
 import {
   applyStash,
   dropAllStashes,
   dropStash,
+  getDiffFilesBetweenRefs,
   getStashes,
   popStash,
+  renameStash,
   stashAllChanges,
   stashSilently,
   stashStagedChanges,
   stashStagedSilently,
 } from '../git';
 import { BranchTreeItem } from '../treeProvider';
-import { resolveRepoRootFromScmContext, type CommandContext } from './shared';
+import {
+  getGitApi,
+  NO_CURRENT_BRANCH_MESSAGE,
+  resolveRepoRootFromScmContext,
+  type CommandContext,
+} from './shared';
 
 type StashExecutor = (repoRoot: string, message?: string) => Promise<boolean>;
+type GitExtensionApi = NonNullable<Awaited<ReturnType<typeof getGitApi>>>;
 
 export function registerStashCommands(
   context: vscode.ExtensionContext,
@@ -45,6 +54,15 @@ export function registerStashCommands(
     vscode.commands.registerCommand('gitBranchesPanel.popStash', async (item: BranchTreeItem) => {
       await handlePopStash(item, commandContext);
     }),
+    vscode.commands.registerCommand('gitBranchesPanel.renameStash', async (item: BranchTreeItem) => {
+      await handleRenameStash(item, commandContext);
+    }),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.compareStashWithCurrent',
+      async (item: BranchTreeItem) => {
+        await handleCompareStashWithCurrent(item, commandContext);
+      }
+    ),
     vscode.commands.registerCommand(
       'gitBranchesPanel.applyLatestStash',
       async (item?: BranchTreeItem) => {
@@ -224,6 +242,99 @@ async function handlePopStash(
   }
 }
 
+async function handleRenameStash(
+  item: BranchTreeItem,
+  commandContext: CommandContext
+): Promise<void> {
+  if (!isStashItem(item)) {
+    return;
+  }
+
+  const currentMessage = getEditableStashMessage(item.branchInfo?.lastCommit);
+  const renamedMessageInput = await vscode.window.showInputBox({
+    prompt: `Rename stash '${item.branchName}'`,
+    placeHolder: 'Stash message',
+    value: currentMessage,
+    validateInput: (value) => validateStashRenameMessage(value, currentMessage),
+  });
+  if (!renamedMessageInput) {
+    return;
+  }
+
+  const renamedMessage = renamedMessageInput.trim();
+  const stashIdentifier = item.branchInfo?.stashRevision ?? item.branchName;
+
+  try {
+    await renameStash(item.repoRoot, stashIdentifier, renamedMessage);
+    await commandContext.showSuccessAndRefresh(
+      `Renamed stash '${item.branchName}' to '${renamedMessage}'.`,
+      {
+        fetchRemoteState: false,
+      }
+    );
+  } catch (error) {
+    commandContext.showCommandError(`Failed to rename stash '${item.branchName}'`, error);
+  }
+}
+
+async function handleCompareStashWithCurrent(
+  item: BranchTreeItem,
+  commandContext: CommandContext
+): Promise<void> {
+  if (!isStashItem(item)) {
+    return;
+  }
+
+  const currentBranch = await commandContext.requireCurrentBranch(NO_CURRENT_BRANCH_MESSAGE);
+  if (!currentBranch) {
+    return;
+  }
+
+  const stashReference = item.branchInfo?.stashRevision ?? item.branchName;
+
+  try {
+    const changes = await getDiffFilesBetweenRefs(item.repoRoot, currentBranch.name, stashReference);
+    if (changes.length === 0) {
+      vscode.window.showInformationMessage(
+        `No differences found between current branch '${currentBranch.name}' and stash '${item.branchName}'.`
+      );
+      return;
+    }
+
+    const gitApi = await getGitApi();
+    if (!gitApi) {
+      vscode.window.showErrorMessage('The built-in Git extension API is not available.');
+      return;
+    }
+
+    const repository = gitApi.getRepository(vscode.Uri.file(item.repoRoot));
+    if (!repository) {
+      vscode.window.showErrorMessage('Could not resolve the Git repository for this workspace.');
+      return;
+    }
+
+    const resources = changes.map((change) =>
+      buildCompareResource(change, item.repoRoot, currentBranch.name, stashReference, gitApi)
+    );
+    const reveal = resources.find((resource) => resource.modifiedUri || resource.originalUri);
+
+    await vscode.commands.executeCommand('_workbench.openMultiDiffEditor', {
+      multiDiffSourceUri: vscode.Uri.from({
+        scheme: 'scm-history-item',
+        path: `${repository.rootUri.path}/${currentBranch.name}..${item.branchName}`,
+      }),
+      title: `Compare stash '${item.branchName}' with current '${currentBranch.name}'`,
+      resources,
+      reveal,
+    });
+  } catch (error) {
+    commandContext.showCommandError(
+      `Failed to compare stash '${item.branchName}' with current branch '${currentBranch.name}'`,
+      error
+    );
+  }
+}
+
 async function handleDropStash(
   item: BranchTreeItem,
   commandContext: CommandContext
@@ -339,5 +450,64 @@ async function handleLatestStashAction(
     });
   } catch (error) {
     commandContext.showCommandError(options.failureMessage, error);
+  }
+}
+
+function isStashItem(
+  item: BranchTreeItem
+): item is BranchTreeItem & { branchName: string; repoRoot: string } {
+  return Boolean(item.branchName && item.repoRoot && item.nodeType === 'stash');
+}
+
+function getEditableStashMessage(stashMessage: string | undefined): string {
+  const match = stashMessage?.match(/^(?:WIP on|On) [^:]+:\s*(.*)$/u);
+  return match?.[1] ?? stashMessage ?? '';
+}
+
+function validateStashRenameMessage(value: string, currentMessage: string): string | undefined {
+  const normalizedValue = value.trim();
+  if (!normalizedValue) {
+    return 'Stash message cannot be empty.';
+  }
+
+  if (normalizedValue === currentMessage.trim()) {
+    return 'Please enter a different stash message.';
+  }
+
+  return undefined;
+}
+
+function buildCompareResource(
+  change: {
+    status: 'A' | 'D' | 'M' | 'R';
+    path: string;
+    originalPath?: string;
+  },
+  repoRoot: string,
+  currentRef: string,
+  compareRef: string,
+  gitApi: GitExtensionApi
+): { originalUri?: vscode.Uri; modifiedUri?: vscode.Uri } {
+  switch (change.status) {
+    case 'A':
+      return {
+        modifiedUri: gitApi.toGitUri(vscode.Uri.file(join(repoRoot, change.path)), compareRef),
+      };
+    case 'D':
+      return {
+        originalUri: gitApi.toGitUri(vscode.Uri.file(join(repoRoot, change.path)), currentRef),
+      };
+    case 'R':
+      return {
+        originalUri: change.originalPath
+          ? gitApi.toGitUri(vscode.Uri.file(join(repoRoot, change.originalPath)), currentRef)
+          : undefined,
+        modifiedUri: gitApi.toGitUri(vscode.Uri.file(join(repoRoot, change.path)), compareRef),
+      };
+    default:
+      return {
+        originalUri: gitApi.toGitUri(vscode.Uri.file(join(repoRoot, change.path)), currentRef),
+        modifiedUri: gitApi.toGitUri(vscode.Uri.file(join(repoRoot, change.path)), compareRef),
+      };
   }
 }

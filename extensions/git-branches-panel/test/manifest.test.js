@@ -40,6 +40,13 @@ test('package manifest exposes the 1.7.0 branch-menu, worktree rename, and stash
   assert.equal(getCommand('gitBranchesPanel.fetchAllPrune').icon, '$(clear-all)');
   assert.notEqual(getCommand('gitBranchesPanel.fetchAll').icon, getCommand('gitBranchesPanel.fetchAllPrune').icon);
   assert.equal(getCommand('gitBranchesPanel.applyLatestStash').title, 'Apply Latest Stash');
+  assert.equal(getCommand('gitBranchesPanel.renameStash').title, 'Rename Stash...');
+  assert.equal(getCommand('gitBranchesPanel.renameStash').icon, '$(edit)');
+  assert.equal(
+    getCommand('gitBranchesPanel.compareStashWithCurrent').title,
+    'Show Stashed Changes vs Current Branch'
+  );
+  assert.equal(getCommand('gitBranchesPanel.compareStashWithCurrent').icon, '$(diff-multiple)');
   assert.equal(
     getCommand('gitBranchesPanel.createWorktreeFromCurrentBranch').title,
     'Create New Worktree...'
@@ -231,6 +238,21 @@ test('package manifest exposes the 1.7.0 branch-menu, worktree rename, and stash
   assert.ok(
     sectionInlineMenus.some(
       (item) => item.command === 'gitBranchesPanel.dropStash' && item.when === 'viewItem =~ /^(?:pinned:)?(?:stash)$/' && item.group === 'inline@3'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.renameStash' && item.when === 'viewItem =~ /^(?:pinned:)?(?:stash)$/' && item.group === 'inline@4'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.compareStashWithCurrent' && item.when === 'viewItem =~ /^(?:pinned:)?(?:stash)$/' && item.group === '1_stash@2.5'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.renameStash' && item.when === 'viewItem =~ /^(?:pinned:)?(?:stash)$/' && item.group === '1_stash@3'
     )
   );
   assert.ok(

@@ -16,6 +16,7 @@ interface GitApiRepository {
 interface GitApi {
   readonly repositories: readonly GitApiRepository[];
   getRepository(uri: vscode.Uri): GitApiRepository | null;
+  toGitUri(uri: vscode.Uri, ref: string): vscode.Uri;
 }
 
 interface GitExtensionExports {

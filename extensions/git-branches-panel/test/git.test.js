@@ -32,6 +32,7 @@ const {
   popStash,
   pushBranch,
   pushAllTags,
+  renameStash,
   removeWorktree,
   renameWorktree,
   stashAllChanges,
@@ -420,6 +421,29 @@ test('dropAllStashes clears every stash entry', async (t) => {
 
   assert.equal(hasRef(repoRoot, 'refs/stash'), false);
   assert.equal((await getStashes(repoRoot)).length, 0);
+});
+
+test('renameStash updates the selected stash message while preserving stack order', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  writeFileSync(join(repoRoot, 'README.md'), '# Test repo\nthird\n');
+  await stashAllChanges(repoRoot, 'First stash');
+  writeFileSync(join(repoRoot, 'README.md'), '# Test repo\nfourth\n');
+  await stashAllChanges(repoRoot, 'Second stash');
+
+  const stashesBeforeRename = await getStashes(repoRoot);
+  assert.equal(stashesBeforeRename.length, 2);
+  assert.ok(stashesBeforeRename[1].stashRevision);
+
+  await renameStash(repoRoot, stashesBeforeRename[1].stashRevision, 'Renamed first stash');
+
+  const stashesAfterRename = await getStashes(repoRoot);
+
+  assert.equal(stashesAfterRename.length, 2);
+  assert.equal(stashesAfterRename[0].stashRevision, stashesBeforeRename[0].stashRevision);
+  assert.equal(stashesAfterRename[1].stashRevision, stashesBeforeRename[1].stashRevision);
+  assert.match(stashesAfterRename[0].lastCommit, /Second stash/);
+  assert.match(stashesAfterRename[1].lastCommit, /Renamed first stash/);
 });
 
 test('getWorktrees lists the current and linked worktrees', async (t) => {
