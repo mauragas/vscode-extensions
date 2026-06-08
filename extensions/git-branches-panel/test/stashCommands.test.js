@@ -178,6 +178,38 @@ test('stashSilently resolves the selected SCM repository before falling back to 
   ]);
 });
 
+test('stashSilently uses the provider repo when invoked without an SCM target', async () => {
+  const vscodeState = createVscodeState();
+  const stashCalls = [];
+  const resolveCalls = [];
+
+  const { commandContext } = createStashCommandsModule({
+    vscodeState,
+    resolveRepoRootFromScmContextImpl: async (target) => {
+      resolveCalls.push(target);
+      return '/wrong-repo';
+    },
+    gitMock: {
+      async stashSilently(repoRoot) {
+        stashCalls.push(repoRoot);
+        return true;
+      },
+    },
+  });
+  commandContext.state.repoRoot = '/fallback-repo';
+
+  await vscodeState.registeredCommands['gitBranchesPanel.stashSilently']();
+
+  assert.deepEqual(resolveCalls, []);
+  assert.deepEqual(stashCalls, ['/fallback-repo']);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: 'Stashed tracked and untracked changes.',
+      options: { fetchRemoteState: false },
+    },
+  ]);
+});
+
 test('stashAllChanges prompts for an optional message and uses the fallback repo when needed', async () => {
   const vscodeState = createVscodeState();
   vscodeState.inputBoxResponse = 'Release prep';

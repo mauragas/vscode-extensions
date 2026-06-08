@@ -162,8 +162,8 @@ async function handleCreateStash(
   target: unknown,
   options: CreateStashCommandOptions
 ): Promise<void> {
-  const repoRoot =
-    (await resolveRepoRootFromScmContext(target)) ?? (await commandContext.requireRepoRoot());
+  const repoRootFromScm = target == null ? undefined : await resolveRepoRootFromScmContext(target);
+  const repoRoot = repoRootFromScm ?? (await commandContext.requireRepoRoot());
   if (!repoRoot) {
     return;
   }
