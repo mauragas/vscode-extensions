@@ -6,34 +6,70 @@ import {
   dropStash,
   getStashes,
   popStash,
+  stashAllChanges,
   stashSilently,
+  stashStagedChanges,
+  stashStagedSilently,
 } from '../git';
 import { BranchTreeItem } from '../treeProvider';
-import type { CommandContext } from './shared';
+import { resolveRepoRootFromScmContext, type CommandContext } from './shared';
+
+type StashExecutor = (repoRoot: string, message?: string) => Promise<boolean>;
 
 export function registerStashCommands(
   context: vscode.ExtensionContext,
   commandContext: CommandContext
 ): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('gitBranchesPanel.stashSilently', async () => {
-      await handleStashSilently(commandContext);
-    }),
+    vscode.commands.registerCommand('gitBranchesPanel.stashSilently', async (target?: unknown) => {
+      await handleStashSilently(commandContext, target);
+    })
+  );
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.stashStagedSilently',
+      async (target?: unknown) => {
+        await handleStashStagedSilently(commandContext, target);
+      }
+    )
+  );
+  context.subscriptions.push(
+    vscode.commands.registerCommand('gitBranchesPanel.stashAllChanges', async (target?: unknown) => {
+      await handleStashAllChanges(commandContext, target);
+    })
+  );
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.stashStagedChanges',
+      async (target?: unknown) => {
+        await handleStashStagedChanges(commandContext, target);
+      }
+    )
+  );
+  context.subscriptions.push(
     vscode.commands.registerCommand('gitBranchesPanel.applyStash', async (item: BranchTreeItem) => {
       await handleApplyStash(item, commandContext);
-    }),
+    })
+  );
+  context.subscriptions.push(
     vscode.commands.registerCommand('gitBranchesPanel.popStash', async (item: BranchTreeItem) => {
       await handlePopStash(item, commandContext);
-    }),
+    })
+  );
+  context.subscriptions.push(
     vscode.commands.registerCommand(
       'gitBranchesPanel.popLatestStash',
       async (item?: BranchTreeItem) => {
         await handlePopLatestStash(item, commandContext);
       }
-    ),
+    )
+  );
+  context.subscriptions.push(
     vscode.commands.registerCommand('gitBranchesPanel.dropStash', async (item: BranchTreeItem) => {
       await handleDropStash(item, commandContext);
-    }),
+    })
+  );
+  context.subscriptions.push(
     vscode.commands.registerCommand(
       'gitBranchesPanel.dropAllStashes',
       async (item?: BranchTreeItem) => {
@@ -73,24 +109,92 @@ async function handlePopLatestStash(
   }
 }
 
-async function handleStashSilently(commandContext: CommandContext): Promise<void> {
-  const repoRoot = await commandContext.requireRepoRoot();
+async function handleStashSilently(
+  commandContext: CommandContext,
+  target?: unknown
+): Promise<void> {
+  await handleCreateStash(commandContext, target, {
+    createStash: (_repoRoot, _message) => stashSilently(_repoRoot),
+    failureMessage: 'Failed to stash changes',
+    nothingToStashMessage: 'No tracked or untracked changes to stash.',
+    successMessage: 'Stashed tracked and untracked changes.',
+  });
+}
+
+async function handleStashStagedSilently(
+  commandContext: CommandContext,
+  target?: unknown
+): Promise<void> {
+  await handleCreateStash(commandContext, target, {
+    createStash: (_repoRoot, _message) => stashStagedSilently(_repoRoot),
+    failureMessage: 'Failed to stash staged changes',
+    nothingToStashMessage: 'No staged changes to stash.',
+    successMessage: 'Stashed staged changes.',
+  });
+}
+
+async function handleStashAllChanges(
+  commandContext: CommandContext,
+  target?: unknown
+): Promise<void> {
+  await handleCreateStash(commandContext, target, {
+    createStash: stashAllChanges,
+    failureMessage: 'Failed to stash changes',
+    nothingToStashMessage: 'No tracked or untracked changes to stash.',
+    prompt: 'Enter an optional stash message for all changes',
+    successMessage: 'Stashed tracked and untracked changes.',
+  });
+}
+
+async function handleStashStagedChanges(
+  commandContext: CommandContext,
+  target?: unknown
+): Promise<void> {
+  await handleCreateStash(commandContext, target, {
+    createStash: stashStagedChanges,
+    failureMessage: 'Failed to stash staged changes',
+    nothingToStashMessage: 'No staged changes to stash.',
+    prompt: 'Enter an optional stash message for staged changes',
+    successMessage: 'Stashed staged changes.',
+  });
+}
+
+interface CreateStashCommandOptions {
+  readonly createStash: StashExecutor;
+  readonly failureMessage: string;
+  readonly nothingToStashMessage: string;
+  readonly prompt?: string;
+  readonly successMessage: string;
+}
+
+async function handleCreateStash(
+  commandContext: CommandContext,
+  target: unknown,
+  options: CreateStashCommandOptions
+): Promise<void> {
+  const repoRoot =
+    (await resolveRepoRootFromScmContext(target)) ?? (await commandContext.requireRepoRoot());
   if (!repoRoot) {
     return;
   }
 
+  const message = options.prompt ? await promptForOptionalStashMessage(options.prompt) : '';
+  if (options.prompt && message === undefined) {
+    return;
+  }
+
   try {
-    const didStash = await stashSilently(repoRoot);
+    const didStash = await options.createStash(repoRoot, message || undefined);
     if (!didStash) {
-      vscode.window.showInformationMessage('No tracked or untracked changes to stash.');
+      vscode.window.showInformationMessage(options.nothingToStashMessage);
       return;
     }
 
-    await commandContext.showSuccessAndRefresh('Stashed tracked and untracked changes.', {
+    await commandContext.showSuccessAndRefresh(options.successMessage, {
       fetchRemoteState: false,
     });
   } catch (error) {
-    commandContext.showCommandError('Failed to stash changes', error);
+    commandContext.showCommandError(options.failureMessage, error);
   }
 }
 
@@ -200,4 +304,12 @@ async function handleDropAllStashes(
 
 function pluralizeStash(count: number): string {
   return count === 1 ? 'stash' : 'stashes';
+}
+
+async function promptForOptionalStashMessage(prompt: string): Promise<string | undefined> {
+  return vscode.window.showInputBox({
+    prompt,
+    placeHolder: 'Optional stash message',
+    value: '',
+  });
 }

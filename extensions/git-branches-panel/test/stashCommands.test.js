@@ -26,6 +26,8 @@ function createVscodeState() {
   return {
     registeredCommands: {},
     infoMessages: [],
+    inputBoxRequests: [],
+    inputBoxResponse: undefined,
     warningMessages: [],
     errorMessages: [],
     warningResponses: [],
@@ -44,6 +46,10 @@ function createVscodeMock(state) {
       async showInformationMessage(message) {
         state.infoMessages.push(message);
         return undefined;
+      },
+      async showInputBox(options) {
+        state.inputBoxRequests.push(options);
+        return state.inputBoxResponse;
       },
       async showWarningMessage(message, options, ...items) {
         state.warningMessages.push({ message, options, items });
@@ -93,13 +99,46 @@ function createCommandContext() {
   };
 }
 
-function createStashCommandsModule({ vscodeState, gitMock }) {
+function createBaseGitMock(overrides = {}) {
+  return {
+    async applyStash() {},
+    async dropAllStashes() {},
+    async dropStash() {},
+    async getStashes() {
+      return [];
+    },
+    async popStash() {},
+    async stashAllChanges() {
+      return false;
+    },
+    async stashSilently() {
+      return false;
+    },
+    async stashStagedChanges() {
+      return false;
+    },
+    async stashStagedSilently() {
+      return false;
+    },
+    ...overrides,
+  };
+}
+
+function createStashCommandsModule({
+  vscodeState,
+  gitMock,
+  resolveRepoRootFromScmContextImpl,
+}) {
   const commandContext = createCommandContext();
   const stashCommands = loadFresh('../out/commands/stashCommands.js', {
     vscode: createVscodeMock(vscodeState),
-    '../git': gitMock,
+    '../git': createBaseGitMock(gitMock),
     '../treeProvider': {
       BranchTreeItem: class BranchTreeItem {},
+    },
+    './shared': {
+      resolveRepoRootFromScmContext:
+        resolveRepoRootFromScmContextImpl ?? (async () => undefined),
     },
   });
 
@@ -110,6 +149,100 @@ function createStashCommandsModule({ vscodeState, gitMock }) {
   };
 }
 
+test('stashSilently resolves the selected SCM repository before falling back to the provider repo', async () => {
+  const vscodeState = createVscodeState();
+  const stashCalls = [];
+
+  const { commandContext } = createStashCommandsModule({
+    vscodeState,
+    resolveRepoRootFromScmContextImpl: async (target) => target?.rootUri?.fsPath,
+    gitMock: {
+      async stashSilently(repoRoot) {
+        stashCalls.push(repoRoot);
+        return true;
+      },
+    },
+  });
+  commandContext.state.repoRoot = '/fallback-repo';
+
+  await vscodeState.registeredCommands['gitBranchesPanel.stashSilently']({
+    rootUri: { fsPath: '/scm-repo' },
+  });
+
+  assert.deepEqual(stashCalls, ['/scm-repo']);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: 'Stashed tracked and untracked changes.',
+      options: { fetchRemoteState: false },
+    },
+  ]);
+});
+
+test('stashAllChanges prompts for an optional message and uses the fallback repo when needed', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.inputBoxResponse = 'Release prep';
+  const stashCalls = [];
+
+  const { commandContext } = createStashCommandsModule({
+    vscodeState,
+    gitMock: {
+      async stashAllChanges(repoRoot, message) {
+        stashCalls.push({ repoRoot, message });
+        return true;
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.stashAllChanges']();
+
+  assert.match(vscodeState.inputBoxRequests[0].prompt, /optional stash message for all changes/i);
+  assert.deepEqual(stashCalls, [{ repoRoot: '/repo', message: 'Release prep' }]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: 'Stashed tracked and untracked changes.',
+      options: { fetchRemoteState: false },
+    },
+  ]);
+});
+
+test('stashStagedChanges stops when the optional message prompt is cancelled', async () => {
+  const vscodeState = createVscodeState();
+  const stashCalls = [];
+
+  const { commandContext } = createStashCommandsModule({
+    vscodeState,
+    gitMock: {
+      async stashStagedChanges(repoRoot, message) {
+        stashCalls.push({ repoRoot, message });
+        return true;
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.stashStagedChanges']();
+
+  assert.equal(vscodeState.inputBoxRequests.length, 1);
+  assert.deepEqual(stashCalls, []);
+  assert.deepEqual(commandContext.state.successRefreshes, []);
+});
+
+test('stashStagedSilently shows an info message when there are no staged changes to stash', async () => {
+  const vscodeState = createVscodeState();
+
+  createStashCommandsModule({
+    vscodeState,
+    gitMock: {
+      async stashStagedSilently() {
+        return false;
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.stashStagedSilently']();
+
+  assert.deepEqual(vscodeState.infoMessages, ['No staged changes to stash.']);
+});
+
 test('dropAllStashes shows an info message when there are no stashes', async () => {
   const vscodeState = createVscodeState();
   const dropAllCalls = [];
@@ -117,17 +250,8 @@ test('dropAllStashes shows an info message when there are no stashes', async () 
   createStashCommandsModule({
     vscodeState,
     gitMock: {
-      async applyStash() {},
       async dropAllStashes(repoRoot) {
         dropAllCalls.push(repoRoot);
-      },
-      async dropStash() {},
-      async getStashes() {
-        return [];
-      },
-      async popStash() {},
-      async stashSilently() {
-        return false;
       },
     },
   });
@@ -150,20 +274,14 @@ test('dropAllStashes confirms, clears all stashes, and refreshes once', async ()
   const { commandContext } = createStashCommandsModule({
     vscodeState,
     gitMock: {
-      async applyStash() {},
       async dropAllStashes(repoRoot) {
         dropAllCalls.push(repoRoot);
       },
-      async dropStash() {},
       async getStashes() {
         return [
           { name: 'stash@{0}', isCurrent: false, scope: 'stash' },
           { name: 'stash@{1}', isCurrent: false, scope: 'stash' },
         ];
-      },
-      async popStash() {},
-      async stashSilently() {
-        return false;
       },
     },
   });
@@ -192,17 +310,8 @@ test('popLatestStash shows an info message when there are no stashes', async () 
   createStashCommandsModule({
     vscodeState,
     gitMock: {
-      async applyStash() {},
-      async dropAllStashes() {},
-      async dropStash() {},
-      async getStashes() {
-        return [];
-      },
       async popStash(repoRoot, stashName) {
         popCalls.push({ repoRoot, stashName });
-      },
-      async stashSilently() {
-        return false;
       },
     },
   });
@@ -224,9 +333,6 @@ test('popLatestStash pops the latest stash from the stash section and refreshes 
   const { commandContext } = createStashCommandsModule({
     vscodeState,
     gitMock: {
-      async applyStash() {},
-      async dropAllStashes() {},
-      async dropStash() {},
       async getStashes() {
         return [
           { name: 'stash@{0}', isCurrent: false, scope: 'stash' },
@@ -235,9 +341,6 @@ test('popLatestStash pops the latest stash from the stash section and refreshes 
       },
       async popStash(repoRoot, stashName) {
         popCalls.push({ repoRoot, stashName });
-      },
-      async stashSilently() {
-        return false;
       },
     },
   });

@@ -58,13 +58,74 @@ export async function dropAllStashes(repoRoot: string): Promise<void> {
   await runGit(repoRoot, ['stash', 'clear']);
 }
 
-export async function stashSilently(repoRoot: string): Promise<boolean> {
-  const { stdout } = await runGit(repoRoot, ['status', '--porcelain', '--untracked-files=all']);
+export async function stashAllChanges(
+  repoRoot: string,
+  message?: string
+): Promise<boolean> {
+  return createStash(repoRoot, {
+    includeUntracked: true,
+    message,
+  });
+}
 
-  if (!stdout.trim()) {
+export async function stashSilently(repoRoot: string): Promise<boolean> {
+  return stashAllChanges(repoRoot);
+}
+
+export async function stashStagedChanges(
+  repoRoot: string,
+  message?: string
+): Promise<boolean> {
+  return createStash(repoRoot, {
+    staged: true,
+    message,
+  });
+}
+
+export async function stashStagedSilently(repoRoot: string): Promise<boolean> {
+  return stashStagedChanges(repoRoot);
+}
+
+interface CreateStashOptions {
+  readonly includeUntracked?: boolean;
+  readonly staged?: boolean;
+  readonly message?: string;
+}
+
+async function createStash(repoRoot: string, options: CreateStashOptions): Promise<boolean> {
+  const hasStashableChanges = options.staged
+    ? await hasStagedChanges(repoRoot)
+    : await hasWorkingTreeChanges(repoRoot);
+
+  if (!hasStashableChanges) {
     return false;
   }
 
-  await runGit(repoRoot, ['stash', 'push', '--include-untracked']);
+  const args = ['stash', 'push'];
+
+  if (options.staged) {
+    args.push('--staged');
+  }
+
+  if (options.includeUntracked) {
+    args.push('--include-untracked');
+  }
+
+  const message = options.message?.trim();
+  if (message) {
+    args.push('--message', message);
+  }
+
+  await runGit(repoRoot, args);
   return true;
+}
+
+async function hasWorkingTreeChanges(repoRoot: string): Promise<boolean> {
+  const { stdout } = await runGit(repoRoot, ['status', '--porcelain', '--untracked-files=all']);
+  return Boolean(stdout.trim());
+}
+
+async function hasStagedChanges(repoRoot: string): Promise<boolean> {
+  const { stdout } = await runGit(repoRoot, ['diff', '--cached', '--name-only', '--no-ext-diff']);
+  return Boolean(stdout.trim());
 }
