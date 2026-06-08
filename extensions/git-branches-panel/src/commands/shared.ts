@@ -175,6 +175,7 @@ function collectCandidateUris(
     'repository',
     'resourceGroup',
     'resourceStates',
+    'selectedResourceStates',
     'selectedResourceGroups',
   ]
     .filter((key) => key in value)

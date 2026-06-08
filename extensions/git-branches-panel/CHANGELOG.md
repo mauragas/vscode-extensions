@@ -17,6 +17,7 @@ All notable changes to this project will be documented in this file.
 - Changed `gitBranchesPanel.showCurrentBranchInfo` to default to `false`, so the current-branch banner starts hidden unless you opt back in
 - Documented the stable-API limitation that prevents custom buttons from being placed directly inside the built-in Commit button row, so the implementation uses the Changes view title bar instead
 - Removed the duplicate current-branch indicator from the VS Code status bar so the extension no longer repeats VS Code's built-in branch label
+- Deprecated `gitBranchesPanel.showStatusBarBranchAction`; the setting now has no effect because the extension no longer contributes a status bar action
 
 ## [1.5.0] - 2026-06-07
 

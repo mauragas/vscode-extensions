@@ -1639,7 +1639,8 @@
         "gitBranchesPanel.showStatusBarBranchAction": {
           "type": "boolean",
           "default": true,
-          "description": "Show the status bar action that syncs or publishes the current branch."
+          "description": "Deprecated. This setting no longer has any effect because the extension no longer contributes a status bar branch action.",
+          "deprecationMessage": "Deprecated: the status bar branch action was removed in 1.6.0 because VS Code already shows the active branch. This setting no longer has any effect."
         },
         "gitBranchesPanel.toolbar.showNewBranch": {
           "type": "boolean",

@@ -84,6 +84,15 @@ test('package manifest exposes the 1.6.0 branch-menu and stash contributions', (
     'recent',
   ]);
   assert.equal(settings['gitBranchesPanel.showCurrentBranchInfo'].default, false);
+  assert.equal(settings['gitBranchesPanel.showStatusBarBranchAction'].default, true);
+  assert.match(
+    settings['gitBranchesPanel.showStatusBarBranchAction'].description,
+    /deprecated/i
+  );
+  assert.match(
+    settings['gitBranchesPanel.showStatusBarBranchAction'].deprecationMessage,
+    /no longer has any effect/i
+  );
   assert.equal(settings['gitBranchesPanel.toolbar.showStashSilently'].default, false);
   assert.equal(settings['gitBranchesPanel.changesView.showStashAllChangesSilently'].default, true);
   assert.equal(settings['gitBranchesPanel.changesView.showStashStagedChangesSilently'].default, false);

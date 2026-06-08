@@ -155,7 +155,7 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 | `gitBranchesPanel.sortOrder` | `alphabetical` | `alphabetical` or `recent` |
 | `gitBranchesPanel.tagSortOrder` | `versionDescending` | `versionDescending`, `versionAscending`, `alphabetical`, or `recent`; version-aware sorting recognizes semver-like suffixes such as `v1.2.3` or `release/v1.2.3` and keeps non-version tags after version tags |
 | `gitBranchesPanel.showCurrentBranchInfo` | `false` | Show the current branch summary above the tree views |
-| `gitBranchesPanel.showStatusBarBranchAction` | `true` | Show the status bar action that syncs or publishes the current branch |
+| `gitBranchesPanel.showStatusBarBranchAction` | `true` | Deprecated. This setting no longer has any effect because the extension no longer contributes a status bar branch action |
 | `gitBranchesPanel.toolbar.showNewBranch` | `true` | Show the **New Branch** toolbar quick action |
 | `gitBranchesPanel.toolbar.showStashSilently` | `false` | Show the **Stash all changes silently** quick action in the extension Branches view toolbar |
 | `gitBranchesPanel.changesView.showStashAllChangesSilently` | `true` | Show **Stash all changes silently** in the built-in Changes view title bar |

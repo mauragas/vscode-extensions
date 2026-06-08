@@ -92,6 +92,46 @@ test('resolveRepoRootFromScmContext resolves the selected SCM repository via the
   assert.deepEqual(repositoryCalls, ['/repo-b']);
 });
 
+test('resolveRepoRootFromScmContext resolves selected SCM resource states via the public Git API', async () => {
+  const repositoryCalls = [];
+  const shared = loadSharedModule(
+    createVscodeMock({
+      gitExtension: {
+        isActive: true,
+        exports: {
+          getAPI() {
+            return {
+              repositories: [
+                { rootUri: { fsPath: '/repo-a', path: '/repo-a' } },
+                { rootUri: { fsPath: '/repo-b', path: '/repo-b' } },
+              ],
+              getRepository(uri) {
+                repositoryCalls.push(uri.fsPath);
+                if (uri.fsPath === '/repo-b/src/app.ts') {
+                  return { rootUri: { fsPath: '/repo-b', path: '/repo-b' } };
+                }
+
+                return null;
+              },
+            };
+          },
+        },
+      },
+    })
+  );
+
+  const repoRoot = await shared.resolveRepoRootFromScmContext({
+    selectedResourceStates: [
+      {
+        resourceUri: { fsPath: '/repo-b/src/app.ts', path: '/repo-b/src/app.ts' },
+      },
+    ],
+  });
+
+  assert.equal(repoRoot, '/repo-b');
+  assert.deepEqual(repositoryCalls, ['/repo-b/src/app.ts']);
+});
+
 test('resolveRepoRootFromScmContext falls back to the sole repository when no target is available', async () => {
   const shared = loadSharedModule(
     createVscodeMock({
