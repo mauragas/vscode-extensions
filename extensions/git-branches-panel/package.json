@@ -427,12 +427,12 @@
         },
         {
           "command": "gitBranchesPanel.pinItem",
-          "when": "(viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch || viewItem == stash || viewItem == worktree || viewItem == currentWorktree) && !gitBranchesPanel.selectedItemPinned",
+          "when": "(viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch || viewItem == stash || viewItem == worktree || viewItem == currentWorktree) && ((view == gitBranchesPanel && !gitBranchesPanel.branchesViewSelectedItemPinned) || (view == gitBranchesSCM && !gitBranchesPanel.scmViewSelectedItemPinned))",
           "group": "inline@4"
         },
         {
           "command": "gitBranchesPanel.unpinItem",
-          "when": "(viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch || viewItem == stash || viewItem == worktree || viewItem == currentWorktree) && gitBranchesPanel.selectedItemPinned",
+          "when": "(viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch || viewItem == stash || viewItem == worktree || viewItem == currentWorktree) && ((view == gitBranchesPanel && gitBranchesPanel.branchesViewSelectedItemPinned) || (view == gitBranchesSCM && gitBranchesPanel.scmViewSelectedItemPinned))",
           "group": "inline@4"
         },
         {

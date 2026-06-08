@@ -49,11 +49,13 @@ function createVscodeMock(showCurrentBranchInfo, treeViews, state) {
           viewId,
           options,
           message: undefined,
+          selection: [],
           onDidChangeSelection(listener) {
             selectionListeners.push(listener);
             return { dispose() {} };
           },
           fireSelection(selection) {
+            treeView.selection = selection;
             for (const listener of selectionListeners) {
               listener({ selection });
             }
@@ -154,8 +156,9 @@ test('registerBranchViews updates the current branch banner when setting is enab
   );
 });
 
-test('registerBranchViews keeps the selected pinned-item context in sync across both tree views', () => {
+test('registerBranchViews keeps per-view pinned-item contexts isolated across both tree views', () => {
   const treeViews = [];
+  const listeners = [];
   const vscodeState = createVscodeState();
   const { registerBranchViews } = loadFresh('../out/viewRegistration.js', {
     vscode: createVscodeMock(false, treeViews, vscodeState),
@@ -163,7 +166,10 @@ test('registerBranchViews keeps the selected pinned-item context in sync across 
 
   const provider = {
     getCurrentBranch: () => undefined,
-    onDidChangeTreeData: () => ({ dispose() {} }),
+    onDidChangeTreeData: (listener) => {
+      listeners.push(listener);
+      return { dispose() {} };
+    },
   };
 
   registerBranchViews({ subscriptions: [] }, provider);
@@ -200,28 +206,41 @@ test('registerBranchViews keeps the selected pinned-item context in sync across 
   treeViews[0].fireSelection([pinnedBranch]);
   treeViews[1].fireSelection([unpinnedBranch]);
   treeViews[1].fireSelection([tagItem]);
+  listeners[0]();
   treeViews[0].fireSelection([]);
 
   assert.deepEqual(vscodeState.executedCommands, [
     {
       command: 'setContext',
-      args: ['gitBranchesPanel.selectedItemPinned', false],
+      args: ['gitBranchesPanel.branchesViewSelectedItemPinned', false],
     },
     {
       command: 'setContext',
-      args: ['gitBranchesPanel.selectedItemPinned', true],
+      args: ['gitBranchesPanel.scmViewSelectedItemPinned', false],
     },
     {
       command: 'setContext',
-      args: ['gitBranchesPanel.selectedItemPinned', false],
+      args: ['gitBranchesPanel.branchesViewSelectedItemPinned', true],
     },
     {
       command: 'setContext',
-      args: ['gitBranchesPanel.selectedItemPinned', false],
+      args: ['gitBranchesPanel.scmViewSelectedItemPinned', false],
     },
     {
       command: 'setContext',
-      args: ['gitBranchesPanel.selectedItemPinned', false],
+      args: ['gitBranchesPanel.scmViewSelectedItemPinned', false],
+    },
+    {
+      command: 'setContext',
+      args: ['gitBranchesPanel.branchesViewSelectedItemPinned', true],
+    },
+    {
+      command: 'setContext',
+      args: ['gitBranchesPanel.scmViewSelectedItemPinned', false],
+    },
+    {
+      command: 'setContext',
+      args: ['gitBranchesPanel.branchesViewSelectedItemPinned', false],
     },
   ]);
 });

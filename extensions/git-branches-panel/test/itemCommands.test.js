@@ -88,16 +88,19 @@ function createItemCommandsModule({ vscodeState, nextPinnedValues = [] }) {
     },
   }, ['../out/pinContext.js']);
 
+  const pinContext = require('../out/pinContext.js');
+
   itemCommands.registerItemCommands({ subscriptions: [] }, commandContext.context);
 
   return {
     commandContext,
+    pinContext,
   };
 }
 
 test('togglePinItem forwards supported items to the provider', async () => {
   const vscodeState = createVscodeState();
-  const { commandContext } = createItemCommandsModule({ vscodeState });
+  const { commandContext, pinContext } = createItemCommandsModule({ vscodeState });
   const item = {
     nodeType: 'stash',
     repoRoot: '/repo',
@@ -108,20 +111,23 @@ test('togglePinItem forwards supported items to the provider', async () => {
     },
   };
 
+  await pinContext.updateSelectedItemPinnedContext('gitBranchesPanel', item);
+  vscodeState.executedCommands = [];
+
   await vscodeState.registeredCommands['gitBranchesPanel.togglePinItem'](item);
 
   assert.deepEqual(commandContext.state.toggledItems, [item]);
   assert.deepEqual(vscodeState.executedCommands, [
     {
       command: 'setContext',
-      args: ['gitBranchesPanel.selectedItemPinned', true],
+      args: ['gitBranchesPanel.branchesViewSelectedItemPinned', true],
     },
   ]);
 });
 
-test('pinItem and unpinItem commands reuse the toggle handler and update the selection context', async () => {
+test('pinItem and unpinItem commands reuse the toggle handler and update matching selected view contexts', async () => {
   const vscodeState = createVscodeState();
-  const { commandContext } = createItemCommandsModule({
+  const { commandContext, pinContext } = createItemCommandsModule({
     vscodeState,
     nextPinnedValues: [true, false],
   });
@@ -137,6 +143,10 @@ test('pinItem and unpinItem commands reuse the toggle handler and update the sel
   assert.equal(typeof vscodeState.registeredCommands['gitBranchesPanel.pinItem'], 'function');
   assert.equal(typeof vscodeState.registeredCommands['gitBranchesPanel.unpinItem'], 'function');
 
+  await pinContext.updateSelectedItemPinnedContext('gitBranchesPanel', item);
+  await pinContext.updateSelectedItemPinnedContext('gitBranchesSCM', item);
+  vscodeState.executedCommands = [];
+
   await vscodeState.registeredCommands['gitBranchesPanel.pinItem'](item);
   await vscodeState.registeredCommands['gitBranchesPanel.unpinItem'](item);
 
@@ -144,11 +154,19 @@ test('pinItem and unpinItem commands reuse the toggle handler and update the sel
   assert.deepEqual(vscodeState.executedCommands, [
     {
       command: 'setContext',
-      args: ['gitBranchesPanel.selectedItemPinned', true],
+      args: ['gitBranchesPanel.branchesViewSelectedItemPinned', true],
     },
     {
       command: 'setContext',
-      args: ['gitBranchesPanel.selectedItemPinned', false],
+      args: ['gitBranchesPanel.scmViewSelectedItemPinned', true],
+    },
+    {
+      command: 'setContext',
+      args: ['gitBranchesPanel.branchesViewSelectedItemPinned', false],
+    },
+    {
+      command: 'setContext',
+      args: ['gitBranchesPanel.scmViewSelectedItemPinned', false],
     },
   ]);
 });

@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
 
-import { isPinnableItem, setSelectedItemPinnedContextValue } from '../pinContext';
+import {
+  isPinnableItem,
+  updateMatchingSelectedItemPinnedContexts,
+} from '../pinContext';
 import { BranchTreeItem } from '../treeProvider';
 import type { CommandContext } from './shared';
 
@@ -35,5 +38,5 @@ async function handleTogglePinItem(
   }
 
   const nextPinned = await commandContext.provider.togglePinnedItem(item);
-  await setSelectedItemPinnedContextValue(nextPinned);
+  await updateMatchingSelectedItemPinnedContexts(item, nextPinned);
 }
