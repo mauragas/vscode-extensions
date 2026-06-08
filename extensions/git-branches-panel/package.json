@@ -233,11 +233,13 @@
       },
       {
         "command": "gitBranchesPanel.applyStash",
-        "title": "Apply Stash"
+        "title": "Apply Stash",
+        "icon": "$(arrow-down)"
       },
       {
         "command": "gitBranchesPanel.popStash",
-        "title": "Pop Stash"
+        "title": "Pop Stash",
+        "icon": "$(arrow-up)"
       },
       {
         "command": "gitBranchesPanel.popLatestStash",
@@ -266,7 +268,8 @@
       },
       {
         "command": "gitBranchesPanel.openWorktreeInNewWindow",
-        "title": "Open Worktree in New Window"
+        "title": "Open Worktree in New Window",
+        "icon": "$(empty-window)"
       },
       {
         "command": "gitBranchesPanel.revealWorktree",

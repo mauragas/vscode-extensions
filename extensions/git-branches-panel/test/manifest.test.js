@@ -11,6 +11,14 @@ function getCommand(commandId) {
   return packageJson.contributes.commands.find((command) => command.command === commandId);
 }
 
+function getInlineViewItemContextCommands() {
+  return [...new Set(
+    packageJson.contributes.menus['view/item/context']
+      .filter((item) => typeof item.group === 'string' && item.group.startsWith('inline@'))
+      .map((item) => item.command)
+  )];
+}
+
 test('package manifest exposes the 1.6.0 branch-menu and stash contributions', () => {
   assert.equal(packageJson.version, '1.6.0');
   assert.equal(getCommand('gitBranchesPanel.stashSilently').title, 'Stash all changes silently');
@@ -158,4 +166,10 @@ test('package manifest exposes the 1.6.0 branch-menu and stash contributions', (
       (item) => item.command === 'gitBranchesPanel.pushAllTags' && item.when === 'viewItem == tagsSection' && item.group === 'inline@2'
     )
   );
+
+  for (const commandId of getInlineViewItemContextCommands()) {
+    const command = getCommand(commandId);
+    assert.ok(command, `Inline view/item/context command '${commandId}' must be contributed.`);
+    assert.ok(command.icon, `Inline view/item/context command '${commandId}' must define an icon.`);
+  }
 });
