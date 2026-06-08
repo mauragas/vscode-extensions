@@ -40,33 +40,9 @@ function createEventEmitter() {
   };
 }
 
-function createStatusBarItem() {
-  return {
-    text: undefined,
-    command: undefined,
-    tooltip: undefined,
-    showCalls: 0,
-    hideCalls: 0,
-    show() {
-      this.showCalls += 1;
-    },
-    hide() {
-      this.hideCalls += 1;
-    },
-  };
-}
-
-function createVscodeMock(statusBarItem, commandCalls, showStatusBarBranchAction = true) {
+function createVscodeMock(commandCalls) {
   return {
     EventEmitter: createEventEmitter(),
-    MarkdownString: class MarkdownString {
-      constructor(value) {
-        this.value = value;
-      }
-    },
-    StatusBarAlignment: {
-      Left: 1,
-    },
     commands: {
       async executeCommand(command, ...args) {
         commandCalls.push({ command, args });
@@ -78,13 +54,9 @@ function createVscodeMock(statusBarItem, commandCalls, showStatusBarBranchAction
         assert.equal(section, 'gitBranchesPanel');
 
         return {
-          get: (key, defaultValue) =>
-            key === 'showStatusBarBranchAction' ? showStatusBarBranchAction : defaultValue,
+          get: (_key, defaultValue) => defaultValue,
         };
       },
-    },
-    window: {
-      createStatusBarItem: () => statusBarItem,
     },
   };
 }
@@ -178,6 +150,7 @@ function createDataLoader(state) {
 test('activate orchestrates provider, views, commands, and auto-refresh wiring', async () => {
   const calls = {
     trackers: 0,
+    branchContextMenus: [],
     providerContexts: [],
     views: [],
     commands: [],
@@ -209,6 +182,11 @@ test('activate orchestrates provider, views, commands, and auto-refresh wiring',
         calls.autoRefresh.push(args);
       },
     },
+    './branchContextMenu': {
+      registerBranchContextMenuContextKeys: (...args) => {
+        calls.branchContextMenus.push(args);
+      },
+    },
     './extensionCommands': {
       registerBranchCommands: (...args) => {
         calls.commands.push(args);
@@ -234,11 +212,13 @@ test('activate orchestrates provider, views, commands, and auto-refresh wiring',
   await Promise.resolve();
 
   assert.equal(calls.trackers, 1);
+  assert.equal(calls.branchContextMenus.length, 1);
   assert.equal(calls.providerContexts.length, 1);
   assert.equal(calls.views.length, 1);
   assert.equal(calls.commands.length, 1);
   assert.equal(calls.autoRefresh.length, 1);
   assert.deepEqual(calls.refreshes, []);
+  assert.equal(calls.branchContextMenus[0][0], context);
   assert.equal(calls.views[0][0], context);
   assert.equal(calls.commands[0][0], context);
   assert.equal(calls.autoRefresh[0][0], context);
@@ -247,8 +227,7 @@ test('activate orchestrates provider, views, commands, and auto-refresh wiring',
   assert.equal(calls.commands[0][2], calls.autoRefresh[0][2]);
 });
 
-test('BranchTreeProvider refreshes status bar data and exposes tree items', async () => {
-  const statusBarItem = createStatusBarItem();
+test('BranchTreeProvider refreshes current branch context and exposes tree items', async () => {
   const commandCalls = [];
   const state = {
     currentBranch: {
@@ -270,7 +249,7 @@ test('BranchTreeProvider refreshes status bar data and exposes tree items', asyn
   };
   const dataLoader = createDataLoader(state);
   const { BranchTreeProvider } = loadFresh('../out/treeProvider.js', {
-    vscode: createVscodeMock(statusBarItem, commandCalls),
+    vscode: createVscodeMock(commandCalls),
     './git': {
       fetchRemoteState() {},
       getBranches() {},
@@ -287,8 +266,6 @@ test('BranchTreeProvider refreshes status bar data and exposes tree items', asyn
     },
     './treeItem': createTreeItemMock(),
     './treePresentation': {
-      buildStatusBarText: (branch) => (branch ? `branch:${branch.name}` : ''),
-      buildStatusBarTooltipContent: (branch) => `tooltip:${branch.name}`,
       findContainerNode,
       findDescendantBranches,
     },
@@ -306,10 +283,6 @@ test('BranchTreeProvider refreshes status bar data and exposes tree items', asyn
   assert.deepEqual(dataLoader.refreshCalls, [{ fetchRemoteState: true }]);
   assert.equal(provider.getRepoRoot(), '/repo');
   assert.equal(provider.getCurrentBranch().name, 'main');
-  assert.equal(statusBarItem.text, 'branch:main');
-  assert.equal(statusBarItem.command, 'gitBranchesPanel.syncCurrentBranch');
-  assert.equal(statusBarItem.tooltip.value, 'tooltip:main');
-  assert.equal(statusBarItem.showCalls, 1);
   assert.deepEqual(commandCalls, [
     {
       command: 'setContext',
@@ -321,7 +294,6 @@ test('BranchTreeProvider refreshes status bar data and exposes tree items', asyn
     },
   ]);
   assert.equal(treeChangeCount, 1);
-  assert.equal(context.subscriptions.includes(statusBarItem), true);
 
   const rootChildren = await provider.getChildren();
   assert.equal(rootChildren.length, 1);
@@ -330,8 +302,7 @@ test('BranchTreeProvider refreshes status bar data and exposes tree items', asyn
   assert.equal(provider.getTreeItem(rootChildren[0]), rootChildren[0]);
 });
 
-test('BranchTreeProvider uses the publish command for current branches that need publishing', async () => {
-  const statusBarItem = createStatusBarItem();
+test('BranchTreeProvider marks publishable current branches in context', async () => {
   const commandCalls = [];
   const state = {
     currentBranch: {
@@ -352,7 +323,7 @@ test('BranchTreeProvider uses the publish command for current branches that need
   };
   const dataLoader = createDataLoader(state);
   const { BranchTreeProvider } = loadFresh('../out/treeProvider.js', {
-    vscode: createVscodeMock(statusBarItem, commandCalls),
+    vscode: createVscodeMock(commandCalls),
     './git': {
       fetchRemoteState() {},
       getBranches() {},
@@ -369,8 +340,6 @@ test('BranchTreeProvider uses the publish command for current branches that need
     },
     './treeItem': createTreeItemMock(),
     './treePresentation': {
-      buildStatusBarText: (branch) => (branch ? `branch:${branch.name}` : ''),
-      buildStatusBarTooltipContent: (branch) => `tooltip:${branch.name}`,
       findContainerNode,
       findDescendantBranches,
     },
@@ -380,7 +349,6 @@ test('BranchTreeProvider uses the publish command for current branches that need
 
   await provider.refresh({ fetchRemoteState: false });
 
-  assert.equal(statusBarItem.command, 'gitBranchesPanel.publishCurrentBranch');
   assert.deepEqual(commandCalls, [
     {
       command: 'setContext',
@@ -393,8 +361,7 @@ test('BranchTreeProvider uses the publish command for current branches that need
   ]);
 });
 
-test('BranchTreeProvider exposes a busy spinner action for syncing current branches', async () => {
-  const statusBarItem = createStatusBarItem();
+test('BranchTreeProvider marks busy current branches in context', async () => {
   const commandCalls = [];
   const state = {
     currentBranch: {
@@ -417,7 +384,7 @@ test('BranchTreeProvider exposes a busy spinner action for syncing current branc
   };
   const dataLoader = createDataLoader(state);
   const { BranchTreeProvider } = loadFresh('../out/treeProvider.js', {
-    vscode: createVscodeMock(statusBarItem, commandCalls),
+    vscode: createVscodeMock(commandCalls),
     './git': {
       fetchRemoteState() {},
       getBranches() {},
@@ -434,8 +401,6 @@ test('BranchTreeProvider exposes a busy spinner action for syncing current branc
     },
     './treeItem': createTreeItemMock(),
     './treePresentation': {
-      buildStatusBarText: (branch) => (branch ? `busy:${branch.name}` : ''),
-      buildStatusBarTooltipContent: (branch) => `tooltip:${branch.name}`,
       findContainerNode,
       findDescendantBranches,
     },
@@ -445,8 +410,6 @@ test('BranchTreeProvider exposes a busy spinner action for syncing current branc
 
   await provider.refresh({ fetchRemoteState: false });
 
-  assert.equal(statusBarItem.text, 'busy:main');
-  assert.equal(statusBarItem.command, 'gitBranchesPanel.branchActionInProgress');
   assert.deepEqual(commandCalls, [
     {
       command: 'setContext',
@@ -459,8 +422,7 @@ test('BranchTreeProvider exposes a busy spinner action for syncing current branc
   ]);
 });
 
-test('BranchTreeProvider loads nested container children and hides the status bar when no branch is active', async () => {
-  const statusBarItem = createStatusBarItem();
+test('BranchTreeProvider loads nested container children and clears branch context when no branch is active', async () => {
   const commandCalls = [];
   const state = {
     currentBranch: undefined,
@@ -527,7 +489,7 @@ test('BranchTreeProvider loads nested container children and hides the status ba
   };
   const dataLoader = createDataLoader(state);
   const { BranchTreeProvider } = loadFresh('../out/treeProvider.js', {
-    vscode: createVscodeMock(statusBarItem, commandCalls),
+    vscode: createVscodeMock(commandCalls),
     './git': {
       fetchRemoteState() {},
       getBranches() {},
@@ -553,8 +515,6 @@ test('BranchTreeProvider loads nested container children and hides the status ba
     },
     './treeItem': createTreeItemMock(),
     './treePresentation': {
-      buildStatusBarText: () => '',
-      buildStatusBarTooltipContent: () => '',
       findContainerNode,
       findDescendantBranches,
     },
@@ -582,7 +542,6 @@ test('BranchTreeProvider loads nested container children and hides the status ba
 
   await provider.refresh();
 
-  assert.ok(statusBarItem.hideCalls >= 1);
   assert.deepEqual(commandCalls.at(-2), {
     command: 'setContext',
     args: ['gitBranchesPanel.currentBranchNeedsPublish', false],
@@ -591,69 +550,4 @@ test('BranchTreeProvider loads nested container children and hides the status ba
     command: 'setContext',
     args: ['gitBranchesPanel.currentBranchBusy', false],
   });
-});
-
-test('BranchTreeProvider hides the status bar branch action when the setting is disabled', async () => {
-  const statusBarItem = createStatusBarItem();
-  const commandCalls = [];
-  const state = {
-    currentBranch: {
-      name: 'main',
-      isCurrent: true,
-      upstreamName: 'origin/main',
-    },
-    treeData: [
-      {
-        kind: 'section',
-        label: 'Local',
-        path: 'section:local',
-        scope: 'local',
-        children: [],
-      },
-    ],
-    repoRoot: '/repo',
-    loadedSections: new Set(['local']),
-  };
-  const dataLoader = createDataLoader(state);
-  const { BranchTreeProvider } = loadFresh('../out/treeProvider.js', {
-    vscode: createVscodeMock(statusBarItem, commandCalls, false),
-    './git': {
-      fetchRemoteState() {},
-      getBranches() {},
-      getRemoteBranches() {},
-      getRepoRoot() {},
-      getStashes() {},
-      getWorktrees() {},
-      getTags() {},
-    },
-    './treeDataLoader': {
-      BranchDataLoader: class BranchDataLoader {},
-      getBranchSectionKey: (sectionPath) =>
-        sectionPath === 'section:local' ? 'local' : undefined,
-    },
-    './treeItem': createTreeItemMock(),
-    './treePresentation': {
-      buildStatusBarText: (branch) => (branch ? `branch:${branch.name}` : ''),
-      buildStatusBarTooltipContent: (branch) => `tooltip:${branch.name}`,
-      findContainerNode,
-      findDescendantBranches,
-    },
-  });
-
-  const provider = new BranchTreeProvider({ subscriptions: [] }, dataLoader);
-
-  await provider.refresh({ fetchRemoteState: false });
-
-  assert.equal(statusBarItem.showCalls, 0);
-  assert.ok(statusBarItem.hideCalls >= 1);
-  assert.deepEqual(commandCalls, [
-    {
-      command: 'setContext',
-      args: ['gitBranchesPanel.currentBranchNeedsPublish', false],
-    },
-    {
-      command: 'setContext',
-      args: ['gitBranchesPanel.currentBranchBusy', false],
-    },
-  ]);
 });

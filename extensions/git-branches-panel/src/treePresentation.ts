@@ -13,11 +13,6 @@ export {
 } from './treePresentation/itemPresentation';
 
 export {
-  buildStatusBarText,
-  buildStatusBarTooltipContent,
-} from './treePresentation/statusBarPresentation';
-
-export {
   findContainerNode,
   findDescendantBranches,
   getContainerNodeKey,

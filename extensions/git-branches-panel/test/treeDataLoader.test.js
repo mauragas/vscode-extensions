@@ -26,6 +26,7 @@ function createDependencies(overrides = {}) {
       getConfiguration: () => ({
         groupByFolder: true,
         sortOrder: 'alphabetical',
+        tagSortOrder: 'versionDescending',
       }),
       getRepoRoot: async () => '/repo',
       getBranches: async () => {
@@ -175,6 +176,31 @@ test('BranchDataLoader only refreshes explicitly requested lazy sections', async
   assert.equal(sections.find((node) => node.path === 'section:stash').children.length, 1);
   assert.equal(sections.find((node) => node.path === 'section:worktree').children.length, 1);
   assert.equal(sections.find((node) => node.path === 'section:tags').children.length, 1);
+});
+
+test('BranchDataLoader applies tagSortOrder independently from branch sortOrder', async () => {
+  const { dependencies } = createDependencies({
+    getConfiguration: () => ({
+      groupByFolder: false,
+      sortOrder: 'alphabetical',
+      tagSortOrder: 'versionDescending',
+    }),
+    getTags: async () => [
+      { name: 'v1.2.0', isCurrent: false, scope: 'tag' },
+      { name: 'v1.10.0', isCurrent: false, scope: 'tag' },
+      { name: 'latest', isCurrent: false, scope: 'tag' },
+    ],
+  });
+  const loader = new BranchDataLoader(dependencies, () => 1_000);
+
+  await loader.refresh({ sections: ['tags'], fetchRemoteState: false });
+
+  const tagSection = loader.getTreeData().find((node) => node.path === 'section:tags');
+  assert.ok(tagSection);
+  assert.deepEqual(
+    tagSection.children.map((node) => (node.kind === 'branch' ? node.fullName : node.path)),
+    ['v1.10.0', 'v1.2.0', 'latest']
+  );
 });
 
 test('BranchDataLoader decorates branches before sorting and tree building', async () => {

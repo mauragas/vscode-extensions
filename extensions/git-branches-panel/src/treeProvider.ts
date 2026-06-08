@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import {
   type BranchInfo,
   type BranchSortOrder,
+  type TagSortOrder,
   type BranchTreeNode,
   isPublishableBranch,
   type TreeBranch,
@@ -31,8 +32,6 @@ import {
 import { BranchTreeItem } from './treeItem';
 import { buildPinnedItemKey, PinnedItemsStore } from './pinnedItems';
 import {
-  buildStatusBarText,
-  buildStatusBarTooltipContent,
   findContainerNode,
   findDescendantBranches,
 } from './treePresentation';
@@ -48,7 +47,6 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
 
   private readonly dataLoader: BranchDataLoader;
   private readonly pinnedItems: PinnedItemsStore;
-  private readonly statusBarItem: vscode.StatusBarItem;
   private readonly busyBranchKeys = new Set<string>();
 
   constructor(
@@ -58,14 +56,11 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     this.pinnedItems = new PinnedItemsStore(context.workspaceState);
     this.dataLoader =
       dataLoader ?? createBranchDataLoader((repoRoot, branch) => this.decorateBranchInfo(repoRoot, branch));
-    this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-    this.statusBarItem.command = 'gitBranchesPanel.refresh';
-    context.subscriptions.push(this.statusBarItem);
   }
 
   async refresh(options: BranchLoadOptions = {}): Promise<void> {
     await this.dataLoader.refresh(options);
-    this.updateStatusBar(this.dataLoader.getCurrentBranch());
+    this.updateCurrentBranchContext(this.dataLoader.getCurrentBranch());
     this.onDidChangeTreeDataEmitter.fire();
   }
 
@@ -151,7 +146,7 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     return nodes.map((node) => new BranchTreeItem(node, this.dataLoader.getRepoRoot() ?? undefined));
   }
 
-  private updateStatusBar(currentBranch: BranchInfo | undefined): void {
+  private updateCurrentBranchContext(currentBranch: BranchInfo | undefined): void {
     const currentBranchNeedsPublish = Boolean(currentBranch && isPublishableBranch(currentBranch));
     const currentBranchBusy = Boolean(currentBranch?.isSyncing);
     void vscode.commands.executeCommand(
@@ -164,27 +159,6 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
       'gitBranchesPanel.currentBranchBusy',
       currentBranchBusy
     );
-
-    const showStatusBarBranchAction = vscode.workspace
-      .getConfiguration('gitBranchesPanel')
-      .get<boolean>('showStatusBarBranchAction', true);
-
-    const statusBarText = showStatusBarBranchAction ? buildStatusBarText(currentBranch) : '';
-    if (!showStatusBarBranchAction || !currentBranch || !statusBarText) {
-      this.statusBarItem.hide();
-      return;
-    }
-
-    this.statusBarItem.text = statusBarText;
-    this.statusBarItem.command = currentBranchBusy
-      ? 'gitBranchesPanel.branchActionInProgress'
-      : currentBranchNeedsPublish
-        ? 'gitBranchesPanel.publishCurrentBranch'
-        : 'gitBranchesPanel.syncCurrentBranch';
-    this.statusBarItem.tooltip = new vscode.MarkdownString(
-      buildStatusBarTooltipContent(currentBranch)
-    );
-    this.statusBarItem.show();
   }
 
   private decorateBranchInfo(repoRoot: string, branch: BranchInfo): BranchInfo {
@@ -215,6 +189,7 @@ function createBranchDataLoaderDependencies(
       return {
         groupByFolder: configuration.get<boolean>('groupByFolder', true),
         sortOrder: configuration.get<BranchSortOrder>('sortOrder', 'alphabetical'),
+        tagSortOrder: configuration.get<TagSortOrder>('tagSortOrder', 'versionDescending'),
       };
     },
     getRepoRoot,

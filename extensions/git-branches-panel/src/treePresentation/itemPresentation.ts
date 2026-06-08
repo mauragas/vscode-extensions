@@ -272,16 +272,21 @@ function buildTreeItemLabel(
 }
 
 function getItemContextValue(nodeType: NodeType, branch: BranchInfo): string {
-  const baseContextValue = resolveBaseContextValue(nodeType, branch);
+  let contextValue = resolveBaseContextValue(nodeType, branch);
   if (branch.isSyncing) {
-    return resolveBusyContextValue(baseContextValue);
+    contextValue = resolveBusyContextValue(contextValue);
+  } else if (branch.isDeletionProtected) {
+    contextValue = resolveProtectedContextValue(contextValue);
   }
 
-  if (branch.isDeletionProtected) {
-    return resolveProtectedContextValue(baseContextValue);
-  }
+  return resolvePinnedContextValue(contextValue, branch.isPinned);
+}
 
-  return baseContextValue;
+function resolvePinnedContextValue(
+  contextValue: string,
+  isPinned: boolean | undefined
+): string {
+  return isPinned ? `pinned:${contextValue}` : contextValue;
 }
 
 function resolveBaseContextValue(nodeType: NodeType, branch: BranchInfo): string {

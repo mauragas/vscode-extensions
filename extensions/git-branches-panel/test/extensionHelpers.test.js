@@ -169,7 +169,7 @@ test('buildCurrentBranchMessage includes sync and timing details when available'
       lastCommitDate: '2 minutes ago',
       aheadCount: 1,
       behindCount: 2,
-    }),
+    }, true),
     'Current branch: main • 2↓ 1↑ • 2 minutes ago'
   );
 
@@ -180,11 +180,18 @@ test('buildCurrentBranchMessage includes sync and timing details when available'
       lastCommitDate: '',
       aheadCount: 0,
       behindCount: 0,
-    }),
+    }, true),
     'Current branch: main'
   );
 
   assert.equal(buildCurrentBranchMessage(undefined), '');
+  assert.equal(
+    buildCurrentBranchMessage({
+      name: 'main',
+      isCurrent: true,
+    }),
+    ''
+  );
   assert.equal(
     buildCurrentBranchMessage(
       {

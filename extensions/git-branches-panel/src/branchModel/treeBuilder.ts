@@ -2,6 +2,7 @@ import type {
   BranchInfo,
   BranchSortOrder,
   BranchTreeNode,
+  TagSortOrder,
   TreeBranch,
   TreeChildNode,
   TreeContainerScope,
@@ -14,9 +15,12 @@ const branchNameCollator = new Intl.Collator(undefined, {
   sensitivity: 'base',
 });
 
+const tagVersionPattern =
+  /(?:^|[/_-])(v?\d+(?:\.\d+)*)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/u;
+
 export function sortBranches(
   branches: readonly BranchInfo[],
-  sortOrder: BranchSortOrder
+  sortOrder: BranchSortOrder | TagSortOrder
 ): BranchInfo[] {
   return [...branches].sort((left, right) => {
     if (Boolean(left.isPinned) !== Boolean(right.isPinned)) {
@@ -34,6 +38,27 @@ export function sortBranches(
 
       if (timestampDelta !== 0) {
         return timestampDelta;
+      }
+    }
+
+    if (sortOrder === 'versionAscending' || sortOrder === 'versionDescending') {
+      const leftVersion = parseTagVersion(left.name);
+      const rightVersion = parseTagVersion(right.name);
+
+      if (leftVersion || rightVersion) {
+        if (!leftVersion) {
+          return 1;
+        }
+
+        if (!rightVersion) {
+          return -1;
+        }
+
+        const versionDelta = compareParsedTagVersions(leftVersion, rightVersion);
+
+        if (versionDelta !== 0) {
+          return sortOrder === 'versionDescending' ? -versionDelta : versionDelta;
+        }
       }
     }
 
@@ -249,4 +274,99 @@ function getBranchNodeLabel(branch: Pick<BranchInfo, 'name' | 'scope'>): string 
   const segments = branch.name.split(separatorPattern).filter(Boolean);
 
   return segments.length > 0 ? segments[segments.length - 1] : branch.name;
+}
+
+interface ParsedTagVersion {
+  components: number[];
+  prerelease: string[];
+}
+
+function parseTagVersion(tagName: string): ParsedTagVersion | undefined {
+  const match = tagVersionPattern.exec(tagName.trim());
+
+  if (!match) {
+    return undefined;
+  }
+
+  const [core = '', prereleaseText = ''] = match.slice(1);
+
+  return {
+    components: core
+      .replace(/^v/i, '')
+      .split('.')
+      .map((component) => Number.parseInt(component, 10)),
+    prerelease: prereleaseText ? prereleaseText.split('.') : [],
+  };
+}
+
+function compareParsedTagVersions(left: ParsedTagVersion, right: ParsedTagVersion): number {
+  const length = Math.max(left.components.length, right.components.length);
+
+  for (let index = 0; index < length; index += 1) {
+    const componentDelta = (left.components[index] ?? 0) - (right.components[index] ?? 0);
+
+    if (componentDelta !== 0) {
+      return componentDelta;
+    }
+  }
+
+  return comparePrereleaseIdentifiers(left.prerelease, right.prerelease);
+}
+
+function comparePrereleaseIdentifiers(left: readonly string[], right: readonly string[]): number {
+  if (left.length === 0 && right.length === 0) {
+    return 0;
+  }
+
+  if (left.length === 0) {
+    return 1;
+  }
+
+  if (right.length === 0) {
+    return -1;
+  }
+
+  const length = Math.max(left.length, right.length);
+
+  for (let index = 0; index < length; index += 1) {
+    const leftIdentifier = left[index];
+    const rightIdentifier = right[index];
+
+    if (leftIdentifier === undefined) {
+      return -1;
+    }
+
+    if (rightIdentifier === undefined) {
+      return 1;
+    }
+
+    const leftIsNumeric = isNumericIdentifier(leftIdentifier);
+    const rightIsNumeric = isNumericIdentifier(rightIdentifier);
+
+    if (leftIsNumeric && rightIsNumeric) {
+      const numericDelta = Number.parseInt(leftIdentifier, 10) - Number.parseInt(rightIdentifier, 10);
+
+      if (numericDelta !== 0) {
+        return numericDelta;
+      }
+
+      continue;
+    }
+
+    if (leftIsNumeric !== rightIsNumeric) {
+      return leftIsNumeric ? -1 : 1;
+    }
+
+    const identifierDelta = branchNameCollator.compare(leftIdentifier, rightIdentifier);
+
+    if (identifierDelta !== 0) {
+      return identifierDelta;
+    }
+  }
+
+  return 0;
+}
+
+function isNumericIdentifier(value: string): boolean {
+  return /^\d+$/u.test(value);
 }

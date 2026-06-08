@@ -31,6 +31,7 @@ export interface BranchSyncState {
 }
 
 export type BranchSortOrder = 'alphabetical' | 'recent';
+export type TagSortOrder = BranchSortOrder | 'versionAscending' | 'versionDescending';
 export type TreeContainerScope = 'local' | 'remote' | 'tag' | 'stash' | 'worktree';
 
 export interface TreeSection {

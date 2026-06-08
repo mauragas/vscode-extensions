@@ -24,6 +24,7 @@ function loadFresh(modulePath, mocks) {
 
 function createVscodeState() {
   return {
+    executedCommands: [],
     registeredCommands: {},
     inputBoxRequests: [],
     inputBoxResponse: undefined,
@@ -37,7 +38,8 @@ function createVscodeMock(state) {
         state.registeredCommands[name] = callback;
         return { dispose() {} };
       },
-      async executeCommand() {
+      async executeCommand(command, ...args) {
+        state.executedCommands.push({ command, args });
         return undefined;
       },
     },
@@ -68,6 +70,7 @@ function createVscodeMock(state) {
 
 function createCommandContext() {
   const state = {
+    currentBranch: undefined,
     successRefreshes: [],
     commandErrors: [],
   };
@@ -82,7 +85,7 @@ function createCommandContext() {
         return '/repo';
       },
       async requireCurrentBranch() {
-        return undefined;
+        return state.currentBranch;
       },
       async showSuccessAndRefresh(message, options = {}) {
         state.successRefreshes.push({ message, options });
@@ -184,6 +187,96 @@ test('createWorktreeFromRef creates a detached worktree from a tag', async () =>
       worktreePath: '/tmp/repo-v1.0.0',
       refName: 'refs/tags/v1.0.0',
       options: { detach: true },
+    },
+  ]);
+});
+
+test('createWorktreeFromCurrentBranch creates a new worktree from the current branch when triggered from the Worktree section', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.inputBoxResponse = '/tmp/repo-feature-main';
+  const createWorktreeCalls = [];
+
+  const { commandContext } = createWorktreeCommandsModule({
+    vscodeState,
+    gitMock: {
+      async createWorktree(repoRoot, worktreePath, refName, options) {
+        createWorktreeCalls.push({ repoRoot, worktreePath, refName, options });
+      },
+      async removeWorktree() {},
+    },
+  });
+  commandContext.state.currentBranch = {
+    name: 'main',
+    isCurrent: true,
+  };
+
+  await vscodeState.registeredCommands['gitBranchesPanel.createWorktreeFromCurrentBranch']({
+    nodeType: 'section',
+    containerPath: 'section:worktree',
+    repoRoot: '/repo',
+  });
+
+  assert.match(vscodeState.inputBoxRequests[0].prompt, /current branch 'main'/);
+  assert.deepEqual(createWorktreeCalls, [
+    {
+      repoRoot: '/repo',
+      worktreePath: '/tmp/repo-feature-main',
+      refName: 'main',
+      options: { detach: false },
+    },
+  ]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: "Created worktree 'repo-feature-main' from current branch 'main'.",
+      options: { fetchRemoteState: false },
+    },
+  ]);
+});
+
+test('openWorktree opens the selected worktree in the current window', async () => {
+  const vscodeState = createVscodeState();
+
+  createWorktreeCommandsModule({
+    vscodeState,
+    gitMock: {
+      async createWorktree() {},
+      async removeWorktree() {},
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.openWorktree']({
+    nodeType: 'worktree',
+    branchName: '/tmp/repo-feature-demo',
+  });
+
+  assert.deepEqual(vscodeState.executedCommands, [
+    {
+      command: 'vscode.openFolder',
+      args: [{ fsPath: '/tmp/repo-feature-demo', path: '/tmp/repo-feature-demo' }, false],
+    },
+  ]);
+});
+
+test('openWorktreeInNewWindow opens the selected worktree in a new window', async () => {
+  const vscodeState = createVscodeState();
+
+  createWorktreeCommandsModule({
+    vscodeState,
+    gitMock: {
+      async createWorktree() {},
+      async removeWorktree() {},
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.openWorktreeInNewWindow']({
+    nodeType: 'worktree',
+    branchName: '/tmp/repo-feature-demo',
+  });
+
+  assert.deepEqual(vscodeState.executedCommands, [
+    {
+      command: 'vscode.openFolder',
+      args: [{ fsPath: '/tmp/repo-feature-demo', path: '/tmp/repo-feature-demo' }, true],
     },
   ]);
 });

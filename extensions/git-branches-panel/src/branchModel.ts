@@ -2,6 +2,7 @@ export type {
   BranchInfo,
   RemoteTrackingState,
   BranchSortOrder,
+  TagSortOrder,
   BranchSyncState,
   BranchTreeNode,
   TreeContainerScope,

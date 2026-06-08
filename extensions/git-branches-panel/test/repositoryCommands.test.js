@@ -130,6 +130,58 @@ test('cleanRepository confirms, cleans the repository, and refreshes once', asyn
   ]);
 });
 
+test('fetchAll fetches remotes and refreshes without pruning', async () => {
+  const vscodeState = createVscodeState();
+  const fetchCalls = [];
+
+  const { commandContext } = createRepositoryCommandsModule({
+    vscodeState,
+    gitMock: {
+      async cleanRepository() {},
+      async fetchAllRemotes(repoRoot) {
+        fetchCalls.push(repoRoot);
+      },
+      async fetchRemoteState() {},
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.fetchAll']();
+
+  assert.deepEqual(fetchCalls, ['/repo']);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: 'Fetched all remotes and refreshed branch status.',
+      options: { fetchRemoteState: false },
+    },
+  ]);
+});
+
+test('fetchAllPrune fetches remotes with pruning and refreshes once', async () => {
+  const vscodeState = createVscodeState();
+  const pruneCalls = [];
+
+  const { commandContext } = createRepositoryCommandsModule({
+    vscodeState,
+    gitMock: {
+      async cleanRepository() {},
+      async fetchAllRemotes() {},
+      async fetchRemoteState(repoRoot) {
+        pruneCalls.push(repoRoot);
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.fetchAllPrune']();
+
+  assert.deepEqual(pruneCalls, ['/repo']);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: 'Fetched all remotes, pruned deleted refs, and refreshed branch status.',
+      options: { fetchRemoteState: false },
+    },
+  ]);
+});
+
 test('openSettings opens the extension settings query', async () => {
   const vscodeState = createVscodeState();
 

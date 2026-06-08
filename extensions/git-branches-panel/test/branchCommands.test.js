@@ -808,6 +808,71 @@ test('showBranchActions opens an iconized quick pick for publishable branches an
   ]);
 });
 
+test('showBranchActions keeps current-branch checkout available even when the primary menu setting hides it', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.configurationValues['branchContextMenu.primaryActions'] = ['copyBranchName'];
+
+  createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.showBranchActions']({
+    nodeType: 'currentBranch',
+    contextValue: 'currentBranch',
+    branchName: 'main',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'main',
+      isCurrent: true,
+      scope: 'local',
+    },
+  });
+
+  assert.equal(vscodeState.quickPickRequests.length, 1);
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(arrow-right) Checkout Branch'
+    )
+  );
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(copy) Copy Branch Name'
+    )
+  );
+});
+
 test('deleteBranch blocks deletion of protected branches before any git command runs', async () => {
   const vscodeState = createVscodeState();
   vscodeState.configurationValues.protectedBranchNames = ['release/2026.06'];

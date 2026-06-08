@@ -1,7 +1,17 @@
 import * as vscode from 'vscode';
 
 import { buildCurrentBranchMessage } from './extensionHelpers';
+import {
+  syncSelectedItemPinnedContexts,
+  type BranchViewId,
+  updateSelectedItemPinnedContext,
+} from './pinContext';
 import { BranchTreeProvider, BranchTreeItem } from './treeProvider';
+
+interface RegisteredBranchView {
+  readonly viewId: BranchViewId;
+  readonly treeView: vscode.TreeView<BranchTreeItem>;
+}
 
 export function registerBranchViews(
   context: vscode.ExtensionContext,
@@ -11,25 +21,36 @@ export function registerBranchViews(
     createBranchTreeView('gitBranchesPanel', provider),
     createBranchTreeView('gitBranchesSCM', provider),
   ] as const;
+  const selectionSubscriptions = treeViews.map(({ viewId, treeView }) =>
+    treeView.onDidChangeSelection(({ selection }) => {
+      void updateSelectedItemPinnedContext(viewId, selection[0]);
+    })
+  );
 
-  updateTreeViewMessages(treeViews, provider);
+  updateTreeViewMessages(treeViews.map(({ treeView }) => treeView), provider);
+  void syncSelectedItemPinnedContexts(treeViews);
 
   context.subscriptions.push(
-    ...treeViews,
+    ...treeViews.map(({ treeView }) => treeView),
+    ...selectionSubscriptions,
     provider.onDidChangeTreeData(() => {
-      updateTreeViewMessages(treeViews, provider);
+      updateTreeViewMessages(treeViews.map(({ treeView }) => treeView), provider);
+      void syncSelectedItemPinnedContexts(treeViews);
     })
   );
 }
 
 function createBranchTreeView(
-  viewId: string,
+  viewId: BranchViewId,
   provider: BranchTreeProvider
-): vscode.TreeView<BranchTreeItem> {
-  return vscode.window.createTreeView(viewId, {
-    treeDataProvider: provider,
-    showCollapseAll: true,
-  });
+): RegisteredBranchView {
+  return {
+    viewId,
+    treeView: vscode.window.createTreeView(viewId, {
+      treeDataProvider: provider,
+      showCollapseAll: true,
+    }),
+  };
 }
 
 function updateTreeViewMessages(
@@ -37,7 +58,7 @@ function updateTreeViewMessages(
   provider: BranchTreeProvider
 ): void {
   const configuration = vscode.workspace.getConfiguration('gitBranchesPanel');
-  const showCurrentBranchInfo = configuration.get<boolean>('showCurrentBranchInfo', true);
+  const showCurrentBranchInfo = configuration.get<boolean>('showCurrentBranchInfo', false);
   const message = buildCurrentBranchMessage(
     provider.getCurrentBranch(),
     showCurrentBranchInfo

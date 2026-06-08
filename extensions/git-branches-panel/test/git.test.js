@@ -33,6 +33,8 @@ const {
   pushBranch,
   pushAllTags,
   removeWorktree,
+  stashAllChanges,
+  stashStagedChanges,
   stashSilently,
   syncBranch,
 } = require('../out/git.js');
@@ -307,6 +309,55 @@ test('stashSilently saves tracked and untracked changes and getStashes lists the
   assert.match(stashes[0].lastCommit, /(WIP on|On) main/);
   assert.equal(readFileSync(join(repoRoot, 'README.md'), 'utf8'), '# Test repo\nsecond\n');
   assert.equal(hasRef(repoRoot, 'refs/stash'), true);
+});
+
+test('stashAllChanges stores an optional stash message with tracked and untracked changes', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  writeFileSync(join(repoRoot, 'README.md'), '# Test repo\nthird\n');
+  writeFileSync(join(repoRoot, 'scratch.txt'), 'untracked\n');
+
+  const didStash = await stashAllChanges(repoRoot, 'Release prep');
+  const stashes = await getStashes(repoRoot);
+
+  assert.equal(didStash, true);
+  assert.equal(stashes.length, 1);
+  assert.match(stashes[0].lastCommit, /Release prep/);
+  assert.equal(readFileSync(join(repoRoot, 'README.md'), 'utf8'), '# Test repo\nsecond\n');
+  assert.equal(hasRef(repoRoot, 'refs/stash'), true);
+});
+
+test('stashStagedChanges stashes only staged changes and preserves unstaged and untracked work', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  commitFile(repoRoot, 'notes.txt', 'base\n', 'Add notes file');
+  writeFileSync(join(repoRoot, 'README.md'), '# Test repo\nstaged change\n');
+  runGit(repoRoot, ['add', 'README.md']);
+  writeFileSync(join(repoRoot, 'notes.txt'), 'unstaged change\n');
+  writeFileSync(join(repoRoot, 'scratch.txt'), 'untracked\n');
+
+  const didStash = await stashStagedChanges(repoRoot, 'Staged only');
+  const stashes = await getStashes(repoRoot);
+
+  assert.equal(didStash, true);
+  assert.equal(stashes.length, 1);
+  assert.match(stashes[0].lastCommit, /Staged only/);
+  assert.equal(readFileSync(join(repoRoot, 'README.md'), 'utf8'), '# Test repo\nsecond\n');
+  assert.equal(readFileSync(join(repoRoot, 'notes.txt'), 'utf8'), 'unstaged change\n');
+  assert.equal(readFileSync(join(repoRoot, 'scratch.txt'), 'utf8'), 'untracked\n');
+  assert.equal(hasRef(repoRoot, 'refs/stash'), true);
+});
+
+test('stashStagedChanges returns false when only unstaged changes remain', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  writeFileSync(join(repoRoot, 'README.md'), '# Test repo\nthird\n');
+
+  const didStash = await stashStagedChanges(repoRoot);
+
+  assert.equal(didStash, false);
+  assert.equal(readFileSync(join(repoRoot, 'README.md'), 'utf8'), '# Test repo\nthird\n');
+  assert.equal(hasRef(repoRoot, 'refs/stash'), false);
 });
 
 test('stashSilently returns false when there is nothing to stash', async (t) => {

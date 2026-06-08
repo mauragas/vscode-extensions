@@ -808,7 +808,7 @@ function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
     );
   }
 
-  if (!isStaleRemoteBranch && !isCurrentBranch) {
+  if (!isStaleRemoteBranch) {
     items.push(
       createBranchActionItem('checkout', '$(arrow-right) Checkout Branch', async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.checkout', item);

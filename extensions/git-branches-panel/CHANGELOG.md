@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.0] - 2026-06-08
+
+- Added `gitBranchesPanel.branchContextMenu.primaryActions` so branch right-click actions can be reordered or hidden from settings, while **More Branch Actions...** still remains the full fallback picker
+- Renamed **Stash Silently** to **Stash all changes silently** while keeping the existing `gitBranchesPanel.stashSilently` command id for backward compatibility
+- Moved the default stash shortcut out of the Branches view toolbar and into the built-in **Changes** view title bar through the stable `scm/title` menu contribution point
+- Added three optional stash commands/buttons, disabled by default: **Stash staged changes silently**, **Stash all changes**, and **Stash staged changes**
+- Added optional-message prompts for the non-silent stash commands and SCM-aware repository resolution so stash buttons target the correct Git repository in multi-repository workspaces
+- Added inline hover actions for the **Local**, **Remote**, **Stash**, **Worktree**, and **Tags** section headers, including **Sync All Branches**, **Pull All Branch Changes**, **Apply Latest Stash**, and section-level tag/worktree creation shortcuts
+- Added inline hover actions on individual worktree items for **Open Worktree** and **Open Worktree in New Window**
+- Added inline hover actions on individual tag items for **Checkout Tag** and **Delete Tag**
+- Added inline hover actions on individual stash items for **Pop Stash**, **Apply Stash**, and **Drop Stash**
+- Added matching section context-menu entries where that improved discoverability for the new hover actions
+- Changed `gitBranchesPanel.showCurrentBranchInfo` to default to `false`, so the current-branch banner starts hidden unless you opt back in
+- Documented the stable-API limitation that prevents custom buttons from being placed directly inside the built-in Commit button row, so the implementation uses the Changes view title bar instead
+- Removed the duplicate current-branch indicator from the VS Code status bar so the extension no longer repeats VS Code's built-in branch label
+- Deprecated `gitBranchesPanel.showStatusBarBranchAction`; the setting now has no effect because the extension no longer contributes a status bar action
+
 ## [1.5.0] - 2026-06-07
 
 - Local branches whose tracked upstream no longer exists are now shown with a warning color so they are visually distinct from healthy branches
@@ -43,7 +60,7 @@ All notable changes to this project will be documented in this file.
 - Fixed folder identity collisions across sections by making folder tree items section-aware end-to-end
 - Refreshed the marketplace icon with a cleaner high-resolution PNG for sharper rendering in the Extensions UI
 - Added settings to show or hide each toolbar quick action independently
-- Added `gitBranchesPanel.showStatusBarBranchAction` to hide the status bar sync/publish action for the current branch
+- Added a setting to hide the status bar sync/publish action for the current branch
 - Added separate publish actions for local branches that do not yet track a live upstream
 - Added a local-folder action to push descendant branches while publishing unpublished ones
 - Added a `Settings` toolbar quick action that opens this extension's settings directly

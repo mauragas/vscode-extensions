@@ -4,8 +4,6 @@ const test = require('node:test');
 const { buildBranchSections } = require('../out/branchModel.js');
 const {
   buildBranchTooltipContent,
-  buildStatusBarText,
-  buildStatusBarTooltipContent,
   buildTreeItemPresentation,
   findDescendantBranches,
   findContainerNode,
@@ -125,64 +123,6 @@ test('buildBranchTooltipContent describes local, remote, stash, tag, and worktre
   assert.match(worktreeTooltip, /_Worktree_/);
   assert.match(worktreeTooltip, /Reference: feature\/worktree/);
   assert.match(worktreeTooltip, /Locked: in use elsewhere/);
-});
-
-test('buildStatusBar helpers format sync and publish guidance', () => {
-  assert.equal(
-    buildStatusBarText({
-      name: 'main',
-      isCurrent: true,
-      behindCount: 2,
-      aheadCount: 1,
-    }),
-    '$(git-branch) main 2↓ 1↑'
-  );
-  assert.equal(
-    buildStatusBarText({
-      name: 'main',
-      isCurrent: true,
-      isSyncing: true,
-      aheadCount: 1,
-    }),
-    '$(sync~spin) main 1↑'
-  );
-  assert.equal(buildStatusBarText(undefined), '');
-
-  const syncTooltip = buildStatusBarTooltipContent({
-    name: 'main',
-    isCurrent: true,
-    upstreamName: 'origin/main',
-    behindCount: 2,
-    aheadCount: 1,
-  });
-  const publishTooltip = buildStatusBarTooltipContent({
-    name: 'main',
-    isCurrent: true,
-    upstreamName: 'origin/main',
-    upstreamMissing: true,
-  });
-  const busySyncTooltip = buildStatusBarTooltipContent({
-    name: 'main',
-    isCurrent: true,
-    upstreamName: 'origin/main',
-    isSyncing: true,
-  });
-  const busyPublishTooltip = buildStatusBarTooltipContent({
-    name: 'feature/offline',
-    isCurrent: true,
-    isSyncing: true,
-  });
-
-  assert.match(syncTooltip, /\*\*Current branch:\*\* main/);
-  assert.match(syncTooltip, /Upstream: origin\/main/);
-  assert.match(syncTooltip, /Sync state: 2↓ 1↑/);
-  assert.match(syncTooltip, /Click to sync the current branch with its remote\./);
-  assert.match(publishTooltip, /Publish target: origin\/main/);
-  assert.match(publishTooltip, /_Tracked upstream no longer exists_/);
-  assert.match(publishTooltip, /Click to publish the current branch to its remote\./);
-  assert.match(busySyncTooltip, /_Syncing current branch\.\.\._/);
-  assert.match(busyPublishTooltip, /Publish target: origin\/feature\/offline/);
-  assert.match(busyPublishTooltip, /_Publishing current branch\.\.\._/);
 });
 
 test('buildTreeItemPresentation maps sections, folders, and branch types consistently', () => {
@@ -507,11 +447,13 @@ test('buildTreeItemPresentation adds pinned prefixes and busy context values whe
   });
 
   assert.equal(pinnedBusyBranchPresentation.label, '★ 1↑ demo');
-  assert.equal(pinnedBusyBranchPresentation.contextValue, 'busyBranch');
+  assert.equal(pinnedBusyBranchPresentation.contextValue, 'pinned:busyBranch');
+  assert.equal(pinnedBusyBranchPresentation.icon.id, 'git-branch');
   assert.match(pinnedBusyBranchPresentation.tooltip, /_Pinned item_/);
 
   assert.equal(pinnedCurrentWorktreePresentation.label, '★ ● git-branches-panel-main-pinned-worktree');
-  assert.equal(pinnedCurrentWorktreePresentation.contextValue, 'currentWorktree');
+  assert.equal(pinnedCurrentWorktreePresentation.contextValue, 'pinned:currentWorktree');
+  assert.equal(pinnedCurrentWorktreePresentation.icon.id, 'folder');
 });
 
 test('buildTreeItemPresentation exposes protected context values so delete actions can be hidden in menus', () => {
