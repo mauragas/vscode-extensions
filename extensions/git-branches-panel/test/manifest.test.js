@@ -115,6 +115,41 @@ test('package manifest exposes the 1.6.0 branch-menu and stash contributions', (
   );
   assert.ok(
     sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.openWorktree' && item.when === 'viewItem == worktree || viewItem == currentWorktree' && item.group === 'inline@1'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.openWorktreeInNewWindow' && item.when === 'viewItem == worktree || viewItem == currentWorktree' && item.group === 'inline@2'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.checkoutTag' && item.when === 'viewItem == tag' && item.group === 'inline@1'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.deleteTag' && item.when === 'viewItem == tag' && item.group === 'inline@2'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.popStash' && item.when === 'viewItem == stash' && item.group === 'inline@1'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.applyStash' && item.when === 'viewItem == stash' && item.group === 'inline@2'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.dropStash' && item.when === 'viewItem == stash' && item.group === 'inline@3'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
       (item) => item.command === 'gitBranchesPanel.createTag' && item.when === 'viewItem == tagsSection' && item.group === 'inline@1'
     )
   );

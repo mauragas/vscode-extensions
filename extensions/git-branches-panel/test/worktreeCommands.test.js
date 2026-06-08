@@ -24,6 +24,7 @@ function loadFresh(modulePath, mocks) {
 
 function createVscodeState() {
   return {
+    executedCommands: [],
     registeredCommands: {},
     inputBoxRequests: [],
     inputBoxResponse: undefined,
@@ -37,7 +38,8 @@ function createVscodeMock(state) {
         state.registeredCommands[name] = callback;
         return { dispose() {} };
       },
-      async executeCommand() {
+      async executeCommand(command, ...args) {
+        state.executedCommands.push({ command, args });
         return undefined;
       },
     },
@@ -227,6 +229,54 @@ test('createWorktreeFromCurrentBranch creates a new worktree from the current br
     {
       message: "Created worktree 'repo-feature-main' from current branch 'main'.",
       options: { fetchRemoteState: false },
+    },
+  ]);
+});
+
+test('openWorktree opens the selected worktree in the current window', async () => {
+  const vscodeState = createVscodeState();
+
+  createWorktreeCommandsModule({
+    vscodeState,
+    gitMock: {
+      async createWorktree() {},
+      async removeWorktree() {},
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.openWorktree']({
+    nodeType: 'worktree',
+    branchName: '/tmp/repo-feature-demo',
+  });
+
+  assert.deepEqual(vscodeState.executedCommands, [
+    {
+      command: 'vscode.openFolder',
+      args: [{ fsPath: '/tmp/repo-feature-demo', path: '/tmp/repo-feature-demo' }, false],
+    },
+  ]);
+});
+
+test('openWorktreeInNewWindow opens the selected worktree in a new window', async () => {
+  const vscodeState = createVscodeState();
+
+  createWorktreeCommandsModule({
+    vscodeState,
+    gitMock: {
+      async createWorktree() {},
+      async removeWorktree() {},
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.openWorktreeInNewWindow']({
+    nodeType: 'worktree',
+    branchName: '/tmp/repo-feature-demo',
+  });
+
+  assert.deepEqual(vscodeState.executedCommands, [
+    {
+      command: 'vscode.openFolder',
+      args: [{ fsPath: '/tmp/repo-feature-demo', path: '/tmp/repo-feature-demo' }, true],
     },
   ]);
 });

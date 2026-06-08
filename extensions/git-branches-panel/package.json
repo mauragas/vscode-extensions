@@ -473,6 +473,41 @@
           "group": "inline@2"
         },
         {
+          "command": "gitBranchesPanel.openWorktree",
+          "when": "viewItem == worktree || viewItem == currentWorktree",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitBranchesPanel.openWorktreeInNewWindow",
+          "when": "viewItem == worktree || viewItem == currentWorktree",
+          "group": "inline@2"
+        },
+        {
+          "command": "gitBranchesPanel.checkoutTag",
+          "when": "viewItem == tag",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitBranchesPanel.deleteTag",
+          "when": "viewItem == tag",
+          "group": "inline@2"
+        },
+        {
+          "command": "gitBranchesPanel.popStash",
+          "when": "viewItem == stash",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitBranchesPanel.applyStash",
+          "when": "viewItem == stash",
+          "group": "inline@2"
+        },
+        {
+          "command": "gitBranchesPanel.dropStash",
+          "when": "viewItem == stash",
+          "group": "inline@3"
+        },
+        {
           "command": "gitBranchesPanel.syncBranch",
           "when": "gitBranchesPanel.branchContextMenu.slot1 == 'syncOrPublish' && (viewItem == branch || viewItem == currentBranch || viewItem == protectedBranch)",
           "group": "1_branchCustom@1"
