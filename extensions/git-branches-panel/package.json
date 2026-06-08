@@ -293,7 +293,7 @@
       {
         "command": "gitBranchesPanel.unpinItem",
         "title": "Unpin",
-        "icon": "$(pin)"
+        "icon": "$(unpin)"
       },
       {
         "command": "gitBranchesPanel.removeWorktree",

@@ -415,7 +415,7 @@ test('buildTreeItemPresentation sets correct context value and icon for missing 
   assert.equal(currentMissingUpstreamPresentation.command, undefined);
 });
 
-test('buildTreeItemPresentation adds pinned prefixes, icons, and busy context values where appropriate', () => {
+test('buildTreeItemPresentation adds pinned prefixes and busy context values where appropriate', () => {
   const pinnedBusyBranchPresentation = buildTreeItemPresentation({
     kind: 'branch',
     fullName: 'feature/demo',
@@ -429,32 +429,6 @@ test('buildTreeItemPresentation adds pinned prefixes, icons, and busy context va
       lastCommitDate: '1 hour ago',
       upstreamName: 'origin/feature/demo',
       aheadCount: 1,
-    },
-  });
-  const pinnedCurrentBranchPresentation = buildTreeItemPresentation({
-    kind: 'branch',
-    fullName: 'main',
-    label: 'main',
-    path: 'main',
-    info: {
-      name: 'main',
-      isCurrent: true,
-      isPinned: true,
-      upstreamName: 'origin/main',
-    },
-  });
-  const pinnedStaleRemotePresentation = buildTreeItemPresentation({
-    kind: 'branch',
-    fullName: 'ghost/main',
-    label: 'main',
-    path: 'ghost/main',
-    info: {
-      name: 'ghost/main',
-      isCurrent: false,
-      isPinned: true,
-      scope: 'remote',
-      remoteName: 'ghost',
-      remoteTrackingState: 'stale',
     },
   });
   const pinnedCurrentWorktreePresentation = buildTreeItemPresentation({
@@ -474,21 +448,12 @@ test('buildTreeItemPresentation adds pinned prefixes, icons, and busy context va
 
   assert.equal(pinnedBusyBranchPresentation.label, '★ 1↑ demo');
   assert.equal(pinnedBusyBranchPresentation.contextValue, 'busyBranch');
-  assert.equal(pinnedBusyBranchPresentation.icon.id, 'pin');
+  assert.equal(pinnedBusyBranchPresentation.icon.id, 'git-branch');
   assert.match(pinnedBusyBranchPresentation.tooltip, /_Pinned item_/);
-
-  assert.equal(pinnedCurrentBranchPresentation.icon.id, 'pin');
-  assert.equal(
-    pinnedCurrentBranchPresentation.icon.colorId,
-    'gitDecoration.addedResourceForeground'
-  );
-
-  assert.equal(pinnedStaleRemotePresentation.icon.id, 'pin');
-  assert.equal(pinnedStaleRemotePresentation.icon.colorId, 'list.warningForeground');
 
   assert.equal(pinnedCurrentWorktreePresentation.label, '★ ● git-branches-panel-main-pinned-worktree');
   assert.equal(pinnedCurrentWorktreePresentation.contextValue, 'currentWorktree');
-  assert.equal(pinnedCurrentWorktreePresentation.icon.id, 'pin');
+  assert.equal(pinnedCurrentWorktreePresentation.icon.id, 'folder');
 });
 
 test('buildTreeItemPresentation exposes protected context values so delete actions can be hidden in menus', () => {

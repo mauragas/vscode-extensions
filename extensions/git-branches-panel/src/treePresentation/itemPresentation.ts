@@ -67,7 +67,7 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
     id: `${node.info.scope ?? 'local'}:branch:${node.fullName}`,
     contextValue: getItemContextValue(nodeType, node.info),
     collapsibleState: 'none',
-    icon: getItemIcon(nodeType, node.info),
+    icon: getItemIcon(nodeType),
     description,
     tooltip: buildBranchTooltipContent(node),
     branchName: node.fullName,
@@ -334,11 +334,7 @@ function resolveProtectedContextValue(contextValue: string): string {
   }
 }
 
-function getItemIcon(nodeType: NodeType, branch: BranchInfo): TreeItemIconDescriptor {
-  if (branch.isPinned) {
-    return getPinnedItemIcon(nodeType);
-  }
-
+function getItemIcon(nodeType: NodeType): TreeItemIconDescriptor {
   switch (nodeType) {
     case 'currentBranch':
       return {
@@ -365,24 +361,6 @@ function getItemIcon(nodeType: NodeType, branch: BranchInfo): TreeItemIconDescri
       return { id: 'folder' };
     default:
       return { id: 'git-branch' };
-  }
-}
-
-function getPinnedItemIcon(nodeType: NodeType): TreeItemIconDescriptor {
-  switch (nodeType) {
-    case 'currentBranch':
-      return {
-        id: 'pin',
-        colorId: 'gitDecoration.addedResourceForeground',
-      };
-    case 'missingUpstreamBranch':
-    case 'staleRemoteBranch':
-      return {
-        id: 'pin',
-        colorId: 'list.warningForeground',
-      };
-    default:
-      return { id: 'pin' };
   }
 }
 

@@ -46,6 +46,8 @@ test('package manifest exposes the 1.6.0 branch-menu and stash contributions', (
   );
   assert.equal(getCommand('gitBranchesPanel.pinItem').title, 'Pin');
   assert.equal(getCommand('gitBranchesPanel.unpinItem').title, 'Unpin');
+  assert.equal(getCommand('gitBranchesPanel.pinItem').icon, '$(pin)');
+  assert.equal(getCommand('gitBranchesPanel.unpinItem').icon, '$(unpin)');
 
   const scmTitleMenus = packageJson.contributes.menus['scm/title'];
   assert.deepEqual(
