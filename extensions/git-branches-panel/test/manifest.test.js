@@ -11,6 +11,12 @@ function getCommand(commandId) {
   return packageJson.contributes.commands.find((command) => command.command === commandId);
 }
 
+function getViewItemContextMenuItems(commandId) {
+  return packageJson.contributes.menus['view/item/context'].filter(
+    (item) => item.command === commandId
+  );
+}
+
 function getInlineViewItemContextCommands() {
   return [...new Set(
     packageJson.contributes.menus['view/item/context']
@@ -30,11 +36,16 @@ test('package manifest exposes the 1.6.0 branch-menu and stash contributions', (
   assert.equal(getCommand('gitBranchesPanel.stashStagedChanges').title, 'Stash staged changes');
   assert.equal(getCommand('gitBranchesPanel.syncAllBranches').title, 'Sync All Branches');
   assert.equal(getCommand('gitBranchesPanel.pullAllLocalBranches').title, 'Pull All Branch Changes');
+  assert.equal(getCommand('gitBranchesPanel.fetchAll').icon, '$(repo-fetch)');
+  assert.equal(getCommand('gitBranchesPanel.fetchAllPrune').icon, '$(clear-all)');
+  assert.notEqual(getCommand('gitBranchesPanel.fetchAll').icon, getCommand('gitBranchesPanel.fetchAllPrune').icon);
   assert.equal(getCommand('gitBranchesPanel.applyLatestStash').title, 'Apply Latest Stash');
   assert.equal(
     getCommand('gitBranchesPanel.createWorktreeFromCurrentBranch').title,
     'Create New Worktree...'
   );
+  assert.equal(getCommand('gitBranchesPanel.pinItem').title, 'Pin');
+  assert.equal(getCommand('gitBranchesPanel.unpinItem').title, 'Unpin');
 
   const scmTitleMenus = packageJson.contributes.menus['scm/title'];
   assert.deepEqual(
@@ -81,6 +92,23 @@ test('package manifest exposes the 1.6.0 branch-menu and stash contributions', (
   );
 
   const sectionInlineMenus = packageJson.contributes.menus['view/item/context'];
+  const [pinInlineMenu] = getViewItemContextMenuItems('gitBranchesPanel.pinItem');
+  const [unpinInlineMenu] = getViewItemContextMenuItems('gitBranchesPanel.unpinItem');
+
+  assert.equal(pinInlineMenu.group, 'inline@4');
+  assert.equal(unpinInlineMenu.group, 'inline@4');
+  assert.ok(pinInlineMenu.when.includes('viewItem == branch'));
+  assert.ok(unpinInlineMenu.when.includes('viewItem == branch'));
+  assert.ok(pinInlineMenu.when.includes('!gitBranchesPanel.selectedItemPinned'));
+  assert.ok(unpinInlineMenu.when.includes('gitBranchesPanel.selectedItemPinned'));
+  assert.equal(
+    pinInlineMenu.when.replace(' && !gitBranchesPanel.selectedItemPinned', ''),
+    unpinInlineMenu.when.replace(' && gitBranchesPanel.selectedItemPinned', '')
+  );
+  assert.ok(
+    !sectionInlineMenus.some((item) => item.command === 'gitBranchesPanel.togglePinItem')
+  );
+
   assert.ok(
     sectionInlineMenus.some(
       (item) => item.command === 'gitBranchesPanel.newBranch' && item.when === 'viewItem == localSection' && item.group === 'inline@1'

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import { buildCurrentBranchMessage } from './extensionHelpers';
+import { updateSelectedItemPinnedContext } from './pinContext';
 import { BranchTreeProvider, BranchTreeItem } from './treeProvider';
 
 export function registerBranchViews(
@@ -11,11 +12,18 @@ export function registerBranchViews(
     createBranchTreeView('gitBranchesPanel', provider),
     createBranchTreeView('gitBranchesSCM', provider),
   ] as const;
+  const selectionSubscriptions = treeViews.map((treeView) =>
+    treeView.onDidChangeSelection(({ selection }) => {
+      void updateSelectedItemPinnedContext(selection[0]);
+    })
+  );
 
   updateTreeViewMessages(treeViews, provider);
+  void updateSelectedItemPinnedContext(undefined);
 
   context.subscriptions.push(
     ...treeViews,
+    ...selectionSubscriptions,
     provider.onDidChangeTreeData(() => {
       updateTreeViewMessages(treeViews, provider);
     })

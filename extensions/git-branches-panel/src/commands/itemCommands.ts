@@ -1,18 +1,24 @@
 import * as vscode from 'vscode';
 
+import { isPinnableItem, setSelectedItemPinnedContextValue } from '../pinContext';
 import { BranchTreeItem } from '../treeProvider';
 import type { CommandContext } from './shared';
+
+const PIN_COMMAND_IDS = [
+  'gitBranchesPanel.togglePinItem',
+  'gitBranchesPanel.pinItem',
+  'gitBranchesPanel.unpinItem',
+] as const;
 
 export function registerItemCommands(
   context: vscode.ExtensionContext,
   commandContext: CommandContext
 ): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand(
-      'gitBranchesPanel.togglePinItem',
-      async (item: BranchTreeItem) => {
+    ...PIN_COMMAND_IDS.map((commandId) =>
+      vscode.commands.registerCommand(commandId, async (item: BranchTreeItem) => {
         await handleTogglePinItem(item, commandContext);
-      }
+      })
     ),
     vscode.commands.registerCommand('gitBranchesPanel.branchActionInProgress', async () => {
       // Intentionally empty: the inline spinning icon is only a visual busy indicator.
@@ -28,19 +34,6 @@ async function handleTogglePinItem(
     return;
   }
 
-  await commandContext.provider.togglePinnedItem(item);
-}
-
-function isPinnableItem(item: BranchTreeItem | undefined): item is BranchTreeItem {
-  return Boolean(
-    item?.repoRoot &&
-      item.branchInfo &&
-      (item.nodeType === 'branch' ||
-        item.nodeType === 'currentBranch' ||
-        item.nodeType === 'missingUpstreamBranch' ||
-        item.nodeType === 'remoteBranch' ||
-        item.nodeType === 'staleRemoteBranch' ||
-        item.nodeType === 'stash' ||
-        item.nodeType === 'worktree')
-  );
+  const nextPinned = await commandContext.provider.togglePinnedItem(item);
+  await setSelectedItemPinnedContextValue(nextPinned);
 }

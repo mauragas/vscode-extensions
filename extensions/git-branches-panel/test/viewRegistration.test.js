@@ -2,10 +2,16 @@ const assert = require('node:assert/strict');
 const Module = require('node:module');
 const test = require('node:test');
 
-function loadFresh(modulePath, mocks) {
+function loadFresh(modulePath, mocks, extraModulePaths = []) {
   const originalLoad = Module._load;
-  const resolvedModulePath = require.resolve(modulePath);
-  delete require.cache[resolvedModulePath];
+  const resolvedModulePaths = [
+    require.resolve(modulePath),
+    ...extraModulePaths.map((extraModulePath) => require.resolve(extraModulePath)),
+  ];
+
+  for (const resolvedModulePath of resolvedModulePaths) {
+    delete require.cache[resolvedModulePath];
+  }
 
   Module._load = function mockLoad(request, parent, isMain) {
     if (Object.prototype.hasOwnProperty.call(mocks, request)) {
@@ -22,14 +28,36 @@ function loadFresh(modulePath, mocks) {
   }
 }
 
-function createVscodeMock(showCurrentBranchInfo, treeViews) {
+function createVscodeState() {
   return {
+    executedCommands: [],
+  };
+}
+
+function createVscodeMock(showCurrentBranchInfo, treeViews, state) {
+  return {
+    commands: {
+      async executeCommand(command, ...args) {
+        state.executedCommands.push({ command, args });
+        return undefined;
+      },
+    },
     window: {
       createTreeView: (viewId, options) => {
+        const selectionListeners = [];
         const treeView = {
           viewId,
           options,
           message: undefined,
+          onDidChangeSelection(listener) {
+            selectionListeners.push(listener);
+            return { dispose() {} };
+          },
+          fireSelection(selection) {
+            for (const listener of selectionListeners) {
+              listener({ selection });
+            }
+          },
           dispose() {},
         };
         treeViews.push(treeView);
@@ -52,9 +80,10 @@ function createVscodeMock(showCurrentBranchInfo, treeViews) {
 test('registerBranchViews hides the current branch banner when setting is disabled', () => {
   const treeViews = [];
   const listeners = [];
+  const vscodeState = createVscodeState();
   const { registerBranchViews } = loadFresh('../out/viewRegistration.js', {
-    vscode: createVscodeMock(false, treeViews),
-  });
+    vscode: createVscodeMock(false, treeViews, vscodeState),
+  }, ['../out/pinContext.js']);
 
   const provider = {
     getCurrentBranch: () => ({
@@ -67,7 +96,6 @@ test('registerBranchViews hides the current branch banner when setting is disabl
       return { dispose() {} };
     },
   };
-
   const context = { subscriptions: [] };
 
   registerBranchViews(context, provider);
@@ -85,9 +113,10 @@ test('registerBranchViews hides the current branch banner when setting is disabl
 test('registerBranchViews updates the current branch banner when setting is enabled', () => {
   const treeViews = [];
   const listeners = [];
+  const vscodeState = createVscodeState();
   const { registerBranchViews } = loadFresh('../out/viewRegistration.js', {
-    vscode: createVscodeMock(true, treeViews),
-  });
+    vscode: createVscodeMock(true, treeViews, vscodeState),
+  }, ['../out/pinContext.js']);
 
   let currentBranch = {
     name: 'main',
@@ -123,4 +152,76 @@ test('registerBranchViews updates the current branch banner when setting is enab
     treeViews[1].message,
     'Current branch: feature/release-candidate • 3 minutes ago'
   );
+});
+
+test('registerBranchViews keeps the selected pinned-item context in sync across both tree views', () => {
+  const treeViews = [];
+  const vscodeState = createVscodeState();
+  const { registerBranchViews } = loadFresh('../out/viewRegistration.js', {
+    vscode: createVscodeMock(false, treeViews, vscodeState),
+  }, ['../out/pinContext.js']);
+
+  const provider = {
+    getCurrentBranch: () => undefined,
+    onDidChangeTreeData: () => ({ dispose() {} }),
+  };
+
+  registerBranchViews({ subscriptions: [] }, provider);
+
+  const pinnedBranch = {
+    nodeType: 'branch',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'feature/demo',
+      isCurrent: false,
+      isPinned: true,
+    },
+  };
+  const unpinnedBranch = {
+    nodeType: 'branch',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'feature/demo',
+      isCurrent: false,
+      isPinned: false,
+    },
+  };
+  const tagItem = {
+    nodeType: 'tag',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'v1.0.0',
+      isCurrent: false,
+      isPinned: true,
+      scope: 'tag',
+    },
+  };
+
+  treeViews[0].fireSelection([pinnedBranch]);
+  treeViews[1].fireSelection([unpinnedBranch]);
+  treeViews[1].fireSelection([tagItem]);
+  treeViews[0].fireSelection([]);
+
+  assert.deepEqual(vscodeState.executedCommands, [
+    {
+      command: 'setContext',
+      args: ['gitBranchesPanel.selectedItemPinned', false],
+    },
+    {
+      command: 'setContext',
+      args: ['gitBranchesPanel.selectedItemPinned', true],
+    },
+    {
+      command: 'setContext',
+      args: ['gitBranchesPanel.selectedItemPinned', false],
+    },
+    {
+      command: 'setContext',
+      args: ['gitBranchesPanel.selectedItemPinned', false],
+    },
+    {
+      command: 'setContext',
+      args: ['gitBranchesPanel.selectedItemPinned', false],
+    },
+  ]);
 });

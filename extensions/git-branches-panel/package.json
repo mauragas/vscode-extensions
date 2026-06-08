@@ -79,12 +79,12 @@
       {
         "command": "gitBranchesPanel.fetchAll",
         "title": "Fetch All",
-        "icon": "$(cloud-download)"
+        "icon": "$(repo-fetch)"
       },
       {
         "command": "gitBranchesPanel.fetchAllPrune",
         "title": "Fetch All (Prune)",
-        "icon": "$(cloud-download)"
+        "icon": "$(clear-all)"
       },
       {
         "command": "gitBranchesPanel.showAdvancedActions",
@@ -286,6 +286,16 @@
         "icon": "$(pin)"
       },
       {
+        "command": "gitBranchesPanel.pinItem",
+        "title": "Pin",
+        "icon": "$(pin)"
+      },
+      {
+        "command": "gitBranchesPanel.unpinItem",
+        "title": "Unpin",
+        "icon": "$(pin)"
+      },
+      {
         "command": "gitBranchesPanel.removeWorktree",
         "title": "Remove Worktree",
         "icon": "$(trash)"
@@ -416,8 +426,13 @@
           "group": "inline@3"
         },
         {
-          "command": "gitBranchesPanel.togglePinItem",
-          "when": "viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch || viewItem == stash || viewItem == worktree || viewItem == currentWorktree",
+          "command": "gitBranchesPanel.pinItem",
+          "when": "(viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch || viewItem == stash || viewItem == worktree || viewItem == currentWorktree) && !gitBranchesPanel.selectedItemPinned",
+          "group": "inline@4"
+        },
+        {
+          "command": "gitBranchesPanel.unpinItem",
+          "when": "(viewItem == branch || viewItem == currentBranch || viewItem == publishableBranch || viewItem == publishableCurrentBranch || viewItem == missingUpstreamBranch || viewItem == remoteBranch || viewItem == staleRemoteBranch || viewItem == protectedBranch || viewItem == protectedPublishableBranch || viewItem == protectedRemoteBranch || viewItem == protectedStaleRemoteBranch || viewItem == protectedMissingUpstreamBranch || viewItem == stash || viewItem == worktree || viewItem == currentWorktree) && gitBranchesPanel.selectedItemPinned",
           "group": "inline@4"
         },
         {

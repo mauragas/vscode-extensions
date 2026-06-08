@@ -2,10 +2,16 @@ const assert = require('node:assert/strict');
 const Module = require('node:module');
 const test = require('node:test');
 
-function loadFresh(modulePath, mocks) {
+function loadFresh(modulePath, mocks, extraModulePaths = []) {
   const originalLoad = Module._load;
-  const resolvedModulePath = require.resolve(modulePath);
-  delete require.cache[resolvedModulePath];
+  const resolvedModulePaths = [
+    require.resolve(modulePath),
+    ...extraModulePaths.map((extraModulePath) => require.resolve(extraModulePath)),
+  ];
+
+  for (const resolvedModulePath of resolvedModulePaths) {
+    delete require.cache[resolvedModulePath];
+  }
 
   Module._load = function mockLoad(request, parent, isMain) {
     if (Object.prototype.hasOwnProperty.call(mocks, request)) {
@@ -25,6 +31,7 @@ function loadFresh(modulePath, mocks) {
 function createVscodeState() {
   return {
     registeredCommands: {},
+    executedCommands: [],
   };
 }
 
@@ -35,13 +42,18 @@ function createVscodeMock(state) {
         state.registeredCommands[name] = callback;
         return { dispose() {} };
       },
+      async executeCommand(command, ...args) {
+        state.executedCommands.push({ command, args });
+        return undefined;
+      },
     },
   };
 }
 
-function createCommandContext() {
+function createCommandContext(nextPinnedValues = []) {
   const state = {
     toggledItems: [],
+    nextPinnedValues: [...nextPinnedValues],
   };
 
   return {
@@ -50,7 +62,7 @@ function createCommandContext() {
       provider: {
         async togglePinnedItem(item) {
           state.toggledItems.push(item);
-          return true;
+          return state.nextPinnedValues.length > 0 ? state.nextPinnedValues.shift() : true;
         },
       },
       activationTracker: {},
@@ -67,14 +79,14 @@ function createCommandContext() {
   };
 }
 
-function createItemCommandsModule({ vscodeState }) {
-  const commandContext = createCommandContext();
+function createItemCommandsModule({ vscodeState, nextPinnedValues = [] }) {
+  const commandContext = createCommandContext(nextPinnedValues);
   const itemCommands = loadFresh('../out/commands/itemCommands.js', {
     vscode: createVscodeMock(vscodeState),
     '../treeProvider': {
       BranchTreeItem: class BranchTreeItem {},
     },
-  });
+  }, ['../out/pinContext.js']);
 
   itemCommands.registerItemCommands({ subscriptions: [] }, commandContext.context);
 
@@ -99,6 +111,46 @@ test('togglePinItem forwards supported items to the provider', async () => {
   await vscodeState.registeredCommands['gitBranchesPanel.togglePinItem'](item);
 
   assert.deepEqual(commandContext.state.toggledItems, [item]);
+  assert.deepEqual(vscodeState.executedCommands, [
+    {
+      command: 'setContext',
+      args: ['gitBranchesPanel.selectedItemPinned', true],
+    },
+  ]);
+});
+
+test('pinItem and unpinItem commands reuse the toggle handler and update the selection context', async () => {
+  const vscodeState = createVscodeState();
+  const { commandContext } = createItemCommandsModule({
+    vscodeState,
+    nextPinnedValues: [true, false],
+  });
+  const item = {
+    nodeType: 'branch',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'feature/demo',
+      isCurrent: false,
+    },
+  };
+
+  assert.equal(typeof vscodeState.registeredCommands['gitBranchesPanel.pinItem'], 'function');
+  assert.equal(typeof vscodeState.registeredCommands['gitBranchesPanel.unpinItem'], 'function');
+
+  await vscodeState.registeredCommands['gitBranchesPanel.pinItem'](item);
+  await vscodeState.registeredCommands['gitBranchesPanel.unpinItem'](item);
+
+  assert.deepEqual(commandContext.state.toggledItems, [item, item]);
+  assert.deepEqual(vscodeState.executedCommands, [
+    {
+      command: 'setContext',
+      args: ['gitBranchesPanel.selectedItemPinned', true],
+    },
+    {
+      command: 'setContext',
+      args: ['gitBranchesPanel.selectedItemPinned', false],
+    },
+  ]);
 });
 
 test('togglePinItem ignores unsupported items', async () => {
@@ -116,6 +168,7 @@ test('togglePinItem ignores unsupported items', async () => {
   });
 
   assert.deepEqual(commandContext.state.toggledItems, []);
+  assert.deepEqual(vscodeState.executedCommands, []);
 });
 
 test('branchActionInProgress is a safe no-op command', async () => {
