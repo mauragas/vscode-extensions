@@ -131,7 +131,7 @@ test('buildBranchTree groups slash-separated branches into nested folders and ke
   );
 });
 
-test('buildBranchSections shows local, remote, stash, worktree, and tag groups in order', () => {
+test('buildBranchSections shows local, remote, stash, worktree, hook, and tag groups in order', () => {
   const localBranches = sortBranches(
     [
       { name: 'feature/auth', isCurrent: false },
@@ -195,6 +195,28 @@ test('buildBranchSections shows local, remote, stash, worktree, and tag groups i
     ],
     'alphabetical'
   );
+  const hookBranches = sortBranches(
+    [
+      {
+        name: 'commit-msg · local',
+        isCurrent: false,
+        scope: 'hook',
+        hookName: 'commit-msg',
+        hookSource: 'local',
+        hookEnabled: true,
+      },
+      {
+        name: 'pre-commit · shared',
+        isCurrent: false,
+        scope: 'hook',
+        hookName: 'pre-commit',
+        hookSource: 'shared',
+        hookEnabled: true,
+        hookActive: true,
+      },
+    ],
+    'alphabetical'
+  );
   const tagBranches = sortBranches(
     [
       { name: 'release/v1.0.0', isCurrent: false, scope: 'tag' },
@@ -208,11 +230,12 @@ test('buildBranchSections shows local, remote, stash, worktree, and tag groups i
     remoteBranches,
     stashBranches,
     worktreeBranches,
+    hookBranches,
     tagBranches,
     true
   );
 
-  assert.equal(sections.length, 5);
+  assert.equal(sections.length, 6);
   assert.equal(sections[0]?.kind, 'section');
   assert.equal(sections[0]?.label, 'Local');
   assert.equal(sections[1]?.kind, 'section');
@@ -222,7 +245,9 @@ test('buildBranchSections shows local, remote, stash, worktree, and tag groups i
   assert.equal(sections[3]?.kind, 'section');
   assert.equal(sections[3]?.label, 'Worktree');
   assert.equal(sections[4]?.kind, 'section');
-  assert.equal(sections[4]?.label, 'Tags');
+  assert.equal(sections[4]?.label, 'Hooks');
+  assert.equal(sections[5]?.kind, 'section');
+  assert.equal(sections[5]?.label, 'Tags');
 
   assert.deepEqual(
     sections[1].children.map((node) => (node.kind === 'folder' ? node.path : node.fullName)),
@@ -255,11 +280,16 @@ test('buildBranchSections shows local, remote, stash, worktree, and tag groups i
 
   assert.deepEqual(
     sections[4].children.map((node) => (node.kind === 'folder' ? node.path : node.fullName)),
+    ['commit-msg · local', 'pre-commit · shared']
+  );
+
+  assert.deepEqual(
+    sections[5].children.map((node) => (node.kind === 'folder' ? node.path : node.fullName)),
     ['release', 'v0.9.0']
   );
 });
 
-test('buildBranchSections omits empty local, remote, stash, worktree, or tag groups', () => {
+test('buildBranchSections omits empty local, remote, stash, worktree, hook, or tag groups', () => {
   const localOnlySections = buildBranchSections(
     [{ name: 'main', isCurrent: true }],
     [],
@@ -292,6 +322,15 @@ test('buildBranchSections omits empty local, remote, stash, worktree, or tag gro
     [],
     true
   );
+  const hookOnlySections = buildBranchSections(
+    [],
+    [],
+    [],
+    [],
+    [{ name: 'pre-commit · shared', isCurrent: false, scope: 'hook', hookName: 'pre-commit' }],
+    [],
+    true
+  );
   const tagOnlySections = buildBranchSections(
     [],
     [],
@@ -305,6 +344,7 @@ test('buildBranchSections omits empty local, remote, stash, worktree, or tag gro
   assert.deepEqual(remoteOnlySections.map((section) => section.label), ['Remote']);
   assert.deepEqual(stashOnlySections.map((section) => section.label), ['Stash']);
   assert.deepEqual(worktreeOnlySections.map((section) => section.label), ['Worktree']);
+  assert.deepEqual(hookOnlySections.map((section) => section.label), ['Hooks']);
   assert.deepEqual(tagOnlySections.map((section) => section.label), ['Tags']);
 });
 
@@ -491,5 +531,17 @@ test('buildBranchDescription combines sync badges with commit timing', () => {
       worktreeLockedReason: 'in use elsewhere',
     }),
     'feature/worktree • locked'
+  );
+
+  assert.equal(
+    buildBranchDescription({
+      name: 'pre-commit · shared',
+      isCurrent: false,
+      scope: 'hook',
+      hookEnabled: true,
+      hookActive: true,
+      hookSource: 'shared',
+    }),
+    'active • shared'
   );
 });

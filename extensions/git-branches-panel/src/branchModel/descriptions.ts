@@ -69,6 +69,9 @@ export function buildBranchDescription(
     BranchInfo,
     | 'aheadCount'
     | 'behindCount'
+    | 'hookActive'
+    | 'hookEnabled'
+    | 'hookSource'
     | 'lastCommit'
     | 'lastCommitDate'
     | 'scope'
@@ -88,6 +91,9 @@ function getDescriptionParts(
     BranchInfo,
     | 'aheadCount'
     | 'behindCount'
+    | 'hookActive'
+    | 'hookEnabled'
+    | 'hookSource'
     | 'lastCommit'
     | 'lastCommitDate'
     | 'scope'
@@ -100,6 +106,8 @@ function getDescriptionParts(
   switch (branch.scope) {
     case 'stash':
       return [branch.lastCommit ?? '', branch.lastCommitDate ?? ''].filter(Boolean);
+    case 'hook':
+      return [resolveHookStatus(branch), branch.hookSource ?? ''].filter(Boolean);
     case 'worktree':
       return [
         branch.worktreeRef ?? '',
@@ -110,4 +118,18 @@ function getDescriptionParts(
     default:
       return [formatSyncStatus(branch), branch.lastCommitDate ?? ''].filter(Boolean);
   }
+}
+
+function resolveHookStatus(
+  branch: Pick<BranchInfo, 'hookActive' | 'hookEnabled'>
+): string {
+  if (branch.hookActive) {
+    return 'active';
+  }
+
+  if (branch.hookEnabled) {
+    return 'inactive';
+  }
+
+  return 'disabled';
 }

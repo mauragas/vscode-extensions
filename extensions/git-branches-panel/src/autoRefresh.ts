@@ -17,6 +17,8 @@ export function registerAutoRefresh(
   const stashRefWatcher = vscode.workspace.createFileSystemWatcher('**/.git/refs/stash');
   const stashLogWatcher = vscode.workspace.createFileSystemWatcher('**/.git/logs/refs/stash');
   const worktreesWatcher = vscode.workspace.createFileSystemWatcher('**/.git/worktrees/**');
+  const gitConfigWatcher = vscode.workspace.createFileSystemWatcher('**/.git/config');
+  const localHooksWatcher = vscode.workspace.createFileSystemWatcher('**/.git/hooks/**');
   const fetchHeadWatcher = vscode.workspace.createFileSystemWatcher('**/.git/FETCH_HEAD');
   const packedRefsWatcher = vscode.workspace.createFileSystemWatcher('**/.git/packed-refs');
 
@@ -96,6 +98,24 @@ export function registerAutoRefresh(
   worktreesWatcher.onDidDelete(() => {
     refreshLoadedSections(['worktree']);
   });
+  gitConfigWatcher.onDidChange(() => {
+    refreshLoadedSections(['hooks']);
+  });
+  gitConfigWatcher.onDidCreate(() => {
+    refreshLoadedSections(['hooks']);
+  });
+  gitConfigWatcher.onDidDelete(() => {
+    refreshLoadedSections(['hooks']);
+  });
+  localHooksWatcher.onDidChange(() => {
+    refreshLoadedSections(['hooks']);
+  });
+  localHooksWatcher.onDidCreate(() => {
+    refreshLoadedSections(['hooks']);
+  });
+  localHooksWatcher.onDidDelete(() => {
+    refreshLoadedSections(['hooks']);
+  });
   fetchHeadWatcher.onDidChange(() => {
     refreshLoadedSections(['local', 'remote']);
   });
@@ -120,6 +140,8 @@ export function registerAutoRefresh(
     stashRefWatcher,
     stashLogWatcher,
     worktreesWatcher,
+    gitConfigWatcher,
+    localHooksWatcher,
     fetchHeadWatcher,
     packedRefsWatcher,
     vscode.workspace.onDidChangeConfiguration((event) => {

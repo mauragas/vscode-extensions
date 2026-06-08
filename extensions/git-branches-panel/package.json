@@ -272,6 +272,21 @@
         "icon": "$(diff-multiple)"
       },
       {
+        "command": "gitBranchesPanel.editHook",
+        "title": "Edit Hook",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "gitBranchesPanel.enableHook",
+        "title": "Enable Hook",
+        "icon": "$(play)"
+      },
+      {
+        "command": "gitBranchesPanel.disableHook",
+        "title": "Disable Hook",
+        "icon": "$(close)"
+      },
+      {
         "command": "gitBranchesPanel.openWorktree",
         "title": "Open Worktree",
         "icon": "$(folder-opened)"
@@ -549,6 +564,21 @@
           "command": "gitBranchesPanel.renameStash",
           "when": "viewItem =~ /^(?:pinned:)?(?:stash)$/",
           "group": "inline@4"
+        },
+        {
+          "command": "gitBranchesPanel.disableHook",
+          "when": "viewItem =~ /^(?:localHook|sharedHook)$/",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitBranchesPanel.enableHook",
+          "when": "viewItem =~ /^(?:disabledLocalHook|disabledSharedHook)$/",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitBranchesPanel.editHook",
+          "when": "viewItem =~ /^(?:localHook|sharedHook|disabledLocalHook|disabledSharedHook)$/",
+          "group": "inline@2"
         },
         {
           "command": "gitBranchesPanel.syncBranch",
@@ -1434,6 +1464,21 @@
           "command": "gitBranchesPanel.renameStash",
           "when": "viewItem =~ /^(?:pinned:)?(?:stash)$/",
           "group": "1_stash@3"
+        },
+        {
+          "command": "gitBranchesPanel.editHook",
+          "when": "viewItem =~ /^(?:localHook|sharedHook|disabledLocalHook|disabledSharedHook)$/",
+          "group": "1_hook@1"
+        },
+        {
+          "command": "gitBranchesPanel.disableHook",
+          "when": "viewItem =~ /^(?:localHook|sharedHook)$/",
+          "group": "1_hook@2"
+        },
+        {
+          "command": "gitBranchesPanel.enableHook",
+          "when": "viewItem =~ /^(?:disabledLocalHook|disabledSharedHook)$/",
+          "group": "1_hook@2"
         },
         {
           "command": "gitBranchesPanel.dropStash",

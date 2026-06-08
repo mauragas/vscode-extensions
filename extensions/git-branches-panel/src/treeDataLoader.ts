@@ -11,7 +11,7 @@ import {
 } from './branchModel';
 import { formatErrorMessage } from './errorUtils';
 
-export type BranchSectionKey = 'local' | 'remote' | 'stash' | 'worktree' | 'tags';
+export type BranchSectionKey = 'local' | 'remote' | 'stash' | 'worktree' | 'hooks' | 'tags';
 
 export interface BranchLoadOptions {
   fetchRemoteState?: boolean;
@@ -32,6 +32,7 @@ export interface BranchDataLoaderDependencies {
   getRemoteBranches(repoRoot: string): Promise<BranchInfo[]>;
   getStashes(repoRoot: string): Promise<BranchInfo[]>;
   getWorktrees(repoRoot: string): Promise<BranchInfo[]>;
+  getHooks(repoRoot: string): Promise<BranchInfo[]>;
   getTags(repoRoot: string): Promise<BranchInfo[]>;
   fetchRemoteState(repoRoot: string): Promise<void>;
   decorateBranchInfo?(repoRoot: string, branch: BranchInfo): BranchInfo;
@@ -40,12 +41,13 @@ export interface BranchDataLoaderDependencies {
 
 export const REMOTE_FETCH_INTERVAL_MS = 30_000;
 
-const DEFAULT_SECTION: BranchSectionKey = 'local';
+const DEFAULT_SECTIONS: readonly BranchSectionKey[] = ['local', 'hooks'];
 const BRANCH_SECTION_ORDER: readonly BranchSectionKey[] = [
   'local',
   'remote',
   'stash',
   'worktree',
+  'hooks',
   'tags',
 ] as const;
 
@@ -54,6 +56,7 @@ const BRANCH_SECTION_LABELS: Record<BranchSectionKey, string> = {
   remote: 'Remote',
   stash: 'Stash',
   worktree: 'Worktree',
+  hooks: 'Hooks',
   tags: 'Tags',
 };
 
@@ -62,6 +65,7 @@ const BRANCH_SECTION_PATHS: Record<BranchSectionKey, string> = {
   remote: 'section:remote',
   stash: 'section:stash',
   worktree: 'section:worktree',
+  hooks: 'section:hooks',
   tags: 'section:tags',
 };
 
@@ -111,7 +115,9 @@ export class BranchDataLoader {
       path: BRANCH_SECTION_PATHS[section],
       scope: toTreeContainerScope(section),
       children: this.sectionStates[section].children,
-    }) satisfies TreeSection);
+    }) satisfies TreeSection).filter(
+      (section) => section.scope !== 'hook' || section.children.length > 0
+    );
   }
 
   getRepoRoot(): string | null {
@@ -180,7 +186,7 @@ export class BranchDataLoader {
   ): BranchSectionKey[] {
     const baseSections =
       requestedSections ??
-      (this.getLoadedSections().length > 0 ? this.getLoadedSections() : [DEFAULT_SECTION]);
+      (this.getLoadedSections().length > 0 ? this.getLoadedSections() : [...DEFAULT_SECTIONS]);
     const uniqueSections = [...new Set(baseSections)];
 
     return onlyIfLoaded
@@ -215,7 +221,7 @@ export class BranchDataLoader {
     );
     const children = buildBranchTree(
       sortedBranches,
-      section === 'worktree' ? false : configuration.groupByFolder,
+      section === 'worktree' || section === 'hooks' ? false : configuration.groupByFolder,
       toTreeContainerScope(section)
     );
 
@@ -239,6 +245,8 @@ export class BranchDataLoader {
         return this.dependencies.getStashes(repoRoot);
       case 'worktree':
         return this.dependencies.getWorktrees(repoRoot);
+      case 'hooks':
+        return this.dependencies.getHooks(repoRoot);
       case 'tags':
         return this.dependencies.getTags(repoRoot);
       default:
@@ -275,10 +283,19 @@ function createEmptySectionStates(): Record<BranchSectionKey, SectionState> {
     remote: createEmptySectionState(),
     stash: createEmptySectionState(),
     worktree: createEmptySectionState(),
+    hooks: createEmptySectionState(),
     tags: createEmptySectionState(),
   };
 }
 
 function toTreeContainerScope(section: BranchSectionKey): TreeContainerScope {
-  return section === 'tags' ? 'tag' : section;
+  if (section === 'tags') {
+    return 'tag';
+  }
+
+  if (section === 'hooks') {
+    return 'hook';
+  }
+
+  return section;
 }

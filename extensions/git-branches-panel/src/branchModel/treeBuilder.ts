@@ -136,7 +136,24 @@ export function buildBranchSections(
   worktreeBranches: readonly BranchInfo[],
   tagBranches: readonly BranchInfo[],
   groupByFolder: boolean
+): TreeSection[];
+export function buildBranchSections(
+  localBranches: readonly BranchInfo[],
+  remoteBranches: readonly BranchInfo[],
+  stashBranches: readonly BranchInfo[],
+  worktreeBranches: readonly BranchInfo[],
+  hookOrTagBranches: readonly BranchInfo[],
+  tagBranchesOrGroupByFolder: readonly BranchInfo[] | boolean,
+  maybeGroupByFolder?: boolean
 ): TreeSection[] {
+  const hasExplicitHookBranches = Array.isArray(tagBranchesOrGroupByFolder);
+  const hookBranches: readonly BranchInfo[] = hasExplicitHookBranches ? hookOrTagBranches : [];
+  const resolvedTagBranches: readonly BranchInfo[] = hasExplicitHookBranches
+    ? tagBranchesOrGroupByFolder
+    : hookOrTagBranches;
+  const resolvedGroupByFolder: boolean = hasExplicitHookBranches
+    ? (maybeGroupByFolder ?? true)
+    : (tagBranchesOrGroupByFolder as boolean);
   const sections: TreeSection[] = [];
 
   if (localBranches.length > 0) {
@@ -145,7 +162,7 @@ export function buildBranchSections(
       label: 'Local',
       path: 'section:local',
       scope: 'local',
-      children: buildBranchTree(localBranches, groupByFolder, 'local'),
+      children: buildBranchTree(localBranches, resolvedGroupByFolder, 'local'),
     });
   }
 
@@ -155,7 +172,7 @@ export function buildBranchSections(
       label: 'Remote',
       path: 'section:remote',
       scope: 'remote',
-      children: buildBranchTree(remoteBranches, groupByFolder, 'remote'),
+      children: buildBranchTree(remoteBranches, resolvedGroupByFolder, 'remote'),
     });
   }
 
@@ -165,7 +182,7 @@ export function buildBranchSections(
       label: 'Stash',
       path: 'section:stash',
       scope: 'stash',
-      children: buildBranchTree(stashBranches, groupByFolder, 'stash'),
+      children: buildBranchTree(stashBranches, resolvedGroupByFolder, 'stash'),
     });
   }
 
@@ -179,13 +196,23 @@ export function buildBranchSections(
     });
   }
 
-  if (tagBranches.length > 0) {
+  if (hookBranches.length > 0) {
+    sections.push({
+      kind: 'section',
+      label: 'Hooks',
+      path: 'section:hooks',
+      scope: 'hook',
+      children: buildBranchTree(hookBranches, false, 'hook'),
+    });
+  }
+
+  if (resolvedTagBranches.length > 0) {
     sections.push({
       kind: 'section',
       label: 'Tags',
       path: 'section:tags',
       scope: 'tag',
-      children: buildBranchTree(tagBranches, groupByFolder, 'tag'),
+      children: buildBranchTree(resolvedTagBranches, resolvedGroupByFolder, 'tag'),
     });
   }
 

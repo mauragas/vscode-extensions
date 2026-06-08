@@ -1,6 +1,15 @@
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
-const { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
+const {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} = require('node:fs');
 const { tmpdir } = require('node:os');
 const { dirname, join } = require('node:path');
 const test = require('node:test');
@@ -22,6 +31,7 @@ const {
   fetchRemoteState,
   getDiffFilesBetweenRefs,
   getBranches,
+  getHooks,
   getRemoteBranchTrackingState,
   getRemotes,
   getRemoteBranches,
@@ -33,6 +43,7 @@ const {
   pushBranch,
   pushAllTags,
   renameStash,
+  setHookEnabled,
   removeWorktree,
   renameWorktree,
   stashAllChanges,
@@ -444,6 +455,98 @@ test('renameStash updates the selected stash message while preserving stack orde
   assert.equal(stashesAfterRename[1].stashRevision, stashesBeforeRename[1].stashRevision);
   assert.match(stashesAfterRename[0].lastCommit, /Second stash/);
   assert.match(stashesAfterRename[1].lastCommit, /Renamed first stash/);
+});
+
+test('getHooks lists local and shared hooks while distinguishing active state', async (t) => {
+  const repoRoot = createTempRepository(t);
+  const localHookPath = join(repoRoot, '.git', 'hooks', 'post-commit');
+  const sharedHooksRoot = join(repoRoot, '.githooks');
+  const sharedHookPath = join(sharedHooksRoot, 'pre-commit');
+  const disabledSharedHookPath = join(sharedHooksRoot, 'commit-msg.disabled');
+
+  mkdirSync(sharedHooksRoot, { recursive: true });
+  writeFileSync(localHookPath, '#!/bin/sh\nexit 0\n');
+  chmodSync(localHookPath, 0o755);
+  writeFileSync(sharedHookPath, '#!/bin/sh\necho shared\n');
+  chmodSync(sharedHookPath, 0o755);
+  writeFileSync(disabledSharedHookPath, '#!/bin/sh\nexit 0\n');
+  runGit(repoRoot, ['config', 'core.hooksPath', '.githooks']);
+
+  const hooks = await getHooks(repoRoot);
+  const localHook = hooks.find(
+    (hook) => hook.hookName === 'post-commit' && hook.hookSource === 'local'
+  );
+  const sharedHook = hooks.find(
+    (hook) => hook.hookName === 'pre-commit' && hook.hookSource === 'shared'
+  );
+  const disabledSharedHook = hooks.find(
+    (hook) => hook.hookName === 'commit-msg' && hook.hookSource === 'shared'
+  );
+
+  assert.ok(localHook);
+  assert.equal(localHook.hookEnabled, true);
+  assert.equal(localHook.hookActive, false);
+  assert.equal(localHook.hookOverridden, true);
+  assert.equal(localHook.hookRelativePath, '.git/hooks/post-commit');
+
+  assert.ok(sharedHook);
+  assert.equal(sharedHook.hookEnabled, true);
+  assert.equal(sharedHook.hookActive, true);
+  assert.equal(sharedHook.hookRelativePath, '.githooks/pre-commit');
+
+  assert.ok(disabledSharedHook);
+  assert.equal(disabledSharedHook.hookEnabled, false);
+  assert.equal(disabledSharedHook.hookActive, false);
+  assert.equal(disabledSharedHook.hookPath, disabledSharedHookPath);
+});
+
+test('setHookEnabled toggles executable bits for standard git hooks', async (t) => {
+  const repoRoot = createTempRepository(t);
+  const hookPath = join(repoRoot, '.git', 'hooks', 'pre-commit');
+
+  writeFileSync(hookPath, '#!/bin/sh\nexit 0\n');
+  chmodSync(hookPath, 0o755);
+
+  await setHookEnabled(
+    {
+      hookEnabled: true,
+      hookPath,
+    },
+    false
+  );
+
+  assert.equal(statSync(hookPath).mode & 0o111, 0);
+
+  await setHookEnabled(
+    {
+      hookEnabled: false,
+      hookPath,
+    },
+    true
+  );
+
+  assert.notEqual(statSync(hookPath).mode & 0o111, 0);
+});
+
+test('setHookEnabled restores .disabled hook files back into place', async (t) => {
+  const repoRoot = createTempRepository(t);
+  const sharedHooksRoot = join(repoRoot, '.githooks');
+  const hookPath = join(sharedHooksRoot, 'pre-push');
+  const disabledHookPath = `${hookPath}.disabled`;
+
+  mkdirSync(sharedHooksRoot, { recursive: true });
+  writeFileSync(disabledHookPath, '#!/bin/sh\nexit 0\n');
+
+  await setHookEnabled(
+    {
+      hookEnabled: false,
+      hookPath: disabledHookPath,
+    },
+    true
+  );
+
+  assert.equal(existsSync(hookPath), true);
+  assert.equal(existsSync(disabledHookPath), false);
 });
 
 test('getWorktrees lists the current and linked worktrees', async (t) => {

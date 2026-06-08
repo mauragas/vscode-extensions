@@ -16,6 +16,7 @@ import {
 import {
   fetchRemoteState,
   getBranches,
+  getHooks,
   getRemoteBranches,
   getRepoRoot,
   getStashes,
@@ -71,7 +72,7 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
   async getChildren(element?: BranchTreeItem): Promise<BranchTreeItem[]> {
     if (!element) {
       if (this.dataLoader.getTreeData().length === 0 || !this.dataLoader.isSectionLoaded('local')) {
-        await this.refresh({ sections: ['local'], fetchRemoteState: false });
+        await this.refresh({ sections: ['local', 'hooks'], fetchRemoteState: false });
       }
 
       return this.nodesToItems(this.dataLoader.getTreeData());
@@ -197,6 +198,7 @@ function createBranchDataLoaderDependencies(
     getRemoteBranches,
     getStashes,
     getWorktrees,
+    getHooks,
     getTags,
     fetchRemoteState,
     decorateBranchInfo,
@@ -222,6 +224,8 @@ function resolveSectionKey(branch: Pick<BranchInfo, 'scope'>): BranchSectionKey 
       return 'stash';
     case 'worktree':
       return 'worktree';
+    case 'hook':
+      return 'hooks';
     case 'tag':
       return 'tags';
     default:

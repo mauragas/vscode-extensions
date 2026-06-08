@@ -14,6 +14,7 @@ function createDependencies(overrides = {}) {
     getRemoteBranches: 0,
     getStashes: 0,
     getWorktrees: 0,
+    getHooks: 0,
     getTags: 0,
   };
   const warnings = [];
@@ -56,6 +57,10 @@ function createDependencies(overrides = {}) {
         calls.getWorktrees += 1;
         return [];
       },
+      getHooks: async () => {
+        calls.getHooks += 1;
+        return [];
+      },
       getTags: async () => {
         calls.getTags += 1;
         return [];
@@ -91,10 +96,12 @@ test('BranchDataLoader lazily loads sections and throttles explicit remote fetch
   assert.equal(calls.getRemoteBranches, 0);
   assert.equal(calls.getStashes, 0);
   assert.equal(calls.getWorktrees, 0);
+  assert.equal(calls.getHooks, 1);
   assert.equal(calls.getTags, 0);
   assert.equal(loader.getRepoRoot(), '/repo');
   assert.equal(loader.getCurrentBranch().name, 'main');
   assert.equal(loader.isSectionLoaded('local'), true);
+  assert.equal(loader.isSectionLoaded('hooks'), true);
   assert.equal(loader.isSectionLoaded('remote'), false);
   assert.deepEqual(loader.getTreeData().map((node) => node.label), [
     'Local',
@@ -171,11 +178,43 @@ test('BranchDataLoader only refreshes explicitly requested lazy sections', async
   assert.equal(loader.isSectionLoaded('worktree'), true);
   assert.equal(loader.isSectionLoaded('tags'), true);
   assert.equal(loader.isSectionLoaded('local'), false);
+  assert.equal(calls.getHooks, 0);
 
   const sections = loader.getTreeData();
   assert.equal(sections.find((node) => node.path === 'section:stash').children.length, 1);
   assert.equal(sections.find((node) => node.path === 'section:worktree').children.length, 1);
   assert.equal(sections.find((node) => node.path === 'section:tags').children.length, 1);
+});
+
+test('BranchDataLoader shows the Hooks section only when configured hooks exist', async () => {
+  const { dependencies, calls } = createDependencies({
+    getHooks: async () => {
+      calls.getHooks += 1;
+      return [
+        {
+          name: 'pre-commit · shared',
+          isCurrent: false,
+          scope: 'hook',
+          hookName: 'pre-commit',
+          hookSource: 'shared',
+          hookEnabled: true,
+          hookActive: true,
+        },
+      ];
+    },
+  });
+  const loader = new BranchDataLoader(dependencies, () => 1_000);
+
+  await loader.refresh();
+
+  const hooksSection = loader.getTreeData().find((node) => node.path === 'section:hooks');
+
+  assert.equal(calls.getHooks, 1);
+  assert.equal(loader.isSectionLoaded('hooks'), true);
+  assert.ok(hooksSection);
+  assert.equal(hooksSection.children.length, 1);
+  assert.equal(hooksSection.children[0].kind, 'branch');
+  assert.equal(hooksSection.children[0].fullName, 'pre-commit · shared');
 });
 
 test('BranchDataLoader applies tagSortOrder independently from branch sortOrder', async () => {

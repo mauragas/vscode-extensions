@@ -93,6 +93,8 @@ test('registerAutoRefresh targets only the affected loaded sections', async () =
   watchers.get('**/.git/refs/tags/**').listeners.create[0]();
   watchers.get('**/.git/logs/refs/stash').listeners.change[0]();
   watchers.get('**/.git/worktrees/**').listeners.create[0]();
+  watchers.get('**/.git/config').listeners.change[0]();
+  watchers.get('**/.git/hooks/**').listeners.delete[0]();
   watchers.get('**/.git/FETCH_HEAD').listeners.change[0]();
   watchers.get('**/.git/packed-refs').listeners.delete[0]();
   configurationListeners[0]({
@@ -108,10 +110,12 @@ test('registerAutoRefresh targets only the affected loaded sections', async () =
     { sections: ['tags'], fetchRemoteState: false, onlyIfLoaded: true },
     { sections: ['stash'], fetchRemoteState: false, onlyIfLoaded: true },
     { sections: ['worktree'], fetchRemoteState: false, onlyIfLoaded: true },
+    { sections: ['hooks'], fetchRemoteState: false, onlyIfLoaded: true },
+    { sections: ['hooks'], fetchRemoteState: false, onlyIfLoaded: true },
     { sections: ['local', 'remote'], fetchRemoteState: false, onlyIfLoaded: true },
     { sections: ['local', 'remote', 'tags'], fetchRemoteState: false, onlyIfLoaded: true },
     { sections: undefined, fetchRemoteState: false, onlyIfLoaded: false },
     { sections: undefined, fetchRemoteState: false, onlyIfLoaded: false },
   ]);
-  assert.ok(context.subscriptions.length >= 11);
+  assert.ok(context.subscriptions.length >= 13);
 });

@@ -67,7 +67,7 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
     id: `${node.info.scope ?? 'local'}:branch:${node.fullName}`,
     contextValue: getItemContextValue(nodeType, node.info),
     collapsibleState: 'none',
-    icon: getItemIcon(nodeType),
+    icon: getItemIcon(nodeType, node.info),
     description,
     tooltip: buildBranchTooltipContent(node),
     branchName: node.fullName,
@@ -85,8 +85,9 @@ export function buildBranchTooltipContent(node: TreeBranch): string {
   const isStaleRemoteBranch = isRemoteBranch && node.info.remoteTrackingState === 'stale';
   const isTag = node.info.scope === 'tag';
   const isStash = node.info.scope === 'stash';
+  const isHook = node.info.scope === 'hook';
   const isWorktree = node.info.scope === 'worktree';
-  const tooltipLines = [`**${node.info.worktreePath ?? node.fullName}**`];
+  const tooltipLines = [`**${node.info.hookName ?? node.info.worktreePath ?? node.fullName}**`];
 
   if (node.info.isPinned) {
     tooltipLines.push('', '_Pinned item_');
@@ -113,6 +114,22 @@ export function buildBranchTooltipContent(node: TreeBranch): string {
 
     if (node.info.worktreePrunableReason) {
       tooltipLines.push('', `Prunable: ${node.info.worktreePrunableReason}`);
+    }
+
+    return tooltipLines.join('\n');
+  }
+
+  if (isHook) {
+    tooltipLines.push('', '_Git hook_');
+    tooltipLines.push('', `Source: ${capitalizeHookSource(node.info.hookSource)}`);
+    tooltipLines.push('', `Status: ${resolveHookStatusLabel(node.info)}`);
+
+    if (node.info.hookRelativePath ?? node.info.hookPath) {
+      tooltipLines.push('', `Path: ${node.info.hookRelativePath ?? node.info.hookPath}`);
+    }
+
+    if (node.info.hookOverridden) {
+      tooltipLines.push('', '_Inactive because a shared hooks path is configured_');
     }
 
     return tooltipLines.join('\n');
@@ -184,7 +201,7 @@ function buildTreeItemDescription(branch: BranchInfo, syncStatus: string): strin
     return ['stale remote', branch.lastCommitDate ?? ''].filter(Boolean).join(' • ');
   }
 
-  if (branch.scope === 'stash' || branch.scope === 'worktree' || !syncStatus) {
+  if (branch.scope === 'stash' || branch.scope === 'worktree' || branch.scope === 'hook' || !syncStatus) {
     return buildBranchDescription(branch) || undefined;
   }
 
@@ -201,6 +218,8 @@ function getSectionContextValue(scope: TreeContainerScope): string {
       return 'stashSection';
     case 'worktree':
       return 'worktreeSection';
+    case 'hook':
+      return 'hooksSection';
     case 'tag':
       return 'tagsSection';
     default:
@@ -220,6 +239,8 @@ function getSectionIconId(scope: TreeContainerScope): string {
       return 'archive';
     case 'worktree':
       return 'folder';
+    case 'hook':
+      return 'tools';
     default:
       return 'source-control';
   }
@@ -233,6 +254,8 @@ function resolveNodeType(info: BranchInfo): NodeType {
   switch (info.scope) {
     case 'stash':
       return 'stash';
+    case 'hook':
+      return 'hook';
     case 'worktree':
       return 'worktree';
     case 'tag':
@@ -290,6 +313,12 @@ function resolvePinnedContextValue(
 }
 
 function resolveBaseContextValue(nodeType: NodeType, branch: BranchInfo): string {
+  if (nodeType === 'hook') {
+    return branch.hookEnabled === false
+      ? `disabled${capitalizeHookSource(branch.hookSource)}Hook`
+      : `${branch.hookSource ?? 'local'}Hook`;
+  }
+
   if (nodeType === 'worktree') {
     return branch.isCurrent ? 'currentWorktree' : 'worktree';
   }
@@ -339,7 +368,7 @@ function resolveProtectedContextValue(contextValue: string): string {
   }
 }
 
-function getItemIcon(nodeType: NodeType): TreeItemIconDescriptor {
+function getItemIcon(nodeType: NodeType, branch?: BranchInfo): TreeItemIconDescriptor {
   switch (nodeType) {
     case 'currentBranch':
       return {
@@ -362,6 +391,25 @@ function getItemIcon(nodeType: NodeType): TreeItemIconDescriptor {
       return { id: 'tag' };
     case 'stash':
       return { id: 'archive' };
+    case 'hook':
+      if (branch?.hookActive) {
+        return {
+          id: 'tools',
+          colorId: 'gitDecoration.addedResourceForeground',
+        };
+      }
+
+      if (branch?.hookEnabled) {
+        return {
+          id: 'tools',
+          colorId: 'list.warningForeground',
+        };
+      }
+
+      return {
+        id: 'tools',
+        colorId: 'disabledForeground',
+      };
     case 'worktree':
       return { id: 'folder' };
     default:
@@ -374,4 +422,22 @@ function shouldActivateOnClick(nodeType: NodeType, isCurrent: boolean): boolean 
     return !isCurrent;
   }
   return false;
+}
+
+function capitalizeHookSource(source: BranchInfo['hookSource']): string {
+  return source === 'shared' ? 'Shared' : 'Local';
+}
+
+function resolveHookStatusLabel(
+  branch: Pick<BranchInfo, 'hookActive' | 'hookEnabled'>
+): string {
+  if (branch.hookActive) {
+    return 'Active';
+  }
+
+  if (branch.hookEnabled) {
+    return 'Inactive';
+  }
+
+  return 'Disabled';
 }

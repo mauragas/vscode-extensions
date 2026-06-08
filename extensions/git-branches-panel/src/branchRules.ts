@@ -44,6 +44,10 @@ export function isBranchProtectedFromDeletion(
 function getProtectedBranchNameCandidates(
   branch: Pick<BranchInfo, 'name' | 'scope'>
 ): string[] {
+  if (branch.scope === 'hook') {
+    return [];
+  }
+
   if ((branch.scope ?? 'local') !== 'remote') {
     return [branch.name];
   }

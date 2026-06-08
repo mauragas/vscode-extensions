@@ -1,9 +1,10 @@
 export type RemoteTrackingState = 'live' | 'stale';
+export type HookSource = 'local' | 'shared';
 
 export interface BranchInfo {
   name: string;
   isCurrent: boolean;
-  scope?: 'local' | 'remote' | 'tag' | 'stash' | 'worktree';
+  scope?: 'local' | 'remote' | 'tag' | 'stash' | 'worktree' | 'hook';
   remoteName?: string;
   remoteTrackingState?: RemoteTrackingState;
   lastCommit?: string;
@@ -22,6 +23,13 @@ export interface BranchInfo {
   worktreeIsBare?: boolean;
   worktreeLockedReason?: string;
   worktreePrunableReason?: string;
+  hookName?: string;
+  hookPath?: string;
+  hookRelativePath?: string;
+  hookSource?: HookSource;
+  hookEnabled?: boolean;
+  hookActive?: boolean;
+  hookOverridden?: boolean;
 }
 
 export interface BranchSyncState {
@@ -32,7 +40,7 @@ export interface BranchSyncState {
 
 export type BranchSortOrder = 'alphabetical' | 'recent';
 export type TagSortOrder = BranchSortOrder | 'versionAscending' | 'versionDescending';
-export type TreeContainerScope = 'local' | 'remote' | 'tag' | 'stash' | 'worktree';
+export type TreeContainerScope = 'local' | 'remote' | 'tag' | 'stash' | 'worktree' | 'hook';
 
 export interface TreeSection {
   kind: 'section';
