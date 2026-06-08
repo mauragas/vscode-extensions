@@ -21,7 +21,7 @@ Remote, Stash, Worktree, and Tags stay collapsed until you expand them.
 - 🧭 **Local and remote sections** — local branches are shown first, with remote branches listed in a separate group below them
 - 🧺 **Stash section** — stashes are shown between remote branches and tags so parked work stays close at hand
 - 🪵 **Worktree section** — worktrees are shown under stashes so additional checkouts are easy to find and manage
-- 🏷️ **Tags section** — tags are shown in their own section below remote branches
+- 🏷️ **Tags section** — tags are shown in their own section below remote branches, with version-like tags newest-first by default
 - 📁 **Folders first** — folders are listed before branch leaves inside each section
 - ⚡ **Faster first paint** — the tree loads Local branches first so the view opens quickly in larger repositories
 - 📦 **Lazy-loaded sections** — Remote, Stash, Worktree, and Tags are loaded only when you expand them
@@ -153,6 +153,7 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 | `gitBranchesPanel.protectedBranchNames` | `["main", "master", "develop"]` | Branch names to protect from delete actions; remote branches also honor the short branch name, so `main` protects `origin/main` |
 | `gitBranchesPanel.branchContextMenu.primaryActions` | `["syncOrPublish", "checkout", "newBranchFromSelected", "newBranchFromSelectedAndCheckout", "createWorktree", "renameBranch", "createTag", "copyBranchName", "compareWithCurrent", "mergeIntoCurrent", "cherryPickIntoCurrent", "deleteOrCleanup"]` | Ordered list of primary branch right-click actions; remove ids to hide them, while **More Branch Actions...** remains the full fallback picker |
 | `gitBranchesPanel.sortOrder` | `alphabetical` | `alphabetical` or `recent` |
+| `gitBranchesPanel.tagSortOrder` | `versionDescending` | `versionDescending`, `versionAscending`, `alphabetical`, or `recent`; version-aware sorting recognizes semver-like suffixes such as `v1.2.3` or `release/v1.2.3` and keeps non-version tags after version tags |
 | `gitBranchesPanel.showCurrentBranchInfo` | `false` | Show the current branch summary above the tree views |
 | `gitBranchesPanel.showStatusBarBranchAction` | `true` | Show the status bar action that syncs or publishes the current branch |
 | `gitBranchesPanel.toolbar.showNewBranch` | `true` | Show the **New Branch** toolbar quick action |
@@ -177,6 +178,7 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 - Extend `gitBranchesPanel.protectedBranchNames` with long-lived release or environment branches to add an extra UI safety net before delete commands run
 - Leave `gitBranchesPanel.showCurrentBranchInfo` disabled if you prefer a leaner tree, or turn it back on if you want the current branch banner above the sections again
 - Trim `gitBranchesPanel.branchContextMenu.primaryActions` down to a smaller ordered list if you want a shorter right-click menu, knowing **More Branch Actions...** still keeps every supported branch action one click away
+- Keep `gitBranchesPanel.tagSortOrder` on `versionDescending` for release-style tags, or switch to `recent` or `alphabetical` if your repository uses non-version tag names more heavily
 - Leave `gitBranchesPanel.toolbar.showStashSilently` off and use the built-in Changes view button by default, or turn the Branches-view stash button back on if you prefer the old placement
 - Enable any of the additional `gitBranchesPanel.changesView.showStash*` settings if you want staged-only stash buttons or stash commands that prompt for an optional message
 - Hide any toolbar quick action you never use to keep the title bar compact

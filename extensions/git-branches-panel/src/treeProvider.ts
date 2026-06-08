@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import {
   type BranchInfo,
   type BranchSortOrder,
+  type TagSortOrder,
   type BranchTreeNode,
   isPublishableBranch,
   type TreeBranch,
@@ -188,6 +189,7 @@ function createBranchDataLoaderDependencies(
       return {
         groupByFolder: configuration.get<boolean>('groupByFolder', true),
         sortOrder: configuration.get<BranchSortOrder>('sortOrder', 'alphabetical'),
+        tagSortOrder: configuration.get<TagSortOrder>('tagSortOrder', 'versionDescending'),
       };
     },
     getRepoRoot,

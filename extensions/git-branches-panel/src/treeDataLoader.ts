@@ -3,6 +3,7 @@ import {
   sortBranches,
   type BranchInfo,
   type BranchSortOrder,
+  type TagSortOrder,
   type BranchTreeNode,
   type TreeContainerScope,
   type TreeChildNode,
@@ -24,6 +25,7 @@ export interface BranchDataLoaderDependencies {
   getConfiguration(): {
     groupByFolder: boolean;
     sortOrder: BranchSortOrder;
+    tagSortOrder: TagSortOrder;
   };
   getRepoRoot(workspaceFolder: string): Promise<string | null>;
   getBranches(repoRoot: string): Promise<BranchInfo[]>;
@@ -71,6 +73,7 @@ interface SectionState {
 interface LoaderConfiguration {
   groupByFolder: boolean;
   sortOrder: BranchSortOrder;
+  tagSortOrder: TagSortOrder;
 }
 
 export function shouldRefreshRemoteState(
@@ -206,7 +209,10 @@ export class BranchDataLoader {
     const decoratedBranches = this.dependencies.decorateBranchInfo
       ? branches.map((branch) => this.dependencies.decorateBranchInfo?.(repoRoot, branch) ?? branch)
       : branches;
-    const sortedBranches = sortBranches(decoratedBranches, configuration.sortOrder);
+    const sortedBranches = sortBranches(
+      decoratedBranches,
+      section === 'tags' ? configuration.tagSortOrder : configuration.sortOrder
+    );
     const children = buildBranchTree(
       sortedBranches,
       section === 'worktree' ? false : configuration.groupByFolder,

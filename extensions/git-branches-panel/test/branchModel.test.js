@@ -60,6 +60,45 @@ test('sortBranches keeps the current branch first for recent sorting', () => {
   ]);
 });
 
+test('sortBranches can keep version-like tags newest-first or oldest-first', () => {
+  const tags = [
+    {
+      name: 'v1.2.0',
+      isCurrent: false,
+      scope: 'tag',
+    },
+    {
+      name: 'v1.10.0',
+      isCurrent: false,
+      scope: 'tag',
+    },
+    {
+      name: 'v1.2.0-beta.1',
+      isCurrent: false,
+      scope: 'tag',
+    },
+    {
+      name: 'latest',
+      isCurrent: false,
+      scope: 'tag',
+    },
+  ];
+
+  assert.deepEqual(sortBranches(tags, 'versionDescending').map((branch) => branch.name), [
+    'v1.10.0',
+    'v1.2.0',
+    'v1.2.0-beta.1',
+    'latest',
+  ]);
+
+  assert.deepEqual(sortBranches(tags, 'versionAscending').map((branch) => branch.name), [
+    'v1.2.0-beta.1',
+    'v1.2.0',
+    'v1.10.0',
+    'latest',
+  ]);
+});
+
 test('buildBranchTree groups slash-separated branches into nested folders and keeps folders first', () => {
   const tree = buildBranchTree(sortBranches(sampleBranches, 'alphabetical'), true);
 

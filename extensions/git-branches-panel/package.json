@@ -293,7 +293,7 @@
       {
         "command": "gitBranchesPanel.unpinItem",
         "title": "Unpin",
-        "icon": "$(unpin)"
+        "icon": "$(pinned)"
       },
       {
         "command": "gitBranchesPanel.removeWorktree",
@@ -1619,6 +1619,17 @@
           ],
           "default": "alphabetical",
           "description": "Sort branches alphabetically or by most recently updated commit."
+        },
+        "gitBranchesPanel.tagSortOrder": {
+          "type": "string",
+          "enum": [
+            "versionDescending",
+            "versionAscending",
+            "alphabetical",
+            "recent"
+          ],
+          "default": "versionDescending",
+          "description": "Sort tags by newest version first, oldest version first, alphabetically, or by most recently updated commit. Version-aware sorting recognizes semver-like suffixes such as `v1.2.3` or `release/v1.2.3` and keeps non-version tags in name order after version tags."
         },
         "gitBranchesPanel.showCurrentBranchInfo": {
           "type": "boolean",
