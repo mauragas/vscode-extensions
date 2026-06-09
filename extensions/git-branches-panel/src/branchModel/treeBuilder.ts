@@ -3,6 +3,7 @@ import type {
   BranchSortOrder,
   BranchTreeNode,
   TagSortOrder,
+  TreeRepository,
   TreeBranch,
   TreeChildNode,
   TreeContainerScope,
@@ -69,12 +70,16 @@ export function sortBranches(
 export function buildBranchTree(
   branches: readonly BranchInfo[],
   groupByFolder: boolean,
-  scope: TreeContainerScope = 'local'
+  scope: TreeContainerScope = 'local',
+  repoRoot = ''
 ): TreeChildNode[] {
   const branchOrder = new Map(branches.map((branch, index) => [getBranchKey(branch), index]));
 
   if (!groupByFolder) {
-    return sortTreeNodes(branches.map((branch) => createBranchNode(branch)), branchOrder);
+    return sortTreeNodes(
+      branches.map((branch) => createBranchNode(branch, repoRoot)),
+      branchOrder
+    );
   }
 
   const root: TreeFolder = {
@@ -82,19 +87,20 @@ export function buildBranchTree(
     label: '__root__',
     path: '',
     scope,
+    repoRoot,
     children: [],
   };
 
   for (const branch of branches) {
     if (branch.isPinned) {
-      root.children.push(createBranchNode(branch));
+      root.children.push(createBranchNode(branch, repoRoot));
       continue;
     }
 
     const segments = branch.name.split('/').filter(Boolean);
 
     if (segments.length <= 1) {
-      root.children.push(createBranchNode(branch));
+      root.children.push(createBranchNode(branch, repoRoot));
       continue;
     }
 
@@ -115,6 +121,7 @@ export function buildBranchTree(
           label: segment,
           path: currentPath,
           scope,
+          repoRoot,
           children: [],
         };
         currentFolder.children.push(nextFolder);
@@ -123,7 +130,7 @@ export function buildBranchTree(
       currentFolder = nextFolder;
     }
 
-    currentFolder.children.push(createBranchNode(branch));
+    currentFolder.children.push(createBranchNode(branch, repoRoot));
   }
 
   return sortTreeNodes(root.children, branchOrder);
@@ -135,7 +142,8 @@ export function buildBranchSections(
   stashBranches: readonly BranchInfo[],
   worktreeBranches: readonly BranchInfo[],
   tagBranches: readonly BranchInfo[],
-  groupByFolder: boolean
+  groupByFolder: boolean,
+  repoRoot?: string
 ): TreeSection[];
 export function buildBranchSections(
   localBranches: readonly BranchInfo[],
@@ -144,7 +152,8 @@ export function buildBranchSections(
   worktreeBranches: readonly BranchInfo[],
   hookOrTagBranches: readonly BranchInfo[],
   tagBranchesOrGroupByFolder: readonly BranchInfo[] | boolean,
-  maybeGroupByFolder?: boolean
+  maybeGroupByFolderOrRepoRoot?: boolean | string,
+  maybeRepoRoot?: string
 ): TreeSection[] {
   const hasExplicitHookBranches = Array.isArray(tagBranchesOrGroupByFolder);
   const hookBranches: readonly BranchInfo[] = hasExplicitHookBranches ? hookOrTagBranches : [];
@@ -152,8 +161,11 @@ export function buildBranchSections(
     ? tagBranchesOrGroupByFolder
     : hookOrTagBranches;
   const resolvedGroupByFolder: boolean = hasExplicitHookBranches
-    ? (maybeGroupByFolder ?? true)
+    ? (typeof maybeGroupByFolderOrRepoRoot === 'boolean' ? maybeGroupByFolderOrRepoRoot : true)
     : (tagBranchesOrGroupByFolder as boolean);
+  const resolvedRepoRoot = hasExplicitHookBranches
+    ? (typeof maybeGroupByFolderOrRepoRoot === 'string' ? maybeGroupByFolderOrRepoRoot : maybeRepoRoot) ?? ''
+    : (typeof maybeGroupByFolderOrRepoRoot === 'string' ? maybeGroupByFolderOrRepoRoot : maybeRepoRoot) ?? '';
   const sections: TreeSection[] = [];
 
   if (localBranches.length > 0) {
@@ -162,7 +174,8 @@ export function buildBranchSections(
       label: 'Local',
       path: 'section:local',
       scope: 'local',
-      children: buildBranchTree(localBranches, resolvedGroupByFolder, 'local'),
+      repoRoot: resolvedRepoRoot,
+      children: buildBranchTree(localBranches, resolvedGroupByFolder, 'local', resolvedRepoRoot),
     });
   }
 
@@ -172,7 +185,8 @@ export function buildBranchSections(
       label: 'Remote',
       path: 'section:remote',
       scope: 'remote',
-      children: buildBranchTree(remoteBranches, resolvedGroupByFolder, 'remote'),
+      repoRoot: resolvedRepoRoot,
+      children: buildBranchTree(remoteBranches, resolvedGroupByFolder, 'remote', resolvedRepoRoot),
     });
   }
 
@@ -182,7 +196,8 @@ export function buildBranchSections(
       label: 'Stash',
       path: 'section:stash',
       scope: 'stash',
-      children: buildBranchTree(stashBranches, resolvedGroupByFolder, 'stash'),
+      repoRoot: resolvedRepoRoot,
+      children: buildBranchTree(stashBranches, resolvedGroupByFolder, 'stash', resolvedRepoRoot),
     });
   }
 
@@ -192,7 +207,8 @@ export function buildBranchSections(
       label: 'Worktree',
       path: 'section:worktree',
       scope: 'worktree',
-      children: buildBranchTree(worktreeBranches, false, 'worktree'),
+      repoRoot: resolvedRepoRoot,
+      children: buildBranchTree(worktreeBranches, false, 'worktree', resolvedRepoRoot),
     });
   }
 
@@ -202,7 +218,8 @@ export function buildBranchSections(
       label: 'Hooks',
       path: 'section:hooks',
       scope: 'hook',
-      children: buildBranchTree(hookBranches, false, 'hook'),
+      repoRoot: resolvedRepoRoot,
+      children: buildBranchTree(hookBranches, false, 'hook', resolvedRepoRoot),
     });
   }
 
@@ -212,7 +229,13 @@ export function buildBranchSections(
       label: 'Tags',
       path: 'section:tags',
       scope: 'tag',
-      children: buildBranchTree(resolvedTagBranches, resolvedGroupByFolder, 'tag'),
+      repoRoot: resolvedRepoRoot,
+      children: buildBranchTree(
+        resolvedTagBranches,
+        resolvedGroupByFolder,
+        'tag',
+        resolvedRepoRoot
+      ),
     });
   }
 
@@ -222,18 +245,24 @@ export function buildBranchSections(
 export function findFolderNode(
   nodes: readonly BranchTreeNode[],
   folderPath: string,
-  scope?: TreeContainerScope
+  scope?: TreeContainerScope,
+  repoRoot?: string
 ): TreeFolder | undefined {
   for (const node of nodes) {
     if (node.kind === 'branch') {
       continue;
     }
 
-    if (node.kind === 'folder' && node.path === folderPath && (!scope || node.scope === scope)) {
+    if (
+      node.kind === 'folder' &&
+      node.path === folderPath &&
+      (!scope || node.scope === scope) &&
+      (!repoRoot || node.repoRoot === repoRoot)
+    ) {
       return node;
     }
 
-    const nestedMatch = findFolderNode(node.children, folderPath, scope);
+    const nestedMatch = findFolderNode(node.children, folderPath, scope, repoRoot);
     if (nestedMatch) {
       return nestedMatch;
     }
@@ -242,7 +271,7 @@ export function findFolderNode(
   return undefined;
 }
 
-function createBranchNode(branch: BranchInfo): TreeBranch {
+function createBranchNode(branch: BranchInfo, repoRoot: string): TreeBranch {
   const label = getBranchNodeLabel(branch);
 
   return {
@@ -251,6 +280,25 @@ function createBranchNode(branch: BranchInfo): TreeBranch {
     fullName: branch.name,
     label,
     path: branch.name,
+    repoRoot,
+  };
+}
+
+export function buildRepositoryNode(options: {
+  repoRoot: string;
+  label: string;
+  description?: string;
+  isActive?: boolean;
+  children: TreeSection[];
+}): TreeRepository {
+  return {
+    kind: 'repository',
+    label: options.label,
+    path: `repo:${options.repoRoot}`,
+    repoRoot: options.repoRoot,
+    description: options.description,
+    isActive: options.isActive,
+    children: options.children,
   };
 }
 

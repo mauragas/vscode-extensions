@@ -24,15 +24,20 @@ export function registerBranchViews(
   const selectionSubscriptions = treeViews.map(({ viewId, treeView }) =>
     treeView.onDidChangeSelection(({ selection }) => {
       void updateSelectedItemPinnedContext(viewId, selection[0]);
+      void provider.setActiveRepositoryFromItem(selection[0]);
     })
   );
 
   updateTreeViewMessages(treeViews.map(({ treeView }) => treeView), provider);
   void syncSelectedItemPinnedContexts(treeViews);
+  void provider.syncActiveRepositoryToEditorIfEnabled();
 
   context.subscriptions.push(
     ...treeViews.map(({ treeView }) => treeView),
     ...selectionSubscriptions,
+    vscode.window.onDidChangeActiveTextEditor(() => {
+      void provider.syncActiveRepositoryToEditorIfEnabled();
+    }),
     provider.onDidChangeTreeData(() => {
       updateTreeViewMessages(treeViews.map(({ treeView }) => treeView), provider);
       void syncSelectedItemPinnedContexts(treeViews);
@@ -61,7 +66,8 @@ function updateTreeViewMessages(
   const showCurrentBranchInfo = configuration.get<boolean>('showCurrentBranchInfo', false);
   const message = buildCurrentBranchMessage(
     provider.getCurrentBranch(),
-    showCurrentBranchInfo
+    showCurrentBranchInfo,
+    provider.getActiveRepositoryLabel()
   );
 
   for (const treeView of treeViews) {

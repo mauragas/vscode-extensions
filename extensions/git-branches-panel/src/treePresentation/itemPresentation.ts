@@ -18,6 +18,24 @@ import type {
 import { getContainerNodeKey } from './containerLookup';
 
 export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresentation {
+  if (node.kind === 'repository') {
+    const containerKey = getContainerNodeKey(node);
+
+    return {
+      nodeType: 'repository',
+      label: node.label,
+      id: containerKey,
+      contextValue: 'repository',
+      collapsibleState: node.isActive ? 'expanded' : 'collapsed',
+      icon: { id: 'repo' },
+      description: node.description,
+      tooltip: buildRepositoryTooltipContent(node),
+      containerKey,
+      containerPath: node.path,
+      branchName: undefined,
+    };
+  }
+
   if (node.kind === 'section') {
     const containerKey = getContainerNodeKey(node);
 
@@ -65,7 +83,9 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
   return {
     nodeType,
     label: prioritizedLabel,
-    id: `${node.info.scope ?? 'local'}:branch:${node.fullName}`,
+    id: node.repoRoot
+      ? `repo:${node.repoRoot}:${node.info.scope ?? 'local'}:branch:${node.fullName}`
+      : `${node.info.scope ?? 'local'}:branch:${node.fullName}`,
     contextValue: getItemContextValue(nodeType, node.info),
     collapsibleState: 'none',
     icon: getItemIcon(nodeType, node.info),
@@ -79,6 +99,18 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
         }
       : undefined,
   };
+}
+
+function buildRepositoryTooltipContent(
+  node: Extract<BranchTreeNode, { kind: 'repository' }>
+): string {
+  const tooltipLines = [`**${node.label}**`, '', `Path: ${node.repoRoot}`];
+
+  if (node.description) {
+    tooltipLines.push('', `Workspace path: ${node.description}`);
+  }
+
+  return tooltipLines.join('\n');
 }
 
 export function buildBranchTooltipContent(node: TreeBranch): string {

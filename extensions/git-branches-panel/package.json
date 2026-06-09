@@ -1,8 +1,8 @@
 {
   "name": "git-branches-panel",
   "displayName": "Git Branches Panel",
-  "description": "Tree view for local and remote Git branches, stashes, worktrees, and tags with grouping, sync state, and quick actions.",
-  "version": "1.7.0",
+  "description": "Tree view for branches, tags, stashes, worktrees, and hooks across one or multiple Git repositories with grouping, sync state, and quick actions.",
+  "version": "2.0.0",
   "publisher": "karolis-mauragas",
   "license": "MIT",
   "repository": {
@@ -75,6 +75,15 @@
         "command": "gitBranchesPanel.openSettings",
         "title": "Open Extension Settings",
         "icon": "$(gear)"
+      },
+      {
+        "command": "gitBranchesPanel.selectRepository",
+        "title": "Select Active Repository",
+        "icon": "$(repo)"
+      },
+      {
+        "command": "gitBranchesPanel.focusActiveEditorRepository",
+        "title": "Focus Repository from Active Editor"
       },
       {
         "command": "gitBranchesPanel.fetchAll",
@@ -427,6 +436,11 @@
           "command": "gitBranchesPanel.refresh",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showRefresh",
           "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.selectRepository",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories",
+          "group": "navigation@6.5"
         },
         {
           "command": "gitBranchesPanel.showAdvancedActions",
@@ -1735,6 +1749,21 @@
           ],
           "default": "versionDescending",
           "description": "Sort tags by newest version first, oldest version first, alphabetically, or by most recently updated commit. Version-aware sorting recognizes semver-like suffixes such as `v1.2.3` or `release/v1.2.3` and keeps non-version tags in name order after version tags."
+        },
+        "gitBranchesPanel.multiRepository.mode": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "alwaysGroupByRepository",
+            "singleActiveRepository"
+          ],
+          "default": "auto",
+          "description": "Control how repositories are shown in the tree: keep the old flat view when only one repository is open (`auto`), always wrap sections under repository containers (`alwaysGroupByRepository`), or show only the active repository (`singleActiveRepository`)."
+        },
+        "gitBranchesPanel.multiRepository.followActiveEditor": {
+          "type": "boolean",
+          "default": false,
+          "description": "When enabled, keep the active repository aligned with the Git repository that owns the active editor whenever multi-repository support is in use."
         },
         "gitBranchesPanel.showCurrentBranchInfo": {
           "type": "boolean",

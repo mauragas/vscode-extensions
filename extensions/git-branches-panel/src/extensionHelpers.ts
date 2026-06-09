@@ -222,17 +222,19 @@ export function looksLikeMergeSafetyError(message: string): boolean {
 
 export function buildCurrentBranchMessage(
   currentBranch: BranchInfo | undefined,
-  showCurrentBranchInfo = false
+  showCurrentBranchInfo = false,
+  repositoryLabel?: string
 ): string {
   if (!showCurrentBranchInfo || !currentBranch) {
     return '';
   }
 
   const description = buildBranchDescription(currentBranch);
-
-  return description
-    ? `Current branch: ${currentBranch.name} • ${description}`
+  const prefix = repositoryLabel
+    ? `Current branch (${repositoryLabel}): ${currentBranch.name}`
     : `Current branch: ${currentBranch.name}`;
+
+  return description ? `${prefix} • ${description}` : prefix;
 }
 
 export function buildCurrentBranchAlreadyCheckedOutMessage(branchName: string): string {

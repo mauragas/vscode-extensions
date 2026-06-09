@@ -77,7 +77,10 @@ async function handleCreateWorktreeFromCurrentBranch(
     return;
   }
 
-  const currentBranch = await commandContext.requireCurrentBranch(NO_CURRENT_BRANCH_MESSAGE);
+  const currentBranch = await commandContext.requireCurrentBranch(
+    NO_CURRENT_BRANCH_MESSAGE,
+    repoRoot
+  );
   if (!currentBranch) {
     return;
   }

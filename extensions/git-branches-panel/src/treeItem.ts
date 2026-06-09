@@ -19,7 +19,7 @@ export class BranchTreeItem extends vscode.TreeItem {
   public readonly containerScope?: TreeContainerScope;
   public readonly repoRoot?: string;
 
-  constructor(node: BranchTreeNode, repoRoot?: string) {
+  constructor(node: BranchTreeNode) {
     const presentation = buildTreeItemPresentation(node);
 
     super(presentation.label, toTreeItemCollapsibleState(presentation.collapsibleState));
@@ -30,7 +30,7 @@ export class BranchTreeItem extends vscode.TreeItem {
     this.containerKey = presentation.containerKey;
     this.containerPath = presentation.containerPath;
     this.containerScope = presentation.containerScope;
-    this.repoRoot = repoRoot;
+    this.repoRoot = node.repoRoot;
     this.id = presentation.id;
     this.contextValue = presentation.contextValue;
     this.description = presentation.description;

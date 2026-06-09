@@ -40,7 +40,7 @@ import {
   validateNewBranchNameInput,
 } from '../extensionHelpers';
 import { BranchTreeItem } from '../treeProvider';
-import { NO_CURRENT_BRANCH_MESSAGE, type CommandContext } from './shared';
+import { getGitApi, NO_CURRENT_BRANCH_MESSAGE, type CommandContext } from './shared';
 
 const NORMALIZE_NEW_BRANCH_NAMES_SETTING = 'normalizeNewBranchNames';
 const PROTECTED_BRANCH_NAMES_SETTING = 'protectedBranchNames';
@@ -254,7 +254,7 @@ async function handleSyncCurrentBranch(commandContext: CommandContext): Promise<
     return;
   }
 
-  const currentBranch = await commandContext.requireCurrentBranch(NO_CURRENT_BRANCH_MESSAGE);
+  const currentBranch = await commandContext.requireCurrentBranch(NO_CURRENT_BRANCH_MESSAGE, repoRoot);
   if (!currentBranch) {
     return;
   }
@@ -268,7 +268,7 @@ async function handlePublishCurrentBranch(commandContext: CommandContext): Promi
     return;
   }
 
-  const currentBranch = await commandContext.requireCurrentBranch(NO_CURRENT_BRANCH_MESSAGE);
+  const currentBranch = await commandContext.requireCurrentBranch(NO_CURRENT_BRANCH_MESSAGE, repoRoot);
   if (!currentBranch) {
     return;
   }
@@ -521,7 +521,10 @@ async function handleCompareBranchWithCurrent(
   const compareBranchName = item.branchName;
   const repoRoot = item.repoRoot;
 
-  const currentBranch = await commandContext.requireCurrentBranch(NO_CURRENT_BRANCH_MESSAGE);
+  const currentBranch = await commandContext.requireCurrentBranch(
+    NO_CURRENT_BRANCH_MESSAGE,
+    repoRoot
+  );
   if (!currentBranch) {
     return;
   }
@@ -583,7 +586,8 @@ async function handleMergeIntoCurrent(
   }
 
   const currentBranch = await commandContext.requireCurrentBranch(
-    'Could not determine the current branch for this repository.'
+    'Could not determine the current branch for this repository.',
+    item.repoRoot
   );
   if (!currentBranch) {
     return;
@@ -630,7 +634,8 @@ async function handleCherryPickIntoCurrent(
   }
 
   const currentBranch = await commandContext.requireCurrentBranch(
-    'Could not determine the current branch for this repository.'
+    'Could not determine the current branch for this repository.',
+    item.repoRoot
   );
   if (!currentBranch) {
     return;
@@ -1013,27 +1018,9 @@ function buildCompareResource(
   }
 }
 
-async function getGitApi(): Promise<GitApi | undefined> {
-  const extension = vscode.extensions.getExtension<GitExtensionExports>('vscode.git');
-  if (!extension) {
-    return undefined;
-  }
-
-  const exports = extension.isActive ? extension.exports : await extension.activate();
-  if (!exports || typeof exports.getAPI !== 'function') {
-    return undefined;
-  }
-
-  return exports.getAPI(1);
-}
-
 interface GitApi {
   getRepository(uri: vscode.Uri): { rootUri: vscode.Uri } | null;
   toGitUri(uri: vscode.Uri, ref: string): vscode.Uri;
-}
-
-interface GitExtensionExports {
-  getAPI(version: number): GitApi;
 }
 
 async function performRemoteBranchDelete(

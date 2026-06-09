@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 import { type BranchInfo } from '../branchModel';
 import { formatErrorMessage } from '../errorUtils';
+import { getGitApi } from '../gitApi';
 import type { BranchItemActivationTracker } from '../extensionHelpers';
 import { resetTrackerAndRefresh } from '../providerRefresh';
 import { BranchTreeProvider, type BranchLoadOptions } from '../treeProvider';
@@ -19,16 +20,19 @@ interface GitApi {
   toGitUri(uri: vscode.Uri, ref: string): vscode.Uri;
 }
 
-interface GitExtensionExports {
-  getAPI(version: number): GitApi;
+interface RepositoryQuickPickItem extends vscode.QuickPickItem {
+  readonly repoRoot: string;
 }
 
 export interface CommandContext {
   readonly provider: BranchTreeProvider;
   readonly activationTracker: BranchItemActivationTracker;
   refresh(options?: BranchLoadOptions): Promise<void>;
-  requireRepoRoot(): Promise<string | undefined>;
-  requireCurrentBranch(missingBranchMessage: string): Promise<BranchInfo | undefined>;
+  requireRepoRoot(preferredRepoRoot?: string): Promise<string | undefined>;
+  requireCurrentBranch(
+    missingBranchMessage: string,
+    preferredRepoRoot?: string
+  ): Promise<BranchInfo | undefined>;
   showSuccessAndRefresh(message: string, refreshOptions?: BranchLoadOptions): Promise<void>;
   showCommandError(prefix: string, error: unknown): void;
 }
@@ -43,8 +47,8 @@ export function createCommandContext(
     refresh: async (options: BranchLoadOptions = {}): Promise<void> => {
       await resetTrackerAndRefresh(provider, activationTracker, options);
     },
-    requireRepoRoot: async () => {
-      const repoRoot = await resolveRepoRoot(provider);
+    requireRepoRoot: async (preferredRepoRoot?: string) => {
+      const repoRoot = await resolveRepoRoot(provider, preferredRepoRoot);
       if (repoRoot) {
         return repoRoot;
       }
@@ -52,8 +56,8 @@ export function createCommandContext(
       vscode.window.showErrorMessage(NO_REPOSITORY_MESSAGE);
       return undefined;
     },
-    requireCurrentBranch: async (missingBranchMessage: string) => {
-      const currentBranch = await resolveCurrentBranch(provider);
+    requireCurrentBranch: async (missingBranchMessage: string, preferredRepoRoot?: string) => {
+      const currentBranch = await resolveCurrentBranch(provider, preferredRepoRoot);
       if (currentBranch) {
         return currentBranch;
       }
@@ -74,24 +78,12 @@ export function createCommandContext(
   };
 }
 
-export async function getGitApi(): Promise<GitApi | undefined> {
-  const extension = vscode.extensions.getExtension<GitExtensionExports>('vscode.git');
-  if (!extension) {
-    return undefined;
-  }
-
-  const exports = extension.isActive ? extension.exports : await extension.activate();
-  if (!exports || typeof exports.getAPI !== 'function') {
-    return undefined;
-  }
-
-  return exports.getAPI(1);
-}
+export { getGitApi };
 
 export async function resolveRepoRootFromScmContext(
   invocationContext: unknown
 ): Promise<string | undefined> {
-  const gitApi = await getGitApi();
+  const gitApi = (await getGitApi()) as GitApi | undefined;
   if (!gitApi) {
     return undefined;
   }
@@ -116,24 +108,76 @@ export async function resolveRepoRootFromScmContext(
   return undefined;
 }
 
-async function resolveRepoRoot(provider: BranchTreeProvider): Promise<string | null> {
+async function resolveRepoRoot(
+  provider: BranchTreeProvider,
+  preferredRepoRoot?: string
+): Promise<string | undefined> {
+  if (preferredRepoRoot) {
+    const activated = await provider.setActiveRepository(preferredRepoRoot);
+    return activated ? preferredRepoRoot : undefined;
+  }
+
   const existingRepoRoot = provider.getRepoRoot();
   if (existingRepoRoot) {
     return existingRepoRoot;
   }
 
   await provider.refresh({ sections: ['local'], fetchRemoteState: false });
-  return provider.getRepoRoot();
+
+  const refreshedRepoRoot = provider.getRepoRoot();
+  if (refreshedRepoRoot) {
+    return refreshedRepoRoot;
+  }
+
+  const repositories = provider.getRepositoryDescriptors();
+  if (repositories.length === 0) {
+    return undefined;
+  }
+
+  if (repositories.length === 1) {
+    await provider.setActiveRepository(repositories[0].repoRoot);
+    return repositories[0].repoRoot;
+  }
+
+  const selection = await vscode.window.showQuickPick<RepositoryQuickPickItem>(
+    repositories.map((repository) => ({
+      label: repository.label,
+      description: repository.description,
+      repoRoot: repository.repoRoot,
+    })),
+    {
+      placeHolder: 'Select a Git repository',
+    }
+  );
+
+  if (!selection) {
+    return undefined;
+  }
+
+  await provider.setActiveRepository(selection.repoRoot);
+  return selection.repoRoot;
 }
 
-async function resolveCurrentBranch(provider: BranchTreeProvider): Promise<BranchInfo | undefined> {
-  const currentBranch = provider.getCurrentBranch();
+async function resolveCurrentBranch(
+  provider: BranchTreeProvider,
+  preferredRepoRoot?: string
+): Promise<BranchInfo | undefined> {
+  const currentBranch = provider.getCurrentBranch(preferredRepoRoot);
   if (currentBranch) {
     return currentBranch;
   }
 
-  await provider.refresh({ sections: ['local'], fetchRemoteState: false });
-  return provider.getCurrentBranch();
+  const repoRoot = await resolveRepoRoot(provider, preferredRepoRoot);
+  if (!repoRoot) {
+    return undefined;
+  }
+
+  await provider.refresh({
+    sections: ['local'],
+    repoRoots: [repoRoot],
+    fetchRemoteState: false,
+  });
+  return provider.getCurrentBranch(repoRoot);
 }
 
 function collectCandidateUris(

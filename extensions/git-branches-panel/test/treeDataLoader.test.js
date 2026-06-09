@@ -23,13 +23,18 @@ function createDependencies(overrides = {}) {
     calls,
     warnings,
     dependencies: {
-      getWorkspaceFolderPaths: () => ['/workspace'],
+      getWorkspaceRepositories: async () => [
+        {
+          repoRoot: '/repo',
+          label: 'repo',
+        },
+      ],
       getConfiguration: () => ({
         groupByFolder: true,
         sortOrder: 'alphabetical',
         tagSortOrder: 'versionDescending',
+        multiRepositoryMode: 'auto',
       }),
-      getRepoRoot: async () => '/repo',
       getBranches: async () => {
         calls.getBranches += 1;
         return [
@@ -126,6 +131,70 @@ test('BranchDataLoader lazily loads sections and throttles explicit remote fetch
 
   await loader.refresh({ fetchRemoteState: true, forceFetchRemoteState: true });
   assert.equal(calls.fetchRemoteState, 3);
+});
+
+test('BranchDataLoader groups repositories when multiple repositories are available', async () => {
+  const { dependencies } = createDependencies({
+    getWorkspaceRepositories: async () => [
+      {
+        repoRoot: '/repo-a',
+        label: 'repo-a',
+        description: 'apps/repo-a',
+      },
+      {
+        repoRoot: '/repo-b',
+        label: 'repo-b',
+        description: 'apps/repo-b',
+      },
+    ],
+    getBranches: async (repoRoot) => [
+      {
+        name: repoRoot === '/repo-b' ? 'main-b' : 'main-a',
+        isCurrent: true,
+        lastCommitTimestamp: repoRoot === '/repo-b' ? 20 : 10,
+      },
+    ],
+  });
+  const loader = new BranchDataLoader(dependencies, () => 1_000);
+
+  await loader.refresh();
+
+  assert.equal(loader.getRepoRoot(), null);
+  assert.deepEqual(loader.getRepoRoots(), ['/repo-a', '/repo-b']);
+
+  const groupedTree = loader.getTreeData({
+    multiRepositoryMode: 'auto',
+    activeRepoRoot: '/repo-b',
+  });
+
+  assert.equal(groupedTree.length, 2);
+  assert.equal(groupedTree[0].kind, 'repository');
+  assert.equal(groupedTree[0].label, 'repo-a');
+  assert.equal(groupedTree[1].kind, 'repository');
+  assert.equal(groupedTree[1].label, 'repo-b');
+  assert.equal(groupedTree[1].isActive, true);
+  assert.deepEqual(groupedTree[0].children.map((child) => child.label), [
+    'Local',
+    'Remote',
+    'Stash',
+    'Worktree',
+    'Tags',
+  ]);
+
+  const singleRepositoryTree = loader.getTreeData({
+    multiRepositoryMode: 'singleActiveRepository',
+    activeRepoRoot: '/repo-b',
+  });
+
+  assert.deepEqual(singleRepositoryTree.map((node) => node.label), [
+    'Local',
+    'Remote',
+    'Stash',
+    'Worktree',
+    'Tags',
+  ]);
+  assert.equal(loader.getCurrentBranch('/repo-a').name, 'main-a');
+  assert.equal(loader.getCurrentBranch('/repo-b').name, 'main-b');
 });
 
 test('BranchDataLoader warns on refresh failures and still loads branch data', async () => {
@@ -267,9 +336,22 @@ test('BranchDataLoader ignores stale section results after the repo root changes
   const remoteBranchesPromise = new Promise((resolve) => {
     resolveRemoteBranches = resolve;
   });
-  const repoRoots = ['/repo-a', '/repo-b'];
+  const repositorySets = [
+    [
+      {
+        repoRoot: '/repo-a',
+        label: 'repo-a',
+      },
+    ],
+    [
+      {
+        repoRoot: '/repo-b',
+        label: 'repo-b',
+      },
+    ],
+  ];
   const { dependencies } = createDependencies({
-    getRepoRoot: async () => repoRoots.shift() ?? '/repo-b',
+    getWorkspaceRepositories: async () => repositorySets.shift() ?? repositorySets[repositorySets.length - 1] ?? [],
     getBranches: async (repoRoot) => [
       {
         name: repoRoot === '/repo-b' ? 'main-b' : 'main-a',
@@ -323,7 +405,7 @@ test('BranchDataLoader ignores stale section results after the repo root changes
 
 test('BranchDataLoader clears data when no workspace folders are available', async () => {
   const { dependencies } = createDependencies({
-    getWorkspaceFolderPaths: () => [],
+    getWorkspaceRepositories: async () => [],
   });
   const loader = new BranchDataLoader(dependencies);
 

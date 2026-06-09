@@ -5,6 +5,7 @@ export type {
   BranchSortOrder,
   TagSortOrder,
   BranchSyncState,
+  TreeRepository,
   BranchTreeNode,
   TreeContainerScope,
   TreeBranch,
@@ -23,6 +24,7 @@ export {
 } from './branchModel/descriptions';
 
 export {
+  buildRepositoryNode,
   buildBranchSections,
   buildBranchTree,
   findFolderNode,

@@ -190,7 +190,10 @@ async function resolveTagSource(
     return undefined;
   }
 
-  const currentBranch = await commandContext.requireCurrentBranch(NO_CURRENT_BRANCH_MESSAGE);
+  const currentBranch = await commandContext.requireCurrentBranch(
+    NO_CURRENT_BRANCH_MESSAGE,
+    repoRoot
+  );
   if (!currentBranch) {
     return undefined;
   }

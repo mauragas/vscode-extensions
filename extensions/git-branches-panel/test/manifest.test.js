@@ -25,8 +25,14 @@ function getInlineViewItemContextCommands() {
   )];
 }
 
-test('package manifest exposes the 1.7.0 branch-menu, worktree, stash, and hook contributions', () => {
-  assert.equal(packageJson.version, '1.7.0');
+test('package manifest exposes the 2.0.0 branch-menu, worktree, stash, hook, and multi-repo contributions', () => {
+  assert.equal(packageJson.version, '2.0.0');
+  assert.equal(getCommand('gitBranchesPanel.selectRepository').title, 'Select Active Repository');
+  assert.equal(getCommand('gitBranchesPanel.selectRepository').icon, '$(repo)');
+  assert.equal(
+    getCommand('gitBranchesPanel.focusActiveEditorRepository').title,
+    'Focus Repository from Active Editor'
+  );
   assert.equal(getCommand('gitBranchesPanel.stashSilently').title, 'Stash all changes silently');
   assert.equal(
     getCommand('gitBranchesPanel.stashStagedSilently').title,
@@ -102,6 +108,13 @@ test('package manifest exposes the 1.7.0 branch-menu, worktree, stash, and hook 
     'alphabetical',
     'recent',
   ]);
+  assert.equal(settings['gitBranchesPanel.multiRepository.mode'].default, 'auto');
+  assert.deepEqual(settings['gitBranchesPanel.multiRepository.mode'].enum, [
+    'auto',
+    'alwaysGroupByRepository',
+    'singleActiveRepository',
+  ]);
+  assert.equal(settings['gitBranchesPanel.multiRepository.followActiveEditor'].default, false);
   assert.equal(settings['gitBranchesPanel.showCurrentBranchInfo'].default, false);
   assert.equal(settings['gitBranchesPanel.showStatusBarBranchAction'].default, true);
   assert.match(
@@ -313,6 +326,13 @@ test('package manifest exposes the 1.7.0 branch-menu, worktree, stash, and hook 
   assert.ok(
     sectionInlineMenus.some(
       (item) => item.command === 'gitBranchesPanel.pushAllTags' && item.when === 'viewItem == tagsSection' && item.group === 'inline@2'
+    )
+  );
+  assert.ok(
+    packageJson.contributes.menus['view/title'].some(
+      (item) =>
+        item.command === 'gitBranchesPanel.selectRepository' &&
+        item.when.includes('gitBranchesPanel.multipleRepositories')
     )
   );
 

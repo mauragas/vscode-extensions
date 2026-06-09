@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0] - 2026-06-09
+
+- Added full multi-repository support so the tree can now show and manage more than one Git repository in the same VS Code workspace
+- Added repository containers that automatically appear when multiple repositories are open, while preserving the old flat section layout when only one repository is present
+- Added `gitBranchesPanel.multiRepository.mode` with `auto`, `alwaysGroupByRepository`, and `singleActiveRepository` options to control how repositories are displayed
+- Added `gitBranchesPanel.multiRepository.followActiveEditor` so the active repository can follow the file you are currently editing
+- Added **Select Active Repository** and **Focus Repository from Active Editor** commands for explicit repository switching in multi-repository workspaces
+- Made current-branch banner, toolbar actions, and command routing repository-aware so item actions and no-item actions target the correct repository
+- Qualified tree identities by repository to prevent section and folder collisions across repositories with matching branch-folder paths
+- Expanded automated coverage for multi-repository loading, provider behavior, manifest contributions, and repo-aware view messaging
+
 ## [1.7.0] - 2026-06-08
 
 - Added a **Hooks** section that appears only when the current repository has configured local `.git/hooks` scripts or shared hooks via `core.hooksPath`

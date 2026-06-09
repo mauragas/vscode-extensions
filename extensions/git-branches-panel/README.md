@@ -2,7 +2,7 @@
 
 `Git Branches Panel` is a Visual Studio Code extension that shows local and
 remote Git branches, stashes, worktrees, hooks, and tags in a dedicated tree view with folder grouping,
-sync status, current-branch context, and quick actions.
+sync status, current-branch context, quick actions, and multi-repository support.
 
 This extension lives in the [`vscode-extensions`](../..) repository under `extensions/git-branches-panel/`.
 
@@ -10,14 +10,17 @@ This extension lives in the [`vscode-extensions`](../..) repository under `exten
 
 The panel keeps the active branch visible at the top, groups slash-separated
 branch names into folders, and separates Local, Remote, Stash, Worktree, Hooks, and Tags into their own
-sections so common Git navigation feels fast and tidy. The Local section opens first, while
-Remote, Stash, Worktree, Hooks, and Tags stay collapsed until you expand them.
+sections so common Git navigation feels fast and tidy. In multi-repository workspaces, the extension can
+group those sections under repository containers or focus on one active repository at a time. The Local
+section opens first, while Remote, Stash, Worktree, Hooks, and Tags stay collapsed until you expand them.
 
 ![Git Branches Panel overview showing the current branch summary plus Local, Remote, and Tags sections.](https://raw.githubusercontent.com/mauragas/vscode-extensions/main/extensions/git-branches-panel/resources/git-branches-panel-overview.png)
 
 ## Features
 
 - 🌿 **Folder grouping** — branches like `feature/auth` or `feature/payments/stripe` are nested into folders automatically
+- 🗂️ **Multi-repository aware** — automatically switches between a flat single-repo tree and repository containers when multiple Git repositories are open in the workspace
+- 🎯 **Active repository focus** — keep one repository active for toolbar actions and current-branch context, or switch directly to the repository that owns the active editor
 - 🧭 **Local and remote sections** — local branches are shown first, with remote branches listed in a separate group below them
 - 🧺 **Stash section** — stashes are shown between remote branches and tags so parked work stays close at hand
 - 🪵 **Worktree section** — worktrees are shown under stashes so additional checkouts are easy to find and manage
@@ -68,6 +71,8 @@ Remote, Stash, Worktree, Hooks, and Tags stay collapsed until you expand them.
 | Command | Description |
 | --- | --- |
 | Refresh | Refresh the loaded branch sections and remote sync state |
+| Select Active Repository | Choose which repository drives the current-branch banner and toolbar actions in multi-repository workspaces |
+| Focus Repository from Active Editor | Switch the active repository to the one that owns the current editor file |
 | Open Extension Settings | Open the extension's settings filtered in the Settings editor |
 | Stash all changes silently | Stash all tracked and untracked files without prompting for a stash name |
 | Stash staged changes silently | Stash only staged changes without prompting for a stash name |
@@ -173,6 +178,8 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 | `gitBranchesPanel.branchContextMenu.primaryActions` | `["syncOrPublish", "checkout", "newBranchFromSelected", "newBranchFromSelectedAndCheckout", "createWorktree", "renameBranch", "createTag", "copyBranchName", "compareWithCurrent", "mergeIntoCurrent", "cherryPickIntoCurrent", "deleteOrCleanup"]` | Ordered list of primary branch right-click actions; remove ids to hide them, while **More Branch Actions...** remains the full fallback picker |
 | `gitBranchesPanel.sortOrder` | `alphabetical` | `alphabetical` or `recent` |
 | `gitBranchesPanel.tagSortOrder` | `versionDescending` | `versionDescending`, `versionAscending`, `alphabetical`, or `recent`; version-aware sorting recognizes semver-like suffixes such as `v1.2.3` or `release/v1.2.3` and keeps non-version tags after version tags |
+| `gitBranchesPanel.multiRepository.mode` | `auto` | Show repository containers only when needed (`auto`), always group sections under repositories (`alwaysGroupByRepository`), or show only the active repository (`singleActiveRepository`) |
+| `gitBranchesPanel.multiRepository.followActiveEditor` | `false` | Keep the active repository aligned with the Git repository that owns the active editor when multi-repository support is in use |
 | `gitBranchesPanel.showCurrentBranchInfo` | `false` | Show the current branch summary above the tree views |
 | `gitBranchesPanel.showStatusBarBranchAction` | `true` | Deprecated. This setting no longer has any effect because the extension no longer contributes a status bar branch action |
 | `gitBranchesPanel.toolbar.showNewBranch` | `true` | Show the **New Branch** toolbar quick action |
@@ -198,6 +205,9 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 - Leave `gitBranchesPanel.showCurrentBranchInfo` disabled if you prefer a leaner tree, or turn it back on if you want the current branch banner above the sections again
 - Trim `gitBranchesPanel.branchContextMenu.primaryActions` down to a smaller ordered list if you want a shorter right-click menu, knowing **More Branch Actions...** still keeps every supported branch action one click away
 - Keep `gitBranchesPanel.tagSortOrder` on `versionDescending` for release-style tags, or switch to `recent` or `alphabetical` if your repository uses non-version tag names more heavily
+- Leave `gitBranchesPanel.multiRepository.mode` on `auto` to keep the familiar flat layout for single-repo workspaces while automatically adding repository containers in polyrepo workspaces
+- Switch `gitBranchesPanel.multiRepository.mode` to `singleActiveRepository` if you prefer focusing on one repository at a time while using **Select Active Repository** or **Focus Repository from Active Editor** to move around
+- Enable `gitBranchesPanel.multiRepository.followActiveEditor` if you want the current-branch banner and toolbar actions to follow the repository that owns the file you are editing
 - Leave `gitBranchesPanel.toolbar.showStashSilently` off and use the built-in Changes view button by default, or turn the Branches-view stash button back on if you prefer the old placement
 - Enable any of the additional `gitBranchesPanel.changesView.showStash*` settings if you want staged-only stash buttons or stash commands that prompt for an optional message
 - Hide any toolbar quick action you never use to keep the title bar compact

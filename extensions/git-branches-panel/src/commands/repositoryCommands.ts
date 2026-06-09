@@ -24,6 +24,12 @@ export function registerRepositoryCommands(
     }),
     vscode.commands.registerCommand('gitBranchesPanel.cleanRepository', async () => {
       await handleCleanRepository(commandContext);
+    }),
+    vscode.commands.registerCommand('gitBranchesPanel.selectRepository', async () => {
+      await handleSelectRepository(commandContext);
+    }),
+    vscode.commands.registerCommand('gitBranchesPanel.focusActiveEditorRepository', async () => {
+      await handleFocusActiveEditorRepository(commandContext);
     })
   );
 }
@@ -93,5 +99,55 @@ async function handleCleanRepository(commandContext: CommandContext): Promise<vo
     );
   } catch (error) {
     commandContext.showCommandError('Failed to clean the repository', error);
+  }
+}
+
+async function handleSelectRepository(commandContext: CommandContext): Promise<void> {
+  const repositories = commandContext.provider.getRepositoryDescriptors();
+  if (repositories.length === 0) {
+    vscode.window.showInformationMessage('No Git repositories are currently available.');
+    return;
+  }
+
+  if (repositories.length === 1) {
+    await commandContext.provider.setActiveRepository(repositories[0].repoRoot);
+    vscode.window.showInformationMessage(`Selected repository '${repositories[0].label}'.`);
+    return;
+  }
+
+  const selection = await vscode.window.showQuickPick(
+    repositories.map((repository) => ({
+      label: repository.label,
+      description: repository.description,
+      repoRoot: repository.repoRoot,
+    })),
+    {
+      placeHolder: 'Select the active Git repository',
+    }
+  );
+
+  if (!selection) {
+    return;
+  }
+
+  await commandContext.provider.setActiveRepository(selection.repoRoot);
+  vscode.window.showInformationMessage(`Selected repository '${selection.label}'.`);
+}
+
+async function handleFocusActiveEditorRepository(commandContext: CommandContext): Promise<void> {
+  const focused = await commandContext.provider.focusRepositoryForUri(
+    vscode.window.activeTextEditor?.document.uri
+  );
+
+  if (!focused) {
+    vscode.window.showInformationMessage(
+      'Could not resolve a Git repository from the active editor.'
+    );
+    return;
+  }
+
+  const activeRepositoryLabel = commandContext.provider.getActiveRepositoryLabel();
+  if (activeRepositoryLabel) {
+    vscode.window.showInformationMessage(`Focused repository '${activeRepositoryLabel}'.`);
   }
 }

@@ -2,7 +2,17 @@ import type { BranchTreeNode, TreeBranch } from '../branchModel/types';
 import type { TreeContainerNode } from './types';
 
 export function getContainerNodeKey(node: TreeContainerNode): string {
-  return node.kind === 'section' ? node.path : `folder:${node.scope}:${node.path}`;
+  if (node.kind === 'repository') {
+    return node.path;
+  }
+
+  if (node.kind === 'section') {
+    return node.repoRoot ? `repo:${node.repoRoot}:${node.path}` : node.path;
+  }
+
+  return node.repoRoot
+    ? `repo:${node.repoRoot}:folder:${node.scope}:${node.path}`
+    : `folder:${node.scope}:${node.path}`;
 }
 
 export function findContainerNode(

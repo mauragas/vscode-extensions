@@ -42,11 +42,22 @@ export type BranchSortOrder = 'alphabetical' | 'recent';
 export type TagSortOrder = BranchSortOrder | 'versionAscending' | 'versionDescending';
 export type TreeContainerScope = 'local' | 'remote' | 'tag' | 'stash' | 'worktree' | 'hook';
 
+export interface TreeRepository {
+  kind: 'repository';
+  label: string;
+  path: string;
+  repoRoot: string;
+  description?: string;
+  isActive?: boolean;
+  children: TreeSection[];
+}
+
 export interface TreeSection {
   kind: 'section';
   label: string;
   path: string;
   scope: TreeContainerScope;
+  repoRoot: string;
   children: TreeChildNode[];
 }
 
@@ -55,6 +66,7 @@ export interface TreeFolder {
   label: string;
   path: string;
   scope: TreeContainerScope;
+  repoRoot: string;
   children: TreeChildNode[];
 }
 
@@ -64,7 +76,8 @@ export interface TreeBranch {
   fullName: string;
   label: string;
   path: string;
+  repoRoot: string;
 }
 
 export type TreeChildNode = TreeFolder | TreeBranch;
-export type BranchTreeNode = TreeSection | TreeFolder | TreeBranch;
+export type BranchTreeNode = TreeRepository | TreeSection | TreeFolder | TreeBranch;
