@@ -418,14 +418,17 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   });
 
   assert.equal(inactiveRepositoryPresentation.nodeType, 'repository');
+  assert.equal(inactiveRepositoryPresentation.contextValue, 'repository');
   assert.equal(inactiveRepositoryPresentation.icon.id, 'repo');
   assert.equal(inactiveRepositoryPresentation.icon.colorId, undefined);
   assert.equal(inactiveRepositoryPresentation.collapsibleState, 'collapsed');
 
   assert.equal(activeRepositoryPresentation.nodeType, 'repository');
+  assert.equal(activeRepositoryPresentation.contextValue, 'activeRepository');
   assert.equal(activeRepositoryPresentation.icon.id, 'repo');
   assert.equal(activeRepositoryPresentation.icon.colorId, 'gitDecoration.addedResourceForeground');
   assert.equal(activeRepositoryPresentation.collapsibleState, 'expanded');
+  assert.match(activeRepositoryPresentation.tooltip, /Active repository/);
   assert.match(activeRepositoryPresentation.tooltip, /apps\/repo-b/);
 
   assert.equal(localSectionPresentation.nodeType, 'section');

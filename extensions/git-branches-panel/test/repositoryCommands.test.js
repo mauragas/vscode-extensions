@@ -26,6 +26,7 @@ function createVscodeState() {
   return {
     registeredCommands: {},
     executedCommands: [],
+    infoMessages: [],
     warningMessages: [],
     warningResponses: [],
   };
@@ -44,6 +45,10 @@ function createVscodeMock(state) {
       },
     },
     window: {
+      async showInformationMessage(message) {
+        state.infoMessages.push(message);
+        return undefined;
+      },
       async showWarningMessage(message, options, ...items) {
         state.warningMessages.push({ message, options, items });
         if (options && options.modal) {
@@ -60,12 +65,26 @@ function createCommandContext() {
   const state = {
     successRefreshes: [],
     commandErrors: [],
+    setActiveRepositoryCalls: [],
   };
 
   return {
     state,
     context: {
-      provider: {},
+      provider: {
+        async setActiveRepository(repoRoot) {
+          state.setActiveRepositoryCalls.push(repoRoot);
+          return true;
+        },
+        getRepositoryDescriptors() {
+          return [
+            {
+              repoRoot: '/repo',
+              label: 'repo',
+            },
+          ];
+        },
+      },
       activationTracker: {},
       async refresh() {},
       async requireRepoRoot() {
@@ -202,4 +221,26 @@ test('openSettings opens the extension settings query', async () => {
       args: ['@ext:karolis-mauragas.git-branches-panel'],
     },
   ]);
+});
+
+test('selectRepository can activate the repository from a repository tree item directly', async () => {
+  const vscodeState = createVscodeState();
+
+  const { commandContext } = createRepositoryCommandsModule({
+    vscodeState,
+    gitMock: {
+      async cleanRepository() {},
+      async fetchAllRemotes() {},
+      async fetchRemoteState() {},
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.selectRepository']({
+    nodeType: 'repository',
+    repoRoot: '/repo',
+    label: 'repo',
+  });
+
+  assert.deepEqual(commandContext.state.setActiveRepositoryCalls, ['/repo']);
+  assert.deepEqual(vscodeState.infoMessages, ["Selected repository 'repo'."]);
 });

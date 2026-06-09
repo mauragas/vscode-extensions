@@ -21,6 +21,7 @@ section opens first, while Remote, Stash, Worktree, Hooks, and Tags stay collaps
 - 🌿 **Folder grouping** — branches like `feature/auth` or `feature/payments/stripe` are nested into folders automatically
 - 🗂️ **Multi-repository aware** — automatically switches between a flat single-repo tree and repository containers when multiple Git repositories are open in the workspace
 - 🎯 **Active repository focus** — keep one repository active for toolbar actions and current-branch context, or switch directly to the repository that owns the active editor
+- 🏢 **Repository-row quick actions** — when repositories are grouped, each repository row can now expose inline actions to select it as the active repository and open repo-scoped **More Actions** directly from that row
 - 🔎 **Find Ref...** — search branches, tags, stashes, worktrees, and optionally hooks with query prefixes like `remote:` or `state:stale`
 - 🎚️ **Tree filtering** — filter the visible tree by query text, pinned-only mode, or a **Needs Attention** preset without losing the surrounding repository or folder context
 - 🕘 **Ref history quick picks** — browse branch and tag commits with actions to open changed files, inspect commit details, or copy commit SHAs

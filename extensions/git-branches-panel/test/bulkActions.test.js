@@ -79,6 +79,7 @@ function createCommandContext() {
     repoRoot: '/repo',
     descendantBranches: new Map(),
     commandErrors: [],
+    activeRepositoryItems: [],
   };
 
   return {
@@ -87,6 +88,9 @@ function createCommandContext() {
       provider: {
         getDescendantBranches(containerKey) {
           return state.descendantBranches.get(containerKey) ?? [];
+        },
+        async setActiveRepositoryFromItem(item) {
+          state.activeRepositoryItems.push(item?.repoRoot);
         },
       },
       activationTracker: {},
@@ -208,6 +212,37 @@ test('showAdvancedActions routes the quick-pick selection to the clean repositor
       args: [],
     },
   ]);
+});
+
+test('showAdvancedActions scopes the picker to the clicked repository item before opening it', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.quickPickSelector = (items) =>
+    items.find((item) => item.actionId === 'refresh');
+
+  const { commandContext } = createBulkActionsModule({
+    vscodeState,
+    gitMock: {
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async deleteTag() {},
+      async fetchRemoteState() {},
+      async getBranches() {
+        return [];
+      },
+      async pushBranch() {},
+      async syncBranch() {
+        throw new Error('syncBranch should not be called in this test');
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.showAdvancedActions']({
+    nodeType: 'repository',
+    repoRoot: '/repo-b',
+  });
+
+  assert.deepEqual(commandContext.state.activeRepositoryItems, ['/repo-b']);
+  assert.deepEqual(commandContext.state.refreshCalls, [{ fetchRemoteState: false }]);
 });
 
 test('pruneMissingUpstreamBranches force deletes stale branches and refreshes once', async () => {

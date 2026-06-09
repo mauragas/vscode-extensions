@@ -74,8 +74,8 @@ export function registerBulkActionCommands(
   commandContext: CommandContext
 ): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('gitBranchesPanel.showAdvancedActions', async () => {
-      await handleShowAdvancedActions(commandContext);
+    vscode.commands.registerCommand('gitBranchesPanel.showAdvancedActions', async (item?: BranchTreeItem) => {
+      await handleShowAdvancedActions(item, commandContext);
     }),
     vscode.commands.registerCommand(
       'gitBranchesPanel.syncAllBranches',
@@ -125,7 +125,14 @@ export function registerBulkActionCommands(
   );
 }
 
-async function handleShowAdvancedActions(commandContext: CommandContext): Promise<void> {
+async function handleShowAdvancedActions(
+  item: BranchTreeItem | undefined,
+  commandContext: CommandContext
+): Promise<void> {
+  if (item?.repoRoot) {
+    await commandContext.provider.setActiveRepositoryFromItem(item);
+  }
+
   const selection = await vscode.window.showQuickPick(
     buildRepositoryActionItems(commandContext),
     {

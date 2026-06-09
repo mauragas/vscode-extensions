@@ -172,6 +172,20 @@ test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, histor
   );
   assert.ok(
     hasViewItemMenu(
+      'gitBranchesPanel.selectRepository',
+      (item) => item.when === 'viewItem == repository' && item.group === 'inline@1'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.showAdvancedActions',
+      (item) =>
+        item.when === 'viewItem == repository || viewItem == activeRepository' &&
+        item.group === 'inline@2'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
       'gitBranchesPanel.pushTag',
       (item) => item.when === 'viewItem == tag' && item.group === 'inline@2'
     )
@@ -241,6 +255,20 @@ test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, histor
     hasViewItemMenu(
       'gitBranchesPanel.openRemoteHomepage',
       (item) => item.when === 'viewItem == remoteConfig' && item.group === '1_remoteConfig@3'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.selectRepository',
+      (item) => item.when === 'viewItem == repository' && item.group === '1_repository@1'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.showAdvancedActions',
+      (item) =>
+        item.when === 'viewItem == repository || viewItem == activeRepository' &&
+        item.group === '1_repository@2'
     )
   );
   assert.ok(

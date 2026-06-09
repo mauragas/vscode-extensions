@@ -33,6 +33,7 @@ All notable changes to this project will be documented in this file.
 - Added **Select Active Repository** and **Focus Repository from Active Editor** commands for explicit repository switching in multi-repository workspaces
 - Made current-branch banner, toolbar actions, and command routing repository-aware so item actions and no-item actions target the correct repository
 - Qualified tree identities by repository to prevent section and folder collisions across repositories with matching branch-folder paths
+- Added inline repository-row quick actions so grouped repository nodes can select themselves as the active repository and open repo-scoped **More Actions** without first changing the global toolbar context
 - Expanded automated coverage for multi-repository loading, provider behavior, manifest contributions, and repo-aware view messaging
 - Added per-section visibility settings under `gitBranchesPanel.sections.*.visible` so Local, Remote, Remotes, Stash, Worktree, Hooks, and Tags can each be shown or hidden independently
 - Changed the dedicated **Remotes** section to start hidden by default through `gitBranchesPanel.sections.remotes.visible = false`, while keeping the older `gitBranchesPanel.showRemotesSection` setting as a deprecated compatibility alias

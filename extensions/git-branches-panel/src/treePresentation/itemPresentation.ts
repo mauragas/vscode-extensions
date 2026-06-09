@@ -25,7 +25,7 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
       nodeType: 'repository',
       label: node.label,
       id: containerKey,
-      contextValue: 'repository',
+      contextValue: node.isActive ? 'activeRepository' : 'repository',
       collapsibleState: node.expanded || node.isActive ? 'expanded' : 'collapsed',
       icon: node.isActive
         ? {
@@ -125,6 +125,10 @@ function buildRepositoryTooltipContent(
   node: Extract<BranchTreeNode, { kind: 'repository' }>
 ): string {
   const tooltipLines = [`**${node.label}**`, '', `Path: ${node.repoRoot}`];
+
+  if (node.isActive) {
+    tooltipLines.push('', '_Active repository_');
+  }
 
   if (node.description) {
     tooltipLines.push('', `Workspace path: ${node.description}`);

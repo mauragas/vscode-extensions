@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import { cleanRepository, fetchAllRemotes, fetchRemoteState } from '../git';
+import { BranchTreeItem } from '../treeProvider';
 import type { CommandContext } from './shared';
 
 const EXTENSION_SETTINGS_QUERY = '@ext:karolis-mauragas.git-branches-panel';
@@ -25,8 +26,8 @@ export function registerRepositoryCommands(
     vscode.commands.registerCommand('gitBranchesPanel.cleanRepository', async () => {
       await handleCleanRepository(commandContext);
     }),
-    vscode.commands.registerCommand('gitBranchesPanel.selectRepository', async () => {
-      await handleSelectRepository(commandContext);
+    vscode.commands.registerCommand('gitBranchesPanel.selectRepository', async (item?: BranchTreeItem) => {
+      await handleSelectRepository(item, commandContext);
     }),
     vscode.commands.registerCommand('gitBranchesPanel.focusActiveEditorRepository', async () => {
       await handleFocusActiveEditorRepository(commandContext);
@@ -102,7 +103,26 @@ async function handleCleanRepository(commandContext: CommandContext): Promise<vo
   }
 }
 
-async function handleSelectRepository(commandContext: CommandContext): Promise<void> {
+async function handleSelectRepository(
+  item: BranchTreeItem | undefined,
+  commandContext: CommandContext
+): Promise<void> {
+  if (item?.repoRoot) {
+    const activated = await commandContext.provider.setActiveRepository(item.repoRoot);
+    if (activated) {
+      const repositoryLabel =
+        commandContext.provider
+          .getRepositoryDescriptors()
+          .find((repository) => repository.repoRoot === item.repoRoot)?.label ?? item.label?.toString();
+
+      if (repositoryLabel) {
+        vscode.window.showInformationMessage(`Selected repository '${repositoryLabel}'.`);
+      }
+    }
+
+    return;
+  }
+
   const repositories = commandContext.provider.getRepositoryDescriptors();
   if (repositories.length === 0) {
     vscode.window.showInformationMessage('No Git repositories are currently available.');

@@ -710,6 +710,16 @@
           "group": "inline@5"
         },
         {
+          "command": "gitBranchesPanel.selectRepository",
+          "when": "viewItem == repository",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "viewItem == repository || viewItem == activeRepository",
+          "group": "inline@2"
+        },
+        {
           "command": "gitBranchesPanel.newBranch",
           "when": "viewItem == localSection",
           "group": "inline@1"
@@ -1938,6 +1948,16 @@
           "command": "gitBranchesPanel.deleteFolderTags",
           "when": "viewItem == tag-folder",
           "group": "2_folder@3"
+        },
+        {
+          "command": "gitBranchesPanel.selectRepository",
+          "when": "viewItem == repository",
+          "group": "1_repository@1"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "viewItem == repository || viewItem == activeRepository",
+          "group": "1_repository@2"
         },
         {
           "command": "gitBranchesPanel.newBranch",
