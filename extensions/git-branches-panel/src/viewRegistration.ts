@@ -21,6 +21,7 @@ export function registerBranchViews(
     createBranchTreeView('gitBranchesPanel', provider),
     createBranchTreeView('gitBranchesSCM', provider),
   ] as const;
+  provider.registerTreeViews(treeViews.map(({ treeView }) => treeView));
   const selectionSubscriptions = treeViews.map(({ viewId, treeView }) =>
     treeView.onDidChangeSelection(({ selection }) => {
       void updateSelectedItemPinnedContext(viewId, selection[0]);
@@ -69,8 +70,18 @@ function updateTreeViewMessages(
     showCurrentBranchInfo,
     provider.getActiveRepositoryLabel()
   );
+  const filterSummary = provider.getFilterSummary();
+  const treeMessage = [
+    message,
+    filterSummary,
+    provider.hasActiveFilter() && !provider.hasVisibleResults()
+      ? 'No refs match the current filter.'
+      : '',
+  ]
+    .filter(Boolean)
+    .join('\n\n');
 
   for (const treeView of treeViews) {
-    treeView.message = message;
+    treeView.message = treeMessage;
   }
 }

@@ -25,14 +25,20 @@ function getInlineViewItemContextCommands() {
   )];
 }
 
-test('package manifest exposes the 2.0.0 branch-menu, worktree, stash, hook, and multi-repo contributions', () => {
-  assert.equal(packageJson.version, '2.0.0');
+test('package manifest exposes the 2.1.0 branch-menu, worktree, stash, hook, multi-repo, and search contributions', () => {
+  assert.equal(packageJson.version, '2.1.0');
   assert.equal(getCommand('gitBranchesPanel.selectRepository').title, 'Select Active Repository');
   assert.equal(getCommand('gitBranchesPanel.selectRepository').icon, '$(repo)');
   assert.equal(
     getCommand('gitBranchesPanel.focusActiveEditorRepository').title,
     'Focus Repository from Active Editor'
   );
+  assert.equal(getCommand('gitBranchesPanel.findRef').title, 'Find Ref...');
+  assert.equal(getCommand('gitBranchesPanel.findRef').icon, '$(search)');
+  assert.equal(getCommand('gitBranchesPanel.setFilter').title, 'Set Filter...');
+  assert.equal(getCommand('gitBranchesPanel.clearFilter').title, 'Clear Filter');
+  assert.equal(getCommand('gitBranchesPanel.toggleShowOnlyPinned').title, 'Toggle Show Only Pinned');
+  assert.equal(getCommand('gitBranchesPanel.showNeedsAttention').title, 'Show Needs Attention');
   assert.equal(getCommand('gitBranchesPanel.stashSilently').title, 'Stash all changes silently');
   assert.equal(
     getCommand('gitBranchesPanel.stashStagedSilently').title,
@@ -115,6 +121,9 @@ test('package manifest exposes the 2.0.0 branch-menu, worktree, stash, hook, and
     'singleActiveRepository',
   ]);
   assert.equal(settings['gitBranchesPanel.multiRepository.followActiveEditor'].default, false);
+  assert.equal(settings['gitBranchesPanel.search.includeHooks'].default, false);
+  assert.equal(settings['gitBranchesPanel.search.maxResults'].default, 200);
+  assert.equal(settings['gitBranchesPanel.search.autoLoadAllSections'].default, true);
   assert.equal(settings['gitBranchesPanel.showCurrentBranchInfo'].default, false);
   assert.equal(settings['gitBranchesPanel.showStatusBarBranchAction'].default, true);
   assert.match(
@@ -333,6 +342,18 @@ test('package manifest exposes the 2.0.0 branch-menu, worktree, stash, hook, and
       (item) =>
         item.command === 'gitBranchesPanel.selectRepository' &&
         item.when.includes('gitBranchesPanel.multipleRepositories')
+    )
+  );
+  assert.ok(
+    packageJson.contributes.menus['view/title'].some(
+      (item) => item.command === 'gitBranchesPanel.findRef'
+    )
+  );
+  assert.ok(
+    packageJson.contributes.menus['view/title'].some(
+      (item) =>
+        item.command === 'gitBranchesPanel.clearFilter' &&
+        item.when.includes('gitBranchesPanel.filterActive')
     )
   );
 

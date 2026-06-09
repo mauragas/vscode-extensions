@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.0] - 2026-06-09
+
+- Added **Find Ref...** to search branches, remote branches, tags, stashes, worktrees, and optionally hooks across the workspace from one command
+- Added query parsing for search and filters, including prefixes such as `local:`, `remote:`, `tag:`, `stash:`, `worktree:`, `hook:`, and `state:`
+- Added in-view filtering commands: **Set Filter...**, **Clear Filter**, **Toggle Show Only Pinned**, and **Show Needs Attention**
+- Added filter-aware tree rendering that preserves only matching branches while auto-expanding repository, section, and folder ancestors around matches
+- Added a filter banner in the tree view message area, including a no-results hint when the active filter hides every ref
+- Added toolbar search and clear-filter buttons for faster navigation when working in large repositories
+- Added search configuration settings for hook inclusion, result limits, and whether the extension should auto-load collapsed sections before searching or filtering
+- Expanded automated coverage with pure search/filter unit tests plus command, view, and manifest coverage for the new search and filtering workflows
+
 ## [2.0.0] - 2026-06-09
 
 - Added full multi-repository support so the tree can now show and manage more than one Git repository in the same VS Code workspace

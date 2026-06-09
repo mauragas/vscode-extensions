@@ -99,6 +99,10 @@ test('registerBranchViews hides the current branch banner when setting is disabl
       lastCommitDate: '1 minute ago',
     }),
     getActiveRepositoryLabel: () => undefined,
+    getFilterSummary: () => '',
+    hasActiveFilter: () => false,
+    hasVisibleResults: () => true,
+    registerTreeViews: () => {},
     setActiveRepositoryFromItem: async () => {},
     syncActiveRepositoryToEditorIfEnabled: async () => {},
     onDidChangeTreeData: (listener) => {
@@ -135,6 +139,10 @@ test('registerBranchViews updates the current branch banner when setting is enab
   const provider = {
     getCurrentBranch: () => currentBranch,
     getActiveRepositoryLabel: () => undefined,
+    getFilterSummary: () => '',
+    hasActiveFilter: () => false,
+    hasVisibleResults: () => true,
+    registerTreeViews: () => {},
     setActiveRepositoryFromItem: async () => {},
     syncActiveRepositoryToEditorIfEnabled: async () => {},
     onDidChangeTreeData: (listener) => {
@@ -182,6 +190,10 @@ test('registerBranchViews includes the active repository label in the branch ban
       lastCommitDate: '1 minute ago',
     }),
     getActiveRepositoryLabel: () => 'repo-b',
+    getFilterSummary: () => '',
+    hasActiveFilter: () => false,
+    hasVisibleResults: () => true,
+    registerTreeViews: () => {},
     setActiveRepositoryFromItem: async () => {},
     syncActiveRepositoryToEditorIfEnabled: async () => {},
     onDidChangeTreeData: (listener) => {
@@ -207,6 +219,10 @@ test('registerBranchViews keeps per-view pinned-item contexts isolated across bo
   const provider = {
     getCurrentBranch: () => undefined,
     getActiveRepositoryLabel: () => undefined,
+    getFilterSummary: () => '',
+    hasActiveFilter: () => false,
+    hasVisibleResults: () => true,
+    registerTreeViews: () => {},
     setActiveRepositoryFromItem: async () => {},
     syncActiveRepositoryToEditorIfEnabled: async () => {},
     onDidChangeTreeData: (listener) => {
@@ -286,4 +302,39 @@ test('registerBranchViews keeps per-view pinned-item contexts isolated across bo
       args: ['gitBranchesPanel.branchesViewSelectedItemPinned', false],
     },
   ]);
+});
+
+test('registerBranchViews shows filter status and a no-results hint when filtering hides every ref', () => {
+  const treeViews = [];
+  const listeners = [];
+  const vscodeState = createVscodeState();
+  const { registerBranchViews } = loadFresh('../out/viewRegistration.js', {
+    vscode: createVscodeMock(false, treeViews, vscodeState),
+  }, ['../out/pinContext.js']);
+
+  const provider = {
+    getCurrentBranch: () => undefined,
+    getActiveRepositoryLabel: () => undefined,
+    getFilterSummary: () => 'Filter: local:feature',
+    hasActiveFilter: () => true,
+    hasVisibleResults: () => false,
+    registerTreeViews: () => {},
+    setActiveRepositoryFromItem: async () => {},
+    syncActiveRepositoryToEditorIfEnabled: async () => {},
+    onDidChangeTreeData: (listener) => {
+      listeners.push(listener);
+      return { dispose() {} };
+    },
+  };
+
+  registerBranchViews({ subscriptions: [] }, provider);
+
+  assert.equal(
+    treeViews[0].message,
+    'Filter: local:feature\n\nNo refs match the current filter.'
+  );
+  assert.equal(
+    treeViews[1].message,
+    'Filter: local:feature\n\nNo refs match the current filter.'
+  );
 });

@@ -49,6 +49,7 @@ export interface TreeRepository {
   repoRoot: string;
   description?: string;
   isActive?: boolean;
+  expanded?: boolean;
   children: TreeSection[];
 }
 
@@ -58,6 +59,7 @@ export interface TreeSection {
   path: string;
   scope: TreeContainerScope;
   repoRoot: string;
+  expanded?: boolean;
   children: TreeChildNode[];
 }
 
@@ -67,6 +69,7 @@ export interface TreeFolder {
   path: string;
   scope: TreeContainerScope;
   repoRoot: string;
+  expanded?: boolean;
   children: TreeChildNode[];
 }
 

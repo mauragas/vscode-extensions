@@ -37,6 +37,15 @@ import {
   findContainerNode,
   findDescendantBranches,
 } from './treePresentation';
+import {
+  buildFilterSummary,
+  clearRefFilterState,
+  createNeedsAttentionFilterState,
+  createRefFilterState,
+  filterTreeNodes,
+  hasActiveFilter,
+  type RefFilterState,
+} from './search/refSearch';
 
 export { BranchTreeItem, type NodeType } from './treeItem';
 export type { BranchLoadOptions } from './treeDataLoader';
@@ -51,6 +60,8 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
   private readonly pinnedItems: PinnedItemsStore;
   private readonly busyBranchKeys = new Set<string>();
   private activeRepoRoot?: string;
+  private filterState: RefFilterState = clearRefFilterState();
+  private treeViews: readonly vscode.TreeView<BranchTreeItem>[] = [];
 
   constructor(
     context: vscode.ExtensionContext,
@@ -65,6 +76,7 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     await this.dataLoader.refresh(options);
     await this.ensureActiveRepoRoot();
     this.updateRepositoryContexts();
+    this.updateFilterContexts();
     this.updateCurrentBranchContext(this.getCurrentBranch());
     this.onDidChangeTreeDataEmitter.fire();
   }
@@ -75,7 +87,7 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
 
   async getChildren(element?: BranchTreeItem): Promise<BranchTreeItem[]> {
     if (!element) {
-      if (this.getVisibleTreeData().length === 0) {
+      if (this.getBaseVisibleTreeData().length === 0) {
         await this.refresh({ sections: ['local', 'hooks'], fetchRemoteState: false });
       }
 
@@ -114,6 +126,16 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     return this.dataLoader.getRepositoryDescriptors();
   }
 
+  getVisibleRepoRoots(): readonly string[] {
+    const allRepoRoots = this.dataLoader.getRepoRoots();
+    if (getMultiRepositoryMode() === 'singleActiveRepository') {
+      const activeRepoRoot = this.getRepoRoot();
+      return activeRepoRoot ? [activeRepoRoot] : allRepoRoots.slice(0, 1);
+    }
+
+    return allRepoRoots;
+  }
+
   getActiveRepositoryLabel(): string | undefined {
     const activeRepoRoot = this.getRepoRoot();
     return this.getRepositoryDescriptors().find((repository) => repository.repoRoot === activeRepoRoot)?.label;
@@ -121,6 +143,64 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
 
   getCurrentBranch(repoRoot?: string): BranchInfo | undefined {
     return this.dataLoader.getCurrentBranch(repoRoot ?? this.getRepoRoot() ?? undefined);
+  }
+
+  getFilterSummary(): string {
+    return buildFilterSummary(this.filterState);
+  }
+
+  getFilterQuery(): string {
+    return this.filterState.rawQuery;
+  }
+
+  hasActiveFilter(): boolean {
+    return hasActiveFilter(this.filterState);
+  }
+
+  hasVisibleResults(): boolean {
+    return this.getVisibleTreeData().length > 0;
+  }
+
+  getSearchTreeData(): readonly BranchTreeNode[] {
+    const repoRoots = this.dataLoader.getRepoRoots();
+    return this.dataLoader.getTreeData({
+      activeRepoRoot: this.activeRepoRoot,
+      multiRepositoryMode: repoRoots.length > 1 ? 'alwaysGroupByRepository' : getMultiRepositoryMode(),
+    });
+  }
+
+  async setFilterQuery(query: string): Promise<void> {
+    this.filterState = createRefFilterState(query, {
+      showOnlyPinned: this.filterState.showOnlyPinned,
+    });
+    this.updateFilterContexts();
+    this.onDidChangeTreeDataEmitter.fire();
+  }
+
+  async clearFilter(): Promise<void> {
+    if (!this.hasActiveFilter()) {
+      return;
+    }
+
+    this.filterState = clearRefFilterState();
+    this.updateFilterContexts();
+    this.onDidChangeTreeDataEmitter.fire();
+  }
+
+  async toggleShowOnlyPinned(): Promise<boolean> {
+    this.filterState = {
+      ...this.filterState,
+      showOnlyPinned: !this.filterState.showOnlyPinned,
+    };
+    this.updateFilterContexts();
+    this.onDidChangeTreeDataEmitter.fire();
+    return this.filterState.showOnlyPinned;
+  }
+
+  async showNeedsAttention(): Promise<void> {
+    this.filterState = createNeedsAttentionFilterState();
+    this.updateFilterContexts();
+    this.onDidChangeTreeDataEmitter.fire();
   }
 
   getDescendantBranches(containerKey: string): readonly TreeBranch[] {
@@ -188,6 +268,10 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     return true;
   }
 
+  registerTreeViews(treeViews: readonly vscode.TreeView<BranchTreeItem>[]): void {
+    this.treeViews = treeViews;
+  }
+
   async setActiveRepositoryFromItem(item: BranchTreeItem | undefined): Promise<void> {
     if (!item?.repoRoot) {
       return;
@@ -216,11 +300,38 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     }
   }
 
-  private getVisibleTreeData(): readonly BranchTreeNode[] {
+  async revealItem(item: BranchTreeItem, options: { clearFilter?: boolean } = {}): Promise<boolean> {
+    const primaryTreeView = this.treeViews[0];
+    if (!primaryTreeView) {
+      return false;
+    }
+
+    if (options.clearFilter ?? false) {
+      await this.clearFilter();
+    }
+
+    await this.setActiveRepositoryFromItem(item);
+    await primaryTreeView.reveal(item, {
+      expand: 3,
+      focus: true,
+      select: true,
+    });
+    return true;
+  }
+
+  private getBaseVisibleTreeData(): readonly BranchTreeNode[] {
     return this.dataLoader.getTreeData({
       activeRepoRoot: this.activeRepoRoot,
       multiRepositoryMode: getMultiRepositoryMode(),
     });
+  }
+
+  private getVisibleTreeData(): readonly BranchTreeNode[] {
+    const baseTreeData = this.getBaseVisibleTreeData();
+
+    return hasActiveFilter(this.filterState)
+      ? filterTreeNodes(baseTreeData, this.filterState)
+      : baseTreeData;
   }
 
   private nodesToItems(nodes: readonly BranchTreeNode[]): BranchTreeItem[] {
@@ -280,6 +391,19 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
       'setContext',
       'gitBranchesPanel.groupedRepositories',
       groupedRepositories
+    );
+  }
+
+  private updateFilterContexts(): void {
+    void vscode.commands.executeCommand(
+      'setContext',
+      'gitBranchesPanel.filterActive',
+      this.hasActiveFilter()
+    );
+    void vscode.commands.executeCommand(
+      'setContext',
+      'gitBranchesPanel.filterShowOnlyPinned',
+      this.filterState.showOnlyPinned
     );
   }
 

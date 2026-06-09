@@ -1,8 +1,8 @@
 {
   "name": "git-branches-panel",
   "displayName": "Git Branches Panel",
-  "description": "Tree view for branches, tags, stashes, worktrees, and hooks across one or multiple Git repositories with grouping, sync state, and quick actions.",
-  "version": "2.0.0",
+  "description": "Tree view for branches, tags, stashes, worktrees, and hooks across one or multiple Git repositories with grouping, search, filtering, sync state, and quick actions.",
+  "version": "2.1.0",
   "publisher": "karolis-mauragas",
   "license": "MIT",
   "repository": {
@@ -84,6 +84,31 @@
       {
         "command": "gitBranchesPanel.focusActiveEditorRepository",
         "title": "Focus Repository from Active Editor"
+      },
+      {
+        "command": "gitBranchesPanel.findRef",
+        "title": "Find Ref...",
+        "icon": "$(search)"
+      },
+      {
+        "command": "gitBranchesPanel.setFilter",
+        "title": "Set Filter...",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "gitBranchesPanel.clearFilter",
+        "title": "Clear Filter",
+        "icon": "$(close)"
+      },
+      {
+        "command": "gitBranchesPanel.toggleShowOnlyPinned",
+        "title": "Toggle Show Only Pinned",
+        "icon": "$(pin)"
+      },
+      {
+        "command": "gitBranchesPanel.showNeedsAttention",
+        "title": "Show Needs Attention",
+        "icon": "$(warning)"
       },
       {
         "command": "gitBranchesPanel.fetchAll",
@@ -408,6 +433,11 @@
           "group": "navigation@2"
         },
         {
+          "command": "gitBranchesPanel.findRef",
+          "when": "view == gitBranchesPanel || view == gitBranchesSCM",
+          "group": "navigation@2.5"
+        },
+        {
           "command": "gitBranchesPanel.branchActionInProgress",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showCurrentBranchAction && gitBranchesPanel.currentBranchBusy",
           "group": "navigation@3"
@@ -441,6 +471,11 @@
           "command": "gitBranchesPanel.selectRepository",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories",
           "group": "navigation@6.5"
+        },
+        {
+          "command": "gitBranchesPanel.clearFilter",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.filterActive",
+          "group": "navigation@6.6"
         },
         {
           "command": "gitBranchesPanel.showAdvancedActions",
@@ -1764,6 +1799,22 @@
           "type": "boolean",
           "default": false,
           "description": "When enabled, keep the active repository aligned with the Git repository that owns the active editor whenever multi-repository support is in use."
+        },
+        "gitBranchesPanel.search.includeHooks": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include Git hook items in the Find Ref command results."
+        },
+        "gitBranchesPanel.search.maxResults": {
+          "type": "number",
+          "default": 200,
+          "minimum": 1,
+          "description": "Maximum number of Find Ref results to show after ranking matches."
+        },
+        "gitBranchesPanel.search.autoLoadAllSections": {
+          "type": "boolean",
+          "default": true,
+          "description": "Load all searchable sections before running Find Ref or applying tree filters so results include refs from collapsed sections."
         },
         "gitBranchesPanel.showCurrentBranchInfo": {
           "type": "boolean",
