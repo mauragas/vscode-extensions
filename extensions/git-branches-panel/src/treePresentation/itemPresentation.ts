@@ -27,7 +27,12 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
       id: containerKey,
       contextValue: 'repository',
       collapsibleState: node.expanded || node.isActive ? 'expanded' : 'collapsed',
-      icon: { id: 'repo' },
+      icon: node.isActive
+        ? {
+            id: 'repo',
+            colorId: 'gitDecoration.addedResourceForeground',
+          }
+        : { id: 'repo' },
       description: node.description,
       tooltip: buildRepositoryTooltipContent(node),
       containerKey,
