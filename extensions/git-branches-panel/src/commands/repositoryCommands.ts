@@ -29,8 +29,8 @@ export function registerRepositoryCommands(
     vscode.commands.registerCommand('gitBranchesPanel.fetchAllRepositoriesPrune', async () => {
       await handleFetchAllRepositoriesPrune(commandContext);
     }),
-    vscode.commands.registerCommand('gitBranchesPanel.cleanRepository', async () => {
-      await handleCleanRepository(commandContext);
+    vscode.commands.registerCommand('gitBranchesPanel.cleanRepository', async (item?: BranchTreeItem) => {
+      await handleCleanRepository(item, commandContext);
     }),
     vscode.commands.registerCommand('gitBranchesPanel.selectRepository', async (item?: BranchTreeItem) => {
       await handleSelectRepository(item, commandContext);
@@ -89,8 +89,11 @@ async function handleFetchAllPrune(
   }
 }
 
-async function handleCleanRepository(commandContext: CommandContext): Promise<void> {
-  const repoRoot = await commandContext.requireRepoRoot();
+async function handleCleanRepository(
+  item: BranchTreeItem | undefined,
+  commandContext: CommandContext
+): Promise<void> {
+  const repoRoot = await commandContext.requireRepoRoot(item?.repoRoot);
   if (!repoRoot) {
     return;
   }

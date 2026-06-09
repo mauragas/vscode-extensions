@@ -575,3 +575,46 @@ test('pruneWorktrees prunes stale worktree metadata and refreshes the worktree s
     },
   ]);
 });
+
+test('pruneWorktrees can target the clicked repository item directly', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Prune');
+  const pruneWorktreeCalls = [];
+
+  const { commandContext } = createWorktreeCommandsModule({
+    vscodeState,
+    gitMock: {
+      async createWorktree() {},
+      async renameWorktree() {},
+      async removeWorktree() {},
+      async pruneWorktrees(repoRoot) {
+        pruneWorktreeCalls.push(repoRoot);
+      },
+      async lockWorktree() {},
+      async unlockWorktree() {},
+      async getWorktrees() {
+        return [
+          {
+            name: '/tmp/repo-b-missing-worktree',
+            isCurrent: false,
+            scope: 'worktree',
+            worktreePrunableReason: 'gitdir file points to non-existent location',
+          },
+        ];
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.pruneWorktrees']({
+    nodeType: 'repository',
+    repoRoot: '/repo-b',
+  });
+
+  assert.deepEqual(pruneWorktreeCalls, ['/repo-b']);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: 'Pruned stale worktree metadata.',
+      options: { sections: ['worktree'], repoRoots: ['/repo-b'], fetchRemoteState: false },
+    },
+  ]);
+});

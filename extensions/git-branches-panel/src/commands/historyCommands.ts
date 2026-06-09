@@ -55,8 +55,8 @@ export function registerHistoryCommands(
     vscode.commands.registerCommand('gitBranchesPanel.compareWithUpstream', async (item?: BranchTreeItem) => {
       await handleCompareWithUpstream(item, commandContext);
     }),
-    vscode.commands.registerCommand('gitBranchesPanel.compareTwoRefs', async () => {
-      await handleCompareTwoRefs(commandContext);
+    vscode.commands.registerCommand('gitBranchesPanel.compareTwoRefs', async (item?: BranchTreeItem) => {
+      await handleCompareTwoRefs(item, commandContext);
     }),
     vscode.commands.registerCommand('gitBranchesPanel.showBranchCommits', async (item?: BranchTreeItem) => {
       await handleShowBranchCommits(item, commandContext);
@@ -90,8 +90,11 @@ async function handleCompareWithUpstream(
   });
 }
 
-async function handleCompareTwoRefs(commandContext: CommandContext): Promise<void> {
-  const repoRoot = await commandContext.requireRepoRoot();
+async function handleCompareTwoRefs(
+  item: BranchTreeItem | undefined,
+  commandContext: CommandContext
+): Promise<void> {
+  const repoRoot = await commandContext.requireRepoRoot(item?.repoRoot);
   if (!repoRoot) {
     return;
   }

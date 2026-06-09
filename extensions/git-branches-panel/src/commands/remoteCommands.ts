@@ -64,10 +64,6 @@ async function handleAddRemote(
   item: BranchTreeItem | undefined,
   commandContext: CommandContext
 ): Promise<void> {
-  if (item && !isRemotesSectionItem(item)) {
-    return;
-  }
-
   const repoRoot = item?.repoRoot ?? (await commandContext.requireRepoRoot());
   if (!repoRoot) {
     return;
@@ -347,10 +343,6 @@ async function handleRemoveRemote(
   } catch (error) {
     commandContext.showCommandError(`Failed to remove remote '${item.remoteInfo.name}'`, error);
   }
-}
-
-function isRemotesSectionItem(item: BranchTreeItem | undefined): item is BranchTreeItem & { repoRoot: string } {
-  return Boolean(item && item.nodeType === 'section' && item.containerScope === 'remoteConfig' && item.repoRoot);
 }
 
 function isRemoteConfigItem(

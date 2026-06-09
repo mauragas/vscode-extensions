@@ -414,6 +414,59 @@ test('pushTag uses the only configured remote automatically', async () => {
   ]);
 });
 
+test('pushAllTags can target the clicked repository item directly', async () => {
+  const vscodeState = createVscodeState();
+  const pushAllTagsCalls = [];
+
+  const { commandContext } = createTagCommandsModule({
+    vscodeState,
+    gitMock: {
+      async checkoutTag() {},
+      async createTag() {},
+      async deleteRemoteTag() {},
+      async deleteTag() {},
+      async getBranches() {
+        return [];
+      },
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async getRemoteBranches() {
+        return [];
+      },
+      async getRemotes() {
+        return ['origin'];
+      },
+      async getStashes() {
+        return [];
+      },
+      async getTagDetails() {
+        return {};
+      },
+      async getTags() {
+        return [];
+      },
+      async pushAllTags(repoRoot, remoteName) {
+        pushAllTagsCalls.push({ repoRoot, remoteName });
+      },
+      async pushTag() {},
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.pushAllTags']({
+    nodeType: 'repository',
+    repoRoot: '/repo-b',
+  });
+
+  assert.deepEqual(pushAllTagsCalls, [{ repoRoot: '/repo-b', remoteName: 'origin' }]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: "Pushed all tags to 'origin'.",
+      options: { fetchRemoteState: false },
+    },
+  ]);
+});
+
 test('deleteRemoteTag confirms and deletes the selected tag from the chosen remote', async () => {
   const vscodeState = createVscodeState();
   vscodeState.warningResponses.push('Delete Remote Tag');

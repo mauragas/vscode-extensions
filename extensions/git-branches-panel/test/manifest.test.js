@@ -46,6 +46,8 @@ test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, histor
     ['gitBranchesPanel.fetchAllRepositoriesPrune', 'Fetch All Repositories (Prune)'],
     ['gitBranchesPanel.syncAllRepositoriesBranches', 'Sync All Repositories Branches'],
     ['gitBranchesPanel.pullAllRepositoriesChanges', 'Pull All Repositories Changes'],
+    ['gitBranchesPanel.showAllRepositoriesActions', 'More Actions'],
+    ['gitBranchesPanel.showRepositoryActions', 'More Actions'],
     ['gitBranchesPanel.openBranchOnRemote', 'Open Branch on Remote'],
     ['gitBranchesPanel.openComparePage', 'Open Compare Page'],
     ['gitBranchesPanel.createPullRequest', 'Create Pull Request'],
@@ -95,6 +97,8 @@ test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, histor
   assert.equal(getCommand('gitBranchesPanel.fetchAllRepositoriesPrune').icon, '$(clear-all)');
   assert.equal(getCommand('gitBranchesPanel.syncAllRepositoriesBranches').icon, '$(sync)');
   assert.equal(getCommand('gitBranchesPanel.pullAllRepositoriesChanges').icon, '$(repo-pull)');
+  assert.equal(getCommand('gitBranchesPanel.showAllRepositoriesActions').icon, '$(ellipsis)');
+  assert.equal(getCommand('gitBranchesPanel.showRepositoryActions').icon, '$(ellipsis)');
   assert.equal(getCommand('gitBranchesPanel.pruneWorktrees').icon, '$(clear-all)');
   assert.equal(getCommand('gitBranchesPanel.lockWorktree').icon, '$(lock)');
   assert.equal(getCommand('gitBranchesPanel.unlockWorktree').icon, '$(unlock)');
@@ -188,6 +192,18 @@ test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, histor
   assert.ok(hasViewTitleMenu('gitBranchesPanel.findRef'));
   assert.ok(
     hasViewTitleMenu(
+      'gitBranchesPanel.showAdvancedActions',
+      (item) => item.when.includes('!gitBranchesPanel.groupedRepositories')
+    )
+  );
+  assert.ok(
+    hasViewTitleMenu(
+      'gitBranchesPanel.showAllRepositoriesActions',
+      (item) => item.when.includes('gitBranchesPanel.groupedRepositories')
+    )
+  );
+  assert.ok(
+    hasViewTitleMenu(
       'gitBranchesPanel.clearFilter',
       (item) => item.when.includes('gitBranchesPanel.filterActive')
     )
@@ -233,7 +249,7 @@ test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, histor
   );
   assert.ok(
     hasViewItemMenu(
-      'gitBranchesPanel.showAdvancedActions',
+      'gitBranchesPanel.showRepositoryActions',
       (item) => item.when === 'viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' && item.group === 'inline@4'
     )
   );
@@ -338,7 +354,7 @@ test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, histor
   );
   assert.ok(
     hasViewItemMenu(
-      'gitBranchesPanel.showAdvancedActions',
+      'gitBranchesPanel.showRepositoryActions',
       (item) =>
         item.when === 'viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' &&
         item.group === '1_repository@4'

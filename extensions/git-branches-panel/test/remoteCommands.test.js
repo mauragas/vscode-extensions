@@ -203,6 +203,34 @@ test('addRemote prompts for name and URLs, then refreshes remote sections', asyn
   ]);
 });
 
+test('addRemote can target the clicked repository item directly', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.inputBoxResponses.push('upstream', 'https://example.com/upstream.git', '');
+  const addCalls = [];
+
+  const { commandContext } = createRemoteCommandsModule(vscodeState, {
+    getRemotes: async () => ['origin'],
+    addRemote: async (repoRoot, remoteName, remoteUrl) => {
+      addCalls.push({ repoRoot, remoteName, remoteUrl });
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.addRemote']({
+    nodeType: 'repository',
+    repoRoot: '/repo-b',
+  });
+
+  assert.deepEqual(addCalls, [
+    { repoRoot: '/repo-b', remoteName: 'upstream', remoteUrl: 'https://example.com/upstream.git' },
+  ]);
+  assert.deepEqual(commandContext.state.refreshes, [
+    {
+      message: "Added remote 'upstream'.",
+      options: { sections: ['local', 'remote', 'remotes'], repoRoots: ['/repo-b'], fetchRemoteState: false },
+    },
+  ]);
+});
+
 test('fetchRemote and fetchRemotePrune target the selected remote item', async () => {
   const vscodeState = createVscodeState();
   const fetchCalls = [];

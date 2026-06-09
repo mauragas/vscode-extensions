@@ -78,6 +78,18 @@ export function registerBulkActionCommands(
       await handleShowAdvancedActions(item, commandContext);
     }),
     vscode.commands.registerCommand(
+      'gitBranchesPanel.showRepositoryActions',
+      async (item?: BranchTreeItem) => {
+        await handleShowRepositoryActions(item, commandContext);
+      }
+    ),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.showAllRepositoriesActions',
+      async () => {
+        await handleShowAllRepositoriesActions(commandContext);
+      }
+    ),
+    vscode.commands.registerCommand(
       'gitBranchesPanel.syncAllBranches',
       async (item?: BranchTreeItem) => {
         await handleSyncAllBranches(item, commandContext);
@@ -118,8 +130,8 @@ export function registerBulkActionCommands(
     }),
     vscode.commands.registerCommand(
       'gitBranchesPanel.pruneMissingUpstreamBranches',
-      async () => {
-        await handlePruneMissingUpstreamBranches(commandContext);
+      async (item?: BranchTreeItem) => {
+        await handlePruneMissingUpstreamBranches(item, commandContext);
       }
     ),
     vscode.commands.registerCommand(
@@ -145,24 +157,34 @@ async function handleShowAdvancedActions(
     await commandContext.provider.setActiveRepositoryFromItem(item);
   }
 
-  const actionItems = shouldShowAllRepositoriesActions(commandContext, item)
-    ? buildAllRepositoriesActionItems(commandContext)
-    : buildRepositoryActionItems(commandContext);
-
-  const selection = await vscode.window.showQuickPick(
-    actionItems,
-    {
-      placeHolder: shouldShowAllRepositoriesActions(commandContext, item)
-        ? 'Choose an all-repositories action'
-        : 'Choose an advanced repository action',
-    }
-  );
-
-  if (!selection) {
+  if (shouldShowAllRepositoriesActions(commandContext, item)) {
+    await handleShowAllRepositoriesActions(commandContext);
     return;
   }
 
-  await selection.run();
+  await showActionQuickPick(
+    buildRepositoryActionItems(commandContext, item),
+    buildRepositoryActionsPlaceHolder(item)
+  );
+}
+
+async function handleShowRepositoryActions(
+  item: BranchTreeItem | undefined,
+  commandContext: CommandContext
+): Promise<void> {
+  await showActionQuickPick(
+    buildRepositoryActionItems(commandContext, item),
+    buildRepositoryActionsPlaceHolder(item)
+  );
+}
+
+async function handleShowAllRepositoriesActions(
+  commandContext: CommandContext
+): Promise<void> {
+  await showActionQuickPick(
+    buildAllRepositoriesActionItems(commandContext),
+    'Choose an all-repositories action'
+  );
 }
 
 async function handleSyncFolderBranches(
@@ -513,8 +535,11 @@ async function handleDeleteFolderTags(
   );
 }
 
-async function handlePruneMissingUpstreamBranches(commandContext: CommandContext): Promise<void> {
-  const repoRoot = await commandContext.requireRepoRoot();
+async function handlePruneMissingUpstreamBranches(
+  item: BranchTreeItem | undefined,
+  commandContext: CommandContext
+): Promise<void> {
+  const repoRoot = await commandContext.requireRepoRoot(item?.repoRoot);
   if (!repoRoot) {
     return;
   }
@@ -652,14 +677,19 @@ async function handlePullAllRepositoriesChanges(commandContext: CommandContext):
   vscode.window.showInformationMessage(message);
 }
 
-function buildRepositoryActionItems(commandContext: CommandContext): AdvancedActionItem[] {
+function buildRepositoryActionItems(
+  commandContext: CommandContext,
+  item?: BranchTreeItem
+): AdvancedActionItem[] {
+  const actionTarget = item?.repoRoot ? item : undefined;
+
   return [
     {
       actionId: 'compareTwoRefs',
       label: '$(diff-multiple) Compare two refs…',
       description: 'Pick any two branches, remote branches, tags, or stashes and open a file comparison',
       run: async () => {
-        await vscode.commands.executeCommand('gitBranchesPanel.compareTwoRefs');
+        await executeCommandWithOptionalItem('gitBranchesPanel.compareTwoRefs', actionTarget);
       },
     },
     {
@@ -667,7 +697,7 @@ function buildRepositoryActionItems(commandContext: CommandContext): AdvancedAct
       label: '$(add) Add remote…',
       description: 'Add a new fetch/push remote to the active repository',
       run: async () => {
-        await vscode.commands.executeCommand('gitBranchesPanel.addRemote');
+        await executeCommandWithOptionalItem('gitBranchesPanel.addRemote', actionTarget);
       },
     },
     {
@@ -675,7 +705,7 @@ function buildRepositoryActionItems(commandContext: CommandContext): AdvancedAct
       label: '$(clear-all) Prune worktrees…',
       description: 'Remove stale worktree metadata for missing or broken linked worktrees',
       run: async () => {
-        await vscode.commands.executeCommand('gitBranchesPanel.pruneWorktrees');
+        await executeCommandWithOptionalItem('gitBranchesPanel.pruneWorktrees', actionTarget);
       },
     },
     {
@@ -683,7 +713,10 @@ function buildRepositoryActionItems(commandContext: CommandContext): AdvancedAct
       label: '$(trash) Prune local branches with missing upstream',
       description: 'Delete non-current local branches whose tracked upstream no longer exists',
       run: async () => {
-        await vscode.commands.executeCommand('gitBranchesPanel.pruneMissingUpstreamBranches');
+        await executeCommandWithOptionalItem(
+          'gitBranchesPanel.pruneMissingUpstreamBranches',
+          actionTarget
+        );
       },
     },
     {
@@ -691,7 +724,7 @@ function buildRepositoryActionItems(commandContext: CommandContext): AdvancedAct
       label: '$(cloud-upload) Push all tags…',
       description: 'Choose a remote and push every local tag',
       run: async () => {
-        await vscode.commands.executeCommand('gitBranchesPanel.pushAllTags');
+        await executeCommandWithOptionalItem('gitBranchesPanel.pushAllTags', actionTarget);
       },
     },
     {
@@ -699,7 +732,7 @@ function buildRepositoryActionItems(commandContext: CommandContext): AdvancedAct
       label: '$(repo-fetch) Fetch all (prune)',
       description: 'Fetch every remote and prune deleted remote refs',
       run: async () => {
-        await vscode.commands.executeCommand('gitBranchesPanel.fetchAllPrune');
+        await executeCommandWithOptionalItem('gitBranchesPanel.fetchAllPrune', actionTarget);
       },
     },
     {
@@ -707,7 +740,7 @@ function buildRepositoryActionItems(commandContext: CommandContext): AdvancedAct
       label: '$(trash) Clean repository…',
       description: 'Run git clean -fdx to remove untracked and ignored files',
       run: async () => {
-        await vscode.commands.executeCommand('gitBranchesPanel.cleanRepository');
+        await executeCommandWithOptionalItem('gitBranchesPanel.cleanRepository', actionTarget);
       },
     },
     {
@@ -715,7 +748,14 @@ function buildRepositoryActionItems(commandContext: CommandContext): AdvancedAct
       label: '$(refresh) Refresh branch tree',
       description: 'Reload the currently visible tree sections',
       run: async () => {
-        await commandContext.refresh({ fetchRemoteState: false });
+        await commandContext.refresh(
+          actionTarget?.repoRoot
+            ? {
+                repoRoots: [actionTarget.repoRoot],
+                fetchRemoteState: false,
+              }
+            : { fetchRemoteState: false }
+        );
       },
     },
   ];
@@ -781,6 +821,52 @@ function shouldShowAllRepositoriesActions(
       : repositoryDescriptors.map((repository) => repository.repoRoot);
 
   return repositoryDescriptors.length > 1 && visibleRepoRoots.length > 1;
+}
+
+async function showActionQuickPick(
+  actionItems: AdvancedActionItem[],
+  placeHolder: string
+): Promise<void> {
+  const selection = await vscode.window.showQuickPick(actionItems, {
+    placeHolder,
+  });
+
+  if (!selection) {
+    return;
+  }
+
+  await selection.run();
+}
+
+function buildRepositoryActionsPlaceHolder(item: BranchTreeItem | undefined): string {
+  const repositoryLabel = getTreeItemLabel(item);
+  return repositoryLabel
+    ? `Choose an action for '${repositoryLabel}'`
+    : 'Choose an advanced repository action';
+}
+
+function getTreeItemLabel(item: BranchTreeItem | undefined): string | undefined {
+  if (!item) {
+    return undefined;
+  }
+
+  if (typeof item.label === 'string') {
+    return item.label;
+  }
+
+  return typeof item.label?.label === 'string' ? item.label.label : undefined;
+}
+
+async function executeCommandWithOptionalItem(
+  commandId: string,
+  item: BranchTreeItem | undefined
+): Promise<void> {
+  if (item) {
+    await vscode.commands.executeCommand(commandId, item);
+    return;
+  }
+
+  await vscode.commands.executeCommand(commandId);
 }
 
 async function syncFolderBranches(

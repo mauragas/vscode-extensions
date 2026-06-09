@@ -226,6 +226,81 @@ test('showAdvancedActions routes the quick-pick selection to the clean repositor
   ]);
 });
 
+test('showRepositoryActions forwards the clicked repository item to repository-scoped commands', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.quickPickSelector = (items) =>
+    items.find((item) => item.actionId === 'cleanRepository');
+
+  createBulkActionsModule({
+    vscodeState,
+    gitMock: {
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async deleteTag() {},
+      async fetchRemoteState() {},
+      async getBranches() {
+        return [];
+      },
+      async pushBranch() {},
+      async syncBranch() {
+        throw new Error('syncBranch should not be called in this test');
+      },
+    },
+  });
+
+  const item = {
+    nodeType: 'repository',
+    repoRoot: '/repo-b',
+    label: 'repo-b',
+  };
+
+  await vscodeState.registeredCommands['gitBranchesPanel.showRepositoryActions'](item);
+
+  assert.deepEqual(vscodeState.executedCommands, [
+    {
+      command: 'gitBranchesPanel.cleanRepository',
+      args: [item],
+    },
+  ]);
+});
+
+test('showRepositoryActions keeps refresh scoped to the clicked repository without switching active repo first', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.quickPickSelector = (items) =>
+    items.find((item) => item.actionId === 'refresh');
+
+  const { commandContext } = createBulkActionsModule({
+    vscodeState,
+    gitMock: {
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async deleteTag() {},
+      async fetchRemoteState() {},
+      async getBranches() {
+        return [];
+      },
+      async pushBranch() {},
+      async syncBranch() {
+        throw new Error('syncBranch should not be called in this test');
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.showRepositoryActions']({
+    nodeType: 'repository',
+    repoRoot: '/repo-b',
+    label: 'repo-b',
+  });
+
+  assert.deepEqual(commandContext.state.activeRepositoryItems, []);
+  assert.deepEqual(commandContext.state.refreshCalls, [
+    {
+      repoRoots: ['/repo-b'],
+      fetchRemoteState: false,
+    },
+  ]);
+});
+
 test('showAdvancedActions scopes the picker to the clicked repository item before opening it', async () => {
   const vscodeState = createVscodeState();
   vscodeState.quickPickSelector = (items) =>
@@ -254,7 +329,12 @@ test('showAdvancedActions scopes the picker to the clicked repository item befor
   });
 
   assert.deepEqual(commandContext.state.activeRepositoryItems, ['/repo-b']);
-  assert.deepEqual(commandContext.state.refreshCalls, [{ fetchRemoteState: false }]);
+  assert.deepEqual(commandContext.state.refreshCalls, [
+    {
+      repoRoots: ['/repo-b'],
+      fetchRemoteState: false,
+    },
+  ]);
 });
 
 test('showAdvancedActions from the top toolbar only shows all-repositories actions when grouped repositories are visible', async () => {
@@ -307,6 +387,45 @@ test('showAdvancedActions from the top toolbar only shows all-repositories actio
   assert.ok(
     !vscodeState.quickPickRequests[0].items.some(
       (item) => item.actionId === 'addRemote'
+    )
+  );
+});
+
+test('showAllRepositoriesActions only shows all-repositories actions', async () => {
+  const vscodeState = createVscodeState();
+
+  const { commandContext } = createBulkActionsModule({
+    vscodeState,
+    gitMock: {
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async deleteTag() {},
+      async fetchRemoteState() {},
+      async getBranches() {
+        return [];
+      },
+      async pushBranch() {},
+      async syncBranch() {
+        throw new Error('syncBranch should not be called in this test');
+      },
+    },
+  });
+  commandContext.state.repositoryDescriptors = [
+    { repoRoot: '/repo-a', label: 'repo-a' },
+    { repoRoot: '/repo-b', label: 'repo-b' },
+  ];
+
+  await vscodeState.registeredCommands['gitBranchesPanel.showAllRepositoriesActions']();
+
+  assert.equal(vscodeState.quickPickRequests.length, 1);
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (item) => item.actionId === 'syncAllRepositoriesBranches'
+    )
+  );
+  assert.ok(
+    !vscodeState.quickPickRequests[0].items.some(
+      (item) => item.actionId === 'cleanRepository'
     )
   );
 });

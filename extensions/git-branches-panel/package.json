@@ -186,6 +186,16 @@
         "icon": "$(ellipsis)"
       },
       {
+        "command": "gitBranchesPanel.showAllRepositoriesActions",
+        "title": "More Actions",
+        "icon": "$(ellipsis)"
+      },
+      {
+        "command": "gitBranchesPanel.showRepositoryActions",
+        "title": "More Actions",
+        "icon": "$(ellipsis)"
+      },
+      {
         "command": "gitBranchesPanel.stashSilently",
         "title": "Stash all changes silently",
         "icon": "$(archive)"
@@ -699,7 +709,12 @@
         },
         {
           "command": "gitBranchesPanel.showAdvancedActions",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showAdvancedActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showAdvancedActions && !gitBranchesPanel.groupedRepositories",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.showAllRepositoriesActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showAdvancedActions && gitBranchesPanel.groupedRepositories",
           "group": "navigation@7"
         },
         {
@@ -775,7 +790,7 @@
           "group": "inline@3"
         },
         {
-          "command": "gitBranchesPanel.showAdvancedActions",
+          "command": "gitBranchesPanel.showRepositoryActions",
           "when": "viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/",
           "group": "inline@4"
         },
@@ -2030,7 +2045,7 @@
           "group": "1_repository@3"
         },
         {
-          "command": "gitBranchesPanel.showAdvancedActions",
+          "command": "gitBranchesPanel.showRepositoryActions",
           "when": "viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/",
           "group": "1_repository@4"
         },

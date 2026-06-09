@@ -232,8 +232,8 @@ function createCommandContext() {
           return searchTreeData;
         },
       },
-      async requireRepoRoot() {
-        return state.repoRoot;
+      async requireRepoRoot(preferredRepoRoot) {
+        return preferredRepoRoot ?? state.repoRoot;
       },
       async requireCurrentBranch() {
         return state.currentBranch;
@@ -369,6 +369,41 @@ test('compareTwoRefs prompts for two refs and opens a multi diff comparison', as
     { repoRoot: '/repo', leftRef: 'feature/demo', rightRef: 'v1.0.0' },
   ]);
   assert.equal(vscodeState.executedCommands[0].command, '_workbench.openMultiDiffEditor');
+});
+
+test('compareTwoRefs can target the clicked repository item directly', async () => {
+  const vscodeState = createVscodeState();
+  let quickPickCall = 0;
+  vscodeState.quickPickSelector = (items) => {
+    quickPickCall += 1;
+    return quickPickCall === 1
+      ? items.find((item) => item.label === 'feature/demo')
+      : items.find((item) => item.label === 'v1.0.0');
+  };
+  const diffCalls = [];
+  const { commandContext } = createHistoryCommandsModule(vscodeState, {
+    async getDiffFilesBetweenRefs(repoRoot, leftRef, rightRef) {
+      diffCalls.push({ repoRoot, leftRef, rightRef });
+      return [{ status: 'A', path: 'release.txt' }];
+    },
+  });
+  commandContext.state.repoRoot = '/fallback-repo';
+
+  await vscodeState.registeredCommands['gitBranchesPanel.compareTwoRefs']({
+    nodeType: 'repository',
+    repoRoot: '/repo',
+  });
+
+  assert.deepEqual(commandContext.state.refreshCalls, [
+    {
+      sections: ['local', 'remote', 'stash', 'tags'],
+      repoRoots: ['/repo'],
+      fetchRemoteState: false,
+    },
+  ]);
+  assert.deepEqual(diffCalls, [
+    { repoRoot: '/repo', leftRef: 'feature/demo', rightRef: 'v1.0.0' },
+  ]);
 });
 
 test('showRefHistory lets the user pick a commit and then open changed files for it', async () => {

@@ -215,10 +215,6 @@ async function handlePushAllTags(
   item: BranchTreeItem | undefined,
   commandContext: CommandContext
 ): Promise<void> {
-  if (item && (item.nodeType !== 'section' || item.containerPath !== 'section:tags')) {
-    return;
-  }
-
   const repoRoot = item?.repoRoot ?? (await commandContext.requireRepoRoot());
   if (!repoRoot) {
     return;

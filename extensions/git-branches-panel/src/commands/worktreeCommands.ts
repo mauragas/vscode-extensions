@@ -335,7 +335,7 @@ async function handlePruneWorktrees(
   item: BranchTreeItem | undefined,
   commandContext: CommandContext
 ): Promise<void> {
-  if (item && !isWorktreeMaintenanceItem(item)) {
+  if (item && item.nodeType !== 'repository' && !isWorktreeMaintenanceItem(item)) {
     return;
   }
 

@@ -153,6 +153,36 @@ test('cleanRepository confirms, cleans the repository, and refreshes once', asyn
   ]);
 });
 
+test('cleanRepository can target the clicked repository item directly', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Clean Repository');
+  const cleanCalls = [];
+
+  const { commandContext } = createRepositoryCommandsModule({
+    vscodeState,
+    gitMock: {
+      async cleanRepository(repoRoot) {
+        cleanCalls.push(repoRoot);
+      },
+      async fetchAllRemotes() {},
+      async fetchRemoteState() {},
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.cleanRepository']({
+    nodeType: 'repository',
+    repoRoot: '/repo-b',
+  });
+
+  assert.deepEqual(cleanCalls, ['/repo-b']);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: 'Removed untracked and ignored files from the repository.',
+      options: { fetchRemoteState: false },
+    },
+  ]);
+});
+
 test('fetchAll fetches remotes and refreshes without pruning', async () => {
   const vscodeState = createVscodeState();
   const fetchCalls = [];
