@@ -521,6 +521,14 @@ async function handlePruneMissingUpstreamBranches(commandContext: CommandContext
 function buildRepositoryActionItems(commandContext: CommandContext): AdvancedActionItem[] {
   return [
     {
+      actionId: 'compareTwoRefs',
+      label: 'Compare two refs…',
+      description: 'Pick any two branches, remote branches, tags, or stashes and open a file comparison',
+      run: async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.compareTwoRefs');
+      },
+    },
+    {
       actionId: 'pruneMissingUpstream',
       label: 'Prune local branches with missing upstream',
       description: 'Delete non-current local branches whose tracked upstream no longer exists',

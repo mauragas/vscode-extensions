@@ -1,8 +1,8 @@
 {
   "name": "git-branches-panel",
   "displayName": "Git Branches Panel",
-  "description": "Tree view for branches, tags, stashes, worktrees, and hooks across one or multiple Git repositories with grouping, search, filtering, remote-host integration, sync state, and quick actions.",
-  "version": "2.2.0",
+  "description": "Tree view for branches, tags, stashes, worktrees, and hooks across one or multiple Git repositories with grouping, search, filtering, compare/history workflows, remote-host integration, sync state, and quick actions.",
+  "version": "2.3.0",
   "publisher": "karolis-mauragas",
   "license": "MIT",
   "repository": {
@@ -259,6 +259,31 @@
         "command": "gitBranchesPanel.copyCompareUrl",
         "title": "Copy Compare URL",
         "icon": "$(copy)"
+      },
+      {
+        "command": "gitBranchesPanel.compareWithUpstream",
+        "title": "Compare with Upstream",
+        "icon": "$(diff-multiple)"
+      },
+      {
+        "command": "gitBranchesPanel.compareTwoRefs",
+        "title": "Compare Two Refs...",
+        "icon": "$(diff-multiple)"
+      },
+      {
+        "command": "gitBranchesPanel.showBranchCommits",
+        "title": "Show Branch Commits",
+        "icon": "$(history)"
+      },
+      {
+        "command": "gitBranchesPanel.showRefHistory",
+        "title": "Show Ref History",
+        "icon": "$(history)"
+      },
+      {
+        "command": "gitBranchesPanel.openChangedFilesForRef",
+        "title": "Open Changed Files for Ref",
+        "icon": "$(diff-multiple)"
       },
       {
         "command": "gitBranchesPanel.copyTagName",
@@ -1540,6 +1565,21 @@
           "group": "1_remoteHosting@5"
         },
         {
+          "command": "gitBranchesPanel.compareWithUpstream",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)$/",
+          "group": "1_history@1"
+        },
+        {
+          "command": "gitBranchesPanel.showBranchCommits",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
+          "group": "1_history@2"
+        },
+        {
+          "command": "gitBranchesPanel.openChangedFilesForRef",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
+          "group": "1_history@3"
+        },
+        {
           "command": "gitBranchesPanel.showBranchActions",
           "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "2_more@1"
@@ -1558,6 +1598,16 @@
           "command": "gitBranchesPanel.copyTagName",
           "when": "viewItem == tag",
           "group": "1_tag@2"
+        },
+        {
+          "command": "gitBranchesPanel.showRefHistory",
+          "when": "viewItem == tag",
+          "group": "1_tag@2.5"
+        },
+        {
+          "command": "gitBranchesPanel.openChangedFilesForRef",
+          "when": "viewItem == tag",
+          "group": "1_tag@2.6"
         },
         {
           "command": "gitBranchesPanel.deleteTag",
@@ -1905,6 +1955,17 @@
               }
             }
           }
+        },
+        "gitBranchesPanel.history.maxCommits": {
+          "type": "number",
+          "default": 50,
+          "minimum": 1,
+          "description": "Maximum number of commits to load when showing branch or ref history in a quick pick."
+        },
+        "gitBranchesPanel.history.includeMerges": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include merge commits in branch and ref history quick picks."
         },
         "gitBranchesPanel.showCurrentBranchInfo": {
           "type": "boolean",

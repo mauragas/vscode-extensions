@@ -25,8 +25,8 @@ function getInlineViewItemContextCommands() {
   )];
 }
 
-test('package manifest exposes the 2.2.0 branch-menu, worktree, stash, hook, multi-repo, search, and remote-host contributions', () => {
-  assert.equal(packageJson.version, '2.2.0');
+test('package manifest exposes the 2.3.0 branch-menu, worktree, stash, hook, multi-repo, search, remote-host, and history contributions', () => {
+  assert.equal(packageJson.version, '2.3.0');
   assert.equal(getCommand('gitBranchesPanel.selectRepository').title, 'Select Active Repository');
   assert.equal(getCommand('gitBranchesPanel.selectRepository').icon, '$(repo)');
   assert.equal(
@@ -44,6 +44,11 @@ test('package manifest exposes the 2.2.0 branch-menu, worktree, stash, hook, mul
   assert.equal(getCommand('gitBranchesPanel.createPullRequest').title, 'Create Pull Request');
   assert.equal(getCommand('gitBranchesPanel.copyBranchUrl').title, 'Copy Branch URL');
   assert.equal(getCommand('gitBranchesPanel.copyCompareUrl').title, 'Copy Compare URL');
+  assert.equal(getCommand('gitBranchesPanel.compareWithUpstream').title, 'Compare with Upstream');
+  assert.equal(getCommand('gitBranchesPanel.compareTwoRefs').title, 'Compare Two Refs...');
+  assert.equal(getCommand('gitBranchesPanel.showBranchCommits').title, 'Show Branch Commits');
+  assert.equal(getCommand('gitBranchesPanel.showRefHistory').title, 'Show Ref History');
+  assert.equal(getCommand('gitBranchesPanel.openChangedFilesForRef').title, 'Open Changed Files for Ref');
   assert.equal(getCommand('gitBranchesPanel.stashSilently').title, 'Stash all changes silently');
   assert.equal(
     getCommand('gitBranchesPanel.stashStagedSilently').title,
@@ -137,6 +142,8 @@ test('package manifest exposes the 2.2.0 branch-menu, worktree, stash, hook, mul
     'currentBranch',
   ]);
   assert.deepEqual(settings['gitBranchesPanel.remoteHosting.customProviders'].default, []);
+  assert.equal(settings['gitBranchesPanel.history.maxCommits'].default, 50);
+  assert.equal(settings['gitBranchesPanel.history.includeMerges'].default, true);
   assert.equal(settings['gitBranchesPanel.showCurrentBranchInfo'].default, false);
   assert.equal(settings['gitBranchesPanel.showStatusBarBranchAction'].default, true);
   assert.match(
@@ -373,6 +380,31 @@ test('package manifest exposes the 2.2.0 branch-menu, worktree, stash, hook, mul
   assert.ok(
     sectionInlineMenus.some(
       (item) => item.command === 'gitBranchesPanel.copyCompareUrl' && item.group === '1_remoteHosting@5'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.compareWithUpstream' && item.group === '1_history@1'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.showBranchCommits' && item.group === '1_history@2'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.openChangedFilesForRef' && item.group === '1_history@3'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.showRefHistory' && item.group === '1_tag@2.5'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.openChangedFilesForRef' && item.group === '1_tag@2.6'
     )
   );
   assert.ok(

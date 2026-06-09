@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.0] - 2026-06-09
+
+- Added **Compare with Upstream** for tracked local branches so you can open a file-level comparison against the branch's configured upstream without leaving the tree
+- Added **Compare Two Refs...** to compare any two branches, remote branches, tags, or stashes from the active repository through the extension UI
+- Added **Show Branch Commits** and **Show Ref History** quick-pick workflows with commit actions such as opening changed files, copying commit SHAs, and opening commit details
+- Added **Open Changed Files for Ref** to jump straight to the latest commit's changed files for branches, remote branches, and tags
+- Added a new Git history helper module for ref history, commit details, and commit file-change discovery to keep compare/history logic testable and reusable
+- Added compare/history actions to branch quick actions, branch context menus, tag context menus, and the repository-level advanced actions quick pick
+- Added `gitBranchesPanel.history.maxCommits` and `gitBranchesPanel.history.includeMerges` settings to control history quick-pick size and merge visibility
+- Expanded automated coverage with command, manifest, and Git-backed history tests for compare-with-upstream, arbitrary ref comparison, commit browsing, and changed-file views
+
 ## [2.2.0] - 2026-06-09
 
 - Added remote-host integration commands to open a branch on its remote, open a compare page, create a pull request, copy a branch URL, and copy a compare URL directly from branch items

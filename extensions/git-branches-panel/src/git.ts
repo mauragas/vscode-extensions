@@ -1,6 +1,7 @@
 export { cleanRepository, getRepoRoot } from './git/shared';
 
 export * from './git/branchGit';
+export * from './git/historyGit';
 export * from './git/remoteGit';
 export * from './git/hosting';
 export * from './git/tagGit';

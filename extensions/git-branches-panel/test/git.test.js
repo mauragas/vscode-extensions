@@ -29,12 +29,15 @@ const {
   dropStash,
   fetchAllRemotes,
   fetchRemoteState,
+  getChangedFilesForCommit,
+  getCommitDetails,
   getDiffFilesBetweenRefs,
   getBranches,
   getHooks,
   getRemoteDefaultBranch,
   getRemoteDetails,
   getRemoteBranchTrackingState,
+  getRefHistory,
   getRemotes,
   getRemoteBranches,
   getStashes,
@@ -710,6 +713,63 @@ test('getDiffFilesBetweenRefs reports added, modified, and deleted files between
       { status: 'D', path: 'legacy.txt' },
       { status: 'M', path: 'README.md' },
     ].sort((left, right) => left.path.localeCompare(right.path))
+  );
+});
+
+test('getRefHistory lists recent commits for a branch with metadata', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/history']);
+  commitFile(repoRoot, 'history.txt', 'one\n', 'Add history file');
+  writeFileSync(join(repoRoot, 'history.txt'), 'one\ntwo\n');
+  runGit(repoRoot, ['commit', '-am', 'Update history file']);
+
+  const history = await getRefHistory(repoRoot, 'feature/history', {
+    limit: 2,
+    includeMerges: true,
+  });
+
+  assert.equal(history.length, 2);
+  assert.equal(history[0].subject, 'Update history file');
+  assert.equal(history[0].authorName, 'Test User');
+  assert.ok(history[0].sha.length >= 7);
+  assert.ok(Array.isArray(history[0].parentShas));
+  assert.match(history[0].body, /Update history file/);
+});
+
+test('getCommitDetails returns the selected commit metadata', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/details']);
+  commitFile(repoRoot, 'details.txt', 'details\n', 'Add details file');
+  const commitSha = runGit(repoRoot, ['rev-parse', 'HEAD']);
+
+  const commitDetails = await getCommitDetails(repoRoot, commitSha);
+
+  assert.ok(commitDetails);
+  assert.equal(commitDetails.sha, commitSha);
+  assert.equal(commitDetails.subject, 'Add details file');
+  assert.equal(commitDetails.shortSha, commitSha.slice(0, 7));
+});
+
+test('getChangedFilesForCommit reports modified files for a specific commit', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/commit-files']);
+  writeFileSync(join(repoRoot, 'README.md'), '# Test repo\nupdated\n');
+  writeFileSync(join(repoRoot, 'commit-file.txt'), 'new\n');
+  runGit(repoRoot, ['add', 'README.md', 'commit-file.txt']);
+  runGit(repoRoot, ['commit', '-m', 'Update readme and add commit file']);
+  const commitSha = runGit(repoRoot, ['rev-parse', 'HEAD']);
+
+  const changes = await getChangedFilesForCommit(repoRoot, commitSha);
+
+  assert.deepEqual(
+    changes.sort((left, right) => left.path.localeCompare(right.path)),
+    [
+      { status: 'A', path: 'commit-file.txt' },
+      { status: 'M', path: 'README.md' },
+    ]
   );
 });
 

@@ -191,6 +191,23 @@ function buildSearchActionItems(
       })
     );
 
+    actionItems.push(
+      createSearchActionItem('$(history) Show Branch Commits', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.showBranchCommits', item);
+      }),
+      createSearchActionItem('$(diff-multiple) Open Changed Files for Ref', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.openChangedFilesForRef', item);
+      })
+    );
+
+    if (item.branchInfo?.upstreamName && !item.branchInfo.upstreamMissing) {
+      actionItems.push(
+        createSearchActionItem('$(diff-multiple) Compare with Upstream', async () => {
+          await vscode.commands.executeCommand('gitBranchesPanel.compareWithUpstream', item);
+        })
+      );
+    }
+
     if (item.nodeType !== 'currentBranch' && !item.branchInfo?.isCurrent) {
       actionItems.push(
         createSearchActionItem('$(diff-multiple) Compare with Current Branch', async () => {
@@ -210,6 +227,12 @@ function buildSearchActionItems(
       }),
       createSearchActionItem('$(diff-multiple) Compare with Current Branch', async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.compareBranchWithCurrent', item);
+      }),
+      createSearchActionItem('$(history) Show Branch Commits', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.showBranchCommits', item);
+      }),
+      createSearchActionItem('$(diff-multiple) Open Changed Files for Ref', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.openChangedFilesForRef', item);
       })
     );
   }
@@ -221,6 +244,9 @@ function buildSearchActionItems(
       }),
       createSearchActionItem('$(diff-multiple) Compare with Current Branch', async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.compareBranchWithCurrent', item);
+      }),
+      createSearchActionItem('$(history) Show Branch Commits', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.showBranchCommits', item);
       }),
       createSearchActionItem('$(trash) Remove Stale Tracking Ref', async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.removeStaleRemoteTrackingRef', item);
@@ -235,6 +261,12 @@ function buildSearchActionItems(
       }),
       createSearchActionItem('$(new-folder) Create Worktree...', async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.createWorktreeFromRef', item);
+      }),
+      createSearchActionItem('$(history) Show Ref History', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.showRefHistory', item);
+      }),
+      createSearchActionItem('$(diff-multiple) Open Changed Files for Ref', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.openChangedFilesForRef', item);
       })
     );
   }

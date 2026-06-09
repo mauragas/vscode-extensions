@@ -1047,6 +1047,25 @@ function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
     );
   }
 
+  if (canCompareWithUpstream(item)) {
+    items.push(
+      createBranchActionItem('compareWithUpstream', '$(diff-multiple) Compare with Upstream', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.compareWithUpstream', item);
+      })
+    );
+  }
+
+  if (supportsBranchHistoryActions(item)) {
+    items.push(
+      createBranchActionItem('showBranchCommits', '$(history) Show Branch Commits', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.showBranchCommits', item);
+      }),
+      createBranchActionItem('openChangedFilesForRef', '$(diff-multiple) Open Changed Files for Ref', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.openChangedFilesForRef', item);
+      })
+    );
+  }
+
   if (!isCurrentBranch) {
     items.push(
       createBranchActionItem(
@@ -1147,6 +1166,24 @@ function supportsRemoteHostingActions(item: BranchTreeItem): boolean {
     item.nodeType === 'branch' ||
     item.nodeType === 'currentBranch' ||
     item.nodeType === 'remoteBranch'
+  );
+}
+
+function canCompareWithUpstream(item: BranchTreeItem): boolean {
+  return Boolean(
+    (item.nodeType === 'branch' || item.nodeType === 'currentBranch') &&
+      item.branchInfo?.upstreamName &&
+      !item.branchInfo.upstreamMissing
+  );
+}
+
+function supportsBranchHistoryActions(item: BranchTreeItem): boolean {
+  return (
+    item.nodeType === 'branch' ||
+    item.nodeType === 'currentBranch' ||
+    item.nodeType === 'missingUpstreamBranch' ||
+    item.nodeType === 'remoteBranch' ||
+    item.nodeType === 'staleRemoteBranch'
   );
 }
 
