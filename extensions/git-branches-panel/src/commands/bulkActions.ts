@@ -145,10 +145,16 @@ async function handleShowAdvancedActions(
     await commandContext.provider.setActiveRepositoryFromItem(item);
   }
 
+  const actionItems = shouldShowAllRepositoriesActions(commandContext, item)
+    ? buildAllRepositoriesActionItems(commandContext)
+    : buildRepositoryActionItems(commandContext);
+
   const selection = await vscode.window.showQuickPick(
-    buildRepositoryActionItems(commandContext),
+    actionItems,
     {
-      placeHolder: 'Choose an advanced repository action',
+      placeHolder: shouldShowAllRepositoriesActions(commandContext, item)
+        ? 'Choose an all-repositories action'
+        : 'Choose an advanced repository action',
     }
   );
 
@@ -713,6 +719,68 @@ function buildRepositoryActionItems(commandContext: CommandContext): AdvancedAct
       },
     },
   ];
+}
+
+function buildAllRepositoriesActionItems(commandContext: CommandContext): AdvancedActionItem[] {
+  return [
+    {
+      actionId: 'syncAllRepositoriesBranches',
+      label: '$(sync) Sync all repositories branches',
+      description: 'Sync tracked local branches across every visible repository',
+      run: async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.syncAllRepositoriesBranches');
+      },
+    },
+    {
+      actionId: 'pullAllRepositoriesChanges',
+      label: '$(repo-pull) Pull all repositories changes',
+      description: 'Pull tracked local branches across every visible repository',
+      run: async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.pullAllRepositoriesChanges');
+      },
+    },
+    {
+      actionId: 'fetchAllRepositories',
+      label: '$(repo-fetch) Fetch all repositories',
+      description: 'Fetch every visible repository',
+      run: async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.fetchAllRepositories');
+      },
+    },
+    {
+      actionId: 'fetchAllRepositoriesPrune',
+      label: '$(clear-all) Fetch all repositories (prune)',
+      description: 'Fetch and prune every visible repository',
+      run: async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.fetchAllRepositoriesPrune');
+      },
+    },
+    {
+      actionId: 'refreshAllRepositories',
+      label: '$(refresh) Refresh branch tree',
+      description: 'Reload all visible repositories and sections',
+      run: async () => {
+        await commandContext.refresh({ fetchRemoteState: false });
+      },
+    },
+  ];
+}
+
+function shouldShowAllRepositoriesActions(
+  commandContext: CommandContext,
+  item: BranchTreeItem | undefined
+): boolean {
+  if (item?.repoRoot) {
+    return false;
+  }
+
+  const repositoryDescriptors = commandContext.provider.getRepositoryDescriptors();
+  const visibleRepoRoots =
+    typeof commandContext.provider.getVisibleRepoRoots === 'function'
+      ? commandContext.provider.getVisibleRepoRoots()
+      : repositoryDescriptors.map((repository) => repository.repoRoot);
+
+  return repositoryDescriptors.length > 1 && visibleRepoRoots.length > 1;
 }
 
 async function syncFolderBranches(

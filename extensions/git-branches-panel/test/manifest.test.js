@@ -156,7 +156,9 @@ test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, histor
   assert.ok(
     hasViewTitleMenu(
       'gitBranchesPanel.selectRepository',
-      (item) => item.when.includes('gitBranchesPanel.multipleRepositories')
+      (item) =>
+        item.when.includes('gitBranchesPanel.multipleRepositories') &&
+        item.when.includes('!gitBranchesPanel.groupedRepositories')
     )
   );
   assert.ok(
@@ -205,40 +207,34 @@ test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, histor
   );
   assert.ok(
     hasViewItemMenu(
-      'gitBranchesPanel.selectRepository',
-      (item) => item.when === 'viewItem =~ /^repository(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' && item.group === 'inline@1'
-    )
-  );
-  assert.ok(
-    hasViewItemMenu(
       'gitBranchesPanel.newBranch',
       (item) =>
         item.when === 'viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' &&
-        item.group === 'inline@2'
+        item.group === 'inline@1'
     )
   );
   assert.ok(
     hasViewItemMenu(
       'gitBranchesPanel.publishCurrentBranch',
-      (item) => item.when === 'viewItem =~ /^(?:activeRepository|repository):publishableCurrentBranch$/' && item.group === 'inline@3'
+      (item) => item.when === 'viewItem =~ /^(?:activeRepository|repository):publishableCurrentBranch$/' && item.group === 'inline@2'
     )
   );
   assert.ok(
     hasViewItemMenu(
       'gitBranchesPanel.syncCurrentBranch',
-      (item) => item.when === 'viewItem == repository || viewItem == activeRepository' && item.group === 'inline@3'
+      (item) => item.when === 'viewItem == repository || viewItem == activeRepository' && item.group === 'inline@2'
     )
   );
   assert.ok(
     hasViewItemMenu(
       'gitBranchesPanel.fetchAllPrune',
-      (item) => item.when === 'viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' && item.group === 'inline@4'
+      (item) => item.when === 'viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' && item.group === 'inline@3'
     )
   );
   assert.ok(
     hasViewItemMenu(
       'gitBranchesPanel.showAdvancedActions',
-      (item) => item.when === 'viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' && item.group === 'inline@5'
+      (item) => item.when === 'viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' && item.group === 'inline@4'
     )
   );
   assert.ok(
@@ -316,34 +312,28 @@ test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, histor
   );
   assert.ok(
     hasViewItemMenu(
-      'gitBranchesPanel.selectRepository',
-      (item) => item.when === 'viewItem =~ /^repository(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' && item.group === '1_repository@1'
-    )
-  );
-  assert.ok(
-    hasViewItemMenu(
       'gitBranchesPanel.newBranch',
       (item) =>
         item.when === 'viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' &&
-        item.group === '1_repository@2'
+        item.group === '1_repository@1'
     )
   );
   assert.ok(
     hasViewItemMenu(
       'gitBranchesPanel.publishCurrentBranch',
-      (item) => item.when === 'viewItem =~ /^(?:activeRepository|repository):publishableCurrentBranch$/' && item.group === '1_repository@3'
+      (item) => item.when === 'viewItem =~ /^(?:activeRepository|repository):publishableCurrentBranch$/' && item.group === '1_repository@2'
     )
   );
   assert.ok(
     hasViewItemMenu(
       'gitBranchesPanel.syncCurrentBranch',
-      (item) => item.when === 'viewItem == repository || viewItem == activeRepository' && item.group === '1_repository@3'
+      (item) => item.when === 'viewItem == repository || viewItem == activeRepository' && item.group === '1_repository@2'
     )
   );
   assert.ok(
     hasViewItemMenu(
       'gitBranchesPanel.fetchAllPrune',
-      (item) => item.when === 'viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' && item.group === '1_repository@4'
+      (item) => item.when === 'viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' && item.group === '1_repository@3'
     )
   );
   assert.ok(
@@ -351,7 +341,7 @@ test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, histor
       'gitBranchesPanel.showAdvancedActions',
       (item) =>
         item.when === 'viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' &&
-        item.group === '1_repository@5'
+        item.group === '1_repository@4'
     )
   );
   assert.ok(

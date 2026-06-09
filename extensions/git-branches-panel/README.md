@@ -21,8 +21,8 @@ section opens first, while Remote, Stash, Worktree, Hooks, and Tags stay collaps
 - 🌿 **Folder grouping** — branches like `feature/auth` or `feature/payments/stripe` are nested into folders automatically
 - 🗂️ **Multi-repository aware** — automatically switches between a flat single-repo tree and repository containers when multiple Git repositories are open in the workspace
 - 🎯 **Active repository focus** — keep one repository active for toolbar actions and current-branch context, or switch directly to the repository that owns the active editor
-- 🏢 **Repository-row quick actions** — when repositories are grouped, each repository row can now expose inline actions to select it as the active repository and open repo-scoped **More Actions** directly from that row
-- 🧭 **Grouped multi-repo toolbar actions** — when repository containers are visible, the top toolbar switches from active-repository-only branch/fetch shortcuts to workspace-wide actions like syncing, pulling, and fetching across all shown repositories
+- 🏢 **Repository-row quick actions** — when repositories are grouped, each repository row now exposes repo-specific inline actions such as **New Branch**, **Sync / Publish Current Branch**, **Fetch All (Prune)**, and a repo-scoped **More Actions** picker
+- 🧭 **Grouped multi-repo toolbar actions** — when repository containers are visible, the top toolbar switches from active-repository-only branch/fetch shortcuts to workspace-wide actions like syncing, pulling, and fetching across all shown repositories, and **More Actions** there is now all-repositories only
 - 🔎 **Find Ref...** — search branches, tags, stashes, worktrees, and optionally hooks with query prefixes like `remote:` or `state:stale`
 - 🎚️ **Tree filtering** — filter the visible tree by query text, pinned-only mode, or a **Needs Attention** preset without losing the surrounding repository or folder context
 - 🕘 **Ref history quick picks** — browse branch and tag commits with actions to open changed files, inspect commit details, or copy commit SHAs
@@ -86,7 +86,7 @@ section opens first, while Remote, Stash, Worktree, Hooks, and Tags stay collaps
 | Clear Filter | Clear the current tree filter and restore the full visible tree |
 | Toggle Show Only Pinned | Toggle a pinned-only tree filter without losing the current query |
 | Show Needs Attention | Filter the visible tree down to stale remote refs, missing-upstream branches, and publishable branches |
-| Select Active Repository | Choose which repository drives the current-branch banner and toolbar actions in multi-repository workspaces |
+| Select Active Repository | Choose which repository drives the current-branch banner and toolbar actions in `singleActiveRepository` mode or from the Command Palette |
 | Focus Repository from Active Editor | Switch the active repository to the one that owns the current editor file |
 | Add Remote... | Add a new remote to the active repository, optionally with a separate push URL |
 | Fetch Remote | Fetch a specific configured remote |
@@ -292,7 +292,7 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 - Turn on any of the `gitBranchesPanel.branchContextMenu.show*` advanced-action toggles if you want rebase, squash-merge, reset, or force-push-with-lease entries visible directly in the first-level branch context menu again
 - Keep `gitBranchesPanel.tagSortOrder` on `versionDescending` for release-style tags, or switch to `recent` or `alphabetical` if your repository uses non-version tag names more heavily
 - Leave `gitBranchesPanel.multiRepository.mode` on `auto` to keep the familiar flat layout for single-repo workspaces while automatically adding repository containers in polyrepo workspaces
-- Switch `gitBranchesPanel.multiRepository.mode` to `singleActiveRepository` if you prefer focusing on one repository at a time while using **Select Active Repository** or **Focus Repository from Active Editor** to move around
+- Switch `gitBranchesPanel.multiRepository.mode` to `singleActiveRepository` if you prefer focusing on one repository at a time while using **Select Active Repository** or **Focus Repository from Active Editor** to move around; grouped mode now prefers row-specific actions plus all-repositories toolbar actions instead of an explicit select button
 - Enable `gitBranchesPanel.multiRepository.followActiveEditor` if you want the current-branch banner and toolbar actions to follow the repository that owns the file you are editing
 - In grouped multi-repository mode, use repository-row hover buttons for repo-specific actions like **New Branch**, **Sync / Publish Current Branch**, and **Fetch All (Prune)**, while the top toolbar switches to all-repositories actions
 - Hide any section you rarely use through `gitBranchesPanel.sections.*.visible`; the dedicated Remotes section now starts off by default so the tree can stay leaner unless you actively manage remotes

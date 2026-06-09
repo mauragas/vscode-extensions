@@ -98,6 +98,9 @@ function createCommandContext() {
         getRepositoryDescriptors() {
           return state.repositoryDescriptors;
         },
+        getVisibleRepoRoots() {
+          return state.repositoryDescriptors.map((repository) => repository.repoRoot);
+        },
         async setActiveRepositoryFromItem(item) {
           state.activeRepositoryItems.push(item?.repoRoot);
         },
@@ -252,6 +255,60 @@ test('showAdvancedActions scopes the picker to the clicked repository item befor
 
   assert.deepEqual(commandContext.state.activeRepositoryItems, ['/repo-b']);
   assert.deepEqual(commandContext.state.refreshCalls, [{ fetchRemoteState: false }]);
+});
+
+test('showAdvancedActions from the top toolbar only shows all-repositories actions when grouped repositories are visible', async () => {
+  const vscodeState = createVscodeState();
+
+  const { commandContext } = createBulkActionsModule({
+    vscodeState,
+    gitMock: {
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async deleteTag() {},
+      async fetchRemoteState() {},
+      async getBranches() {
+        return [];
+      },
+      async pushBranch() {},
+      async syncBranch() {
+        throw new Error('syncBranch should not be called in this test');
+      },
+    },
+  });
+  commandContext.state.repositoryDescriptors = [
+    { repoRoot: '/repo-a', label: 'repo-a' },
+    { repoRoot: '/repo-b', label: 'repo-b' },
+  ];
+
+  await vscodeState.registeredCommands['gitBranchesPanel.showAdvancedActions']();
+
+  assert.equal(vscodeState.quickPickRequests.length, 1);
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (item) => item.actionId === 'syncAllRepositoriesBranches'
+    )
+  );
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (item) => item.actionId === 'pullAllRepositoriesChanges'
+    )
+  );
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (item) => item.actionId === 'fetchAllRepositories'
+    )
+  );
+  assert.ok(
+    !vscodeState.quickPickRequests[0].items.some(
+      (item) => item.actionId === 'compareTwoRefs'
+    )
+  );
+  assert.ok(
+    !vscodeState.quickPickRequests[0].items.some(
+      (item) => item.actionId === 'addRemote'
+    )
+  );
 });
 
 test('syncAllRepositoriesBranches processes every repository and refreshes once', async () => {
