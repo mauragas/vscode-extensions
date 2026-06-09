@@ -841,7 +841,7 @@ test('getRefHistory lists recent commits for a branch with metadata', async (t) 
   runGit(repoRoot, ['checkout', '-b', 'feature/history']);
   commitFile(repoRoot, 'history.txt', 'one\n', 'Add history file');
   writeFileSync(join(repoRoot, 'history.txt'), 'one\ntwo\n');
-  runGit(repoRoot, ['commit', '-am', 'Update history file']);
+  runGit(repoRoot, ['commit', '-am', 'Update history file', '-m', 'Includes a separate body.']);
 
   const history = await getRefHistory(repoRoot, 'feature/history', {
     limit: 2,
@@ -853,14 +853,16 @@ test('getRefHistory lists recent commits for a branch with metadata', async (t) 
   assert.equal(history[0].authorName, 'Test User');
   assert.ok(history[0].sha.length >= 7);
   assert.ok(Array.isArray(history[0].parentShas));
-  assert.match(history[0].body, /Update history file/);
+  assert.equal(history[0].body, 'Includes a separate body.');
 });
 
 test('getCommitDetails returns the selected commit metadata', async (t) => {
   const repoRoot = createTempRepository(t);
 
   runGit(repoRoot, ['checkout', '-b', 'feature/details']);
-  commitFile(repoRoot, 'details.txt', 'details\n', 'Add details file');
+  writeFileSync(join(repoRoot, 'details.txt'), 'details\n');
+  runGit(repoRoot, ['add', 'details.txt']);
+  runGit(repoRoot, ['commit', '-m', 'Add details file', '-m', 'Commit details body']);
   const commitSha = runGit(repoRoot, ['rev-parse', 'HEAD']);
 
   const commitDetails = await getCommitDetails(repoRoot, commitSha);
@@ -869,6 +871,7 @@ test('getCommitDetails returns the selected commit metadata', async (t) => {
   assert.equal(commitDetails.sha, commitSha);
   assert.equal(commitDetails.subject, 'Add details file');
   assert.equal(commitDetails.shortSha, commitSha.slice(0, 7));
+  assert.equal(commitDetails.body, 'Commit details body');
 });
 
 test('getChangedFilesForCommit reports modified files for a specific commit', async (t) => {

@@ -1,8 +1,8 @@
 export {
-	cleanRepository,
-	getGitOperationState,
-	getRepoRoot,
-	getWorkingTreeStatus,
+  cleanRepository,
+  getGitOperationState,
+  getRepoRoot,
+  getWorkingTreeStatus,
 } from './git/shared';
 
 export * from './git/branchGit';

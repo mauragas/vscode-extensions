@@ -618,3 +618,38 @@ test('pruneWorktrees can target the clicked repository item directly', async () 
     },
   ]);
 });
+
+test('pruneWorktrees reports worktree discovery failures through command errors', async () => {
+  const vscodeState = createVscodeState();
+
+  const { commandContext } = createWorktreeCommandsModule({
+    vscodeState,
+    gitMock: {
+      async createWorktree() {},
+      async renameWorktree() {},
+      async removeWorktree() {},
+      async pruneWorktrees() {
+        throw new Error('pruneWorktrees should not be called');
+      },
+      async lockWorktree() {},
+      async unlockWorktree() {},
+      async getWorktrees() {
+        throw new Error('git worktree list failed');
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.pruneWorktrees']({
+    nodeType: 'section',
+    containerPath: 'section:worktree',
+    repoRoot: '/repo',
+  });
+
+  assert.deepEqual(commandContext.state.commandErrors, [
+    {
+      prefix: 'Failed to load worktrees for pruning',
+      message: 'git worktree list failed',
+    },
+  ]);
+  assert.equal(vscodeState.warningMessages.length, 0);
+});

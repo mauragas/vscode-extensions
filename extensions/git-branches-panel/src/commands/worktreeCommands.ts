@@ -344,9 +344,16 @@ async function handlePruneWorktrees(
     return;
   }
 
-  const prunableWorktrees = (await getWorktrees(repoRoot)).filter(
-    (worktree) => worktree.worktreePrunableReason
-  );
+  let prunableWorktrees: Awaited<ReturnType<typeof getWorktrees>> = [];
+  try {
+    prunableWorktrees = (await getWorktrees(repoRoot)).filter(
+      (worktree) => worktree.worktreePrunableReason
+    );
+  } catch (error) {
+    commandContext.showCommandError('Failed to load worktrees for pruning', error);
+    return;
+  }
+
   const prunableWorktreeLabels = prunableWorktrees.map(
     (worktree) => basename(worktree.name) || worktree.name
   );

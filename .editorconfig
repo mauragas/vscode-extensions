@@ -10,17 +10,36 @@ insert_final_newline = true
 trim_trailing_whitespace = true
 
 # TypeScript and JavaScript files
-[*.{ts,tsx,js,jsx}]
+[*.ts]
+indent_size = 2
+quote_type = single
+
+[*.tsx]
+indent_size = 2
+quote_type = single
+
+[*.js]
+indent_size = 2
+quote_type = single
+
+[*.jsx]
 indent_size = 2
 quote_type = single
 
 # TypeScript source files (stricter)
-[{src,extensions}/**/*.ts]
+[src/**/*.ts]
+indent_size = 2
+max_line_length = 120
+
+[extensions/**/*.ts]
 indent_size = 2
 max_line_length = 120
 
 # Test files
-[*.test.{ts,js}]
+[*.test.ts]
+indent_size = 2
+
+[*.test.js]
 indent_size = 2
 
 # JSON files
@@ -29,16 +48,31 @@ indent_size = 2
 insert_final_newline = true
 
 # Configuration files
-[{tsconfig*.json,package*.json,.eslintrc*}]
+[tsconfig*.json]
+indent_size = 2
+
+[package*.json]
+indent_size = 2
+
+[.eslintrc*]
 indent_size = 2
 
 # YAML files (if any)
-[*.{yml,yaml}]
+[*.yml]
+indent_style = space
+indent_size = 2
+
+[*.yaml]
 indent_style = space
 indent_size = 2
 
 # Shell scripts
-[*.{sh,bash}]
+[*.sh]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+
+[*.bash]
 indent_style = space
 indent_size = 2
 end_of_line = lf
