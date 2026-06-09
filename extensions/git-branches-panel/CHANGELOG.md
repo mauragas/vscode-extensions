@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.3.0] - 2026-06-09
+## [2.0.0] - 2026-06-09
 
 - Added **Compare with Upstream** for tracked local branches so you can open a file-level comparison against the branch's configured upstream without leaving the tree
 - Added **Compare Two Refs...** to compare any two branches, remote branches, tags, or stashes from the active repository through the extension UI
@@ -12,18 +12,12 @@ All notable changes to this project will be documented in this file.
 - Added compare/history actions to branch quick actions, branch context menus, tag context menus, and the repository-level advanced actions quick pick
 - Added `gitBranchesPanel.history.maxCommits` and `gitBranchesPanel.history.includeMerges` settings to control history quick-pick size and merge visibility
 - Expanded automated coverage with command, manifest, and Git-backed history tests for compare-with-upstream, arbitrary ref comparison, commit browsing, and changed-file views
-
-## [2.2.0] - 2026-06-09
-
 - Added remote-host integration commands to open a branch on its remote, open a compare page, create a pull request, copy a branch URL, and copy a compare URL directly from branch items
 - Added provider-aware hosted URL generation for GitHub, GitLab, Bitbucket, and Azure DevOps using remote URL parsing instead of provider-specific authentication
 - Added `gitBranchesPanel.remoteHosting.preferredRemote`, `gitBranchesPanel.remoteHosting.compareBase`, and `gitBranchesPanel.remoteHosting.customProviders` settings to control how hosted URLs are resolved and customized
 - Added hosted-URL actions to branch context menus and the **More Branch Actions...** quick pick for local, current, publishable, and live remote branches
 - Added remote metadata helpers for fetch/push URL discovery and remote default-branch resolution to support compare and pull-request links
 - Expanded automated coverage for hosted URL parsing, command behavior, manifest contributions, and Git-backed remote metadata helpers
-
-## [2.1.0] - 2026-06-09
-
 - Added **Find Ref...** to search branches, remote branches, tags, stashes, worktrees, and optionally hooks across the workspace from one command
 - Added query parsing for search and filters, including prefixes such as `local:`, `remote:`, `tag:`, `stash:`, `worktree:`, `hook:`, and `state:`
 - Added in-view filtering commands: **Set Filter...**, **Clear Filter**, **Toggle Show Only Pinned**, and **Show Needs Attention**
@@ -32,9 +26,6 @@ All notable changes to this project will be documented in this file.
 - Added toolbar search and clear-filter buttons for faster navigation when working in large repositories
 - Added search configuration settings for hook inclusion, result limits, and whether the extension should auto-load collapsed sections before searching or filtering
 - Expanded automated coverage with pure search/filter unit tests plus command, view, and manifest coverage for the new search and filtering workflows
-
-## [2.0.0] - 2026-06-09
-
 - Added full multi-repository support so the tree can now show and manage more than one Git repository in the same VS Code workspace
 - Added repository containers that automatically appear when multiple repositories are open, while preserving the old flat section layout when only one repository is present
 - Added `gitBranchesPanel.multiRepository.mode` with `auto`, `alwaysGroupByRepository`, and `singleActiveRepository` options to control how repositories are displayed
