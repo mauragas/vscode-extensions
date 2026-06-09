@@ -18,6 +18,29 @@ import type {
 import { getContainerNodeKey } from './containerLookup';
 
 export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresentation {
+  if (node.kind === 'repository') {
+    const containerKey = getContainerNodeKey(node);
+
+    return {
+      nodeType: 'repository',
+      label: node.label,
+      id: containerKey,
+      contextValue: getRepositoryContextValue(node),
+      collapsibleState: node.expanded || node.isActive ? 'expanded' : 'collapsed',
+      icon: node.isActive
+        ? {
+            id: 'repo',
+            colorId: 'gitDecoration.addedResourceForeground',
+          }
+        : { id: 'repo' },
+      description: node.description,
+      tooltip: buildRepositoryTooltipContent(node),
+      containerKey,
+      containerPath: node.path,
+      branchName: undefined,
+    };
+  }
+
   if (node.kind === 'section') {
     const containerKey = getContainerNodeKey(node);
 
@@ -26,7 +49,7 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
       label: node.label,
       id: containerKey,
       contextValue: getSectionContextValue(node),
-      collapsibleState: getSectionCollapsibleState(node.scope),
+      collapsibleState: node.expanded ? 'expanded' : getSectionCollapsibleState(node.scope),
       icon: { id: getSectionIconId(node.scope) },
       containerKey,
       containerPath: node.path,
@@ -42,7 +65,7 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
       label: node.label,
       id: containerKey,
       contextValue: getFolderContextValue(node.scope),
-      collapsibleState: 'collapsed',
+      collapsibleState: node.expanded ? 'expanded' : 'collapsed',
       icon: { id: 'folder' },
       containerKey,
       containerPath: node.path,
@@ -50,13 +73,28 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
     };
   }
 
+  if (node.kind === 'remote') {
+    return {
+      nodeType: 'remoteConfig',
+      label: node.label,
+      id: `repo:${node.repoRoot}:remote:${node.info.name}`,
+      contextValue: 'remoteConfig',
+      collapsibleState: 'none',
+      icon: { id: 'repo' },
+      description: buildRemoteItemDescription(node.info),
+      tooltip: buildRemoteTooltipContent(node),
+      branchName: undefined,
+    };
+  }
+
   const nodeType = resolveNodeType(node.info);
   const syncStatus = shouldShowSyncStatus(nodeType) ? formatSyncStatus(node.info) : '';
+  const syncLabel = shouldShowSyncStatus(nodeType) ? buildInlineSyncStatus(node.info) : '';
   const description = buildTreeItemDescription(node.info, syncStatus);
   const prioritizedLabel = buildTreeItemLabel(
     node.label,
     nodeType,
-    syncStatus,
+    syncLabel,
     node.info.isCurrent,
     node.info.isPinned
   );
@@ -65,7 +103,9 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
   return {
     nodeType,
     label: prioritizedLabel,
-    id: `${node.info.scope ?? 'local'}:branch:${node.fullName}`,
+    id: node.repoRoot
+      ? `repo:${node.repoRoot}:${node.info.scope ?? 'local'}:branch:${node.fullName}`
+      : `${node.info.scope ?? 'local'}:branch:${node.fullName}`,
     contextValue: getItemContextValue(nodeType, node.info),
     collapsibleState: 'none',
     icon: getItemIcon(nodeType, node.info),
@@ -79,6 +119,67 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
         }
       : undefined,
   };
+}
+
+function buildRepositoryTooltipContent(
+  node: Extract<BranchTreeNode, { kind: 'repository' }>
+): string {
+  const tooltipLines = [`**${node.label}**`, '', `Path: ${node.repoRoot}`];
+
+  if (node.isActive) {
+    tooltipLines.push('', '_Active repository_');
+  }
+
+  if (node.description) {
+    tooltipLines.push('', `Workspace path: ${node.description}`);
+  }
+
+  return tooltipLines.join('\n');
+}
+
+function getRepositoryContextValue(
+  node: Extract<BranchTreeNode, { kind: 'repository' }>
+): string {
+  const baseContextValue = node.isActive ? 'activeRepository' : 'repository';
+
+  if (node.currentBranchBusy) {
+    return `${baseContextValue}:busyCurrentBranch`;
+  }
+
+  if (node.currentBranchNeedsPublish) {
+    return `${baseContextValue}:publishableCurrentBranch`;
+  }
+
+  return baseContextValue;
+}
+
+function buildRemoteItemDescription(info: Extract<BranchTreeNode, { kind: 'remote' }>['info']): string | undefined {
+  const parts = [info.hostProvider, summarizeRemoteUrl(info.fetchUrl)].filter(Boolean);
+  if (parts.length === 0) {
+    return undefined;
+  }
+
+  return parts.join(' • ');
+}
+
+function buildRemoteTooltipContent(
+  node: Extract<BranchTreeNode, { kind: 'remote' }>
+): string {
+  const tooltipLines = [`**${node.info.name}**`, '', `Fetch: ${node.info.fetchUrl}`];
+
+  if (node.info.pushUrl !== node.info.fetchUrl) {
+    tooltipLines.push('', `Push: ${node.info.pushUrl}`);
+  }
+
+  if (node.info.hostProvider) {
+    tooltipLines.push('', `Provider: ${node.info.hostProvider}`);
+  }
+
+  if (node.info.isDefault) {
+    tooltipLines.push('', '_Default remote_');
+  }
+
+  return tooltipLines.join('\n');
 }
 
 export function buildBranchTooltipContent(node: TreeBranch): string {
@@ -219,6 +320,8 @@ function getSectionContextValue(node: Extract<BranchTreeNode, { kind: 'section' 
       return 'localSection';
     case 'remote':
       return 'remoteSection';
+    case 'remoteConfig':
+      return 'remotesSection';
     case 'stash':
       return 'stashSection';
     case 'worktree':
@@ -238,6 +341,8 @@ function getSectionIconId(scope: TreeContainerScope): string {
   switch (scope) {
     case 'remote':
       return 'cloud';
+    case 'remoteConfig':
+      return 'repo';
     case 'stash':
       return 'archive';
     case 'worktree':
@@ -280,7 +385,7 @@ function shouldShowSyncStatus(nodeType: NodeType): boolean {
 function buildTreeItemLabel(
   label: string,
   nodeType: NodeType,
-  syncStatus: string,
+  syncLabel: string,
   isCurrent: boolean,
   isPinned: boolean | undefined
 ): string {
@@ -294,7 +399,25 @@ function buildTreeItemLabel(
 
   const prefix = prefixParts.length > 0 ? `${prefixParts.join(' ')} ` : '';
 
-  return syncStatus ? `${prefix}${syncStatus} ${label}` : `${prefix}${label}`;
+  return syncLabel ? `${prefix}${syncLabel} ${label}` : `${prefix}${label}`;
+}
+
+function buildInlineSyncStatus(
+  syncState: Pick<BranchInfo, 'aheadCount' | 'behindCount'>
+): string {
+  const behindCount = syncState.behindCount ?? 0;
+  const aheadCount = syncState.aheadCount ?? 0;
+  const statusParts: string[] = [];
+
+  if (behindCount > 0) {
+    statusParts.push(`🔵${behindCount}↓`);
+  }
+
+  if (aheadCount > 0) {
+    statusParts.push(`🟢${aheadCount}↑`);
+  }
+
+  return statusParts.join(' ');
 }
 
 function getItemContextValue(nodeType: NodeType, branch: BranchInfo): string {
@@ -323,7 +446,7 @@ function resolveBaseContextValue(nodeType: NodeType, branch: BranchInfo): string
   }
 
   if (nodeType === 'worktree') {
-    return branch.isCurrent ? 'currentWorktree' : 'worktree';
+    return buildWorktreeContextValue(branch);
   }
 
   if (nodeType === 'missingUpstreamBranch') {
@@ -414,6 +537,20 @@ function getItemIcon(nodeType: NodeType, branch?: BranchInfo): TreeItemIconDescr
         colorId: 'disabledForeground',
       };
     case 'worktree':
+      if (branch?.worktreePrunableReason) {
+        return {
+          id: 'folder',
+          colorId: 'list.warningForeground',
+        };
+      }
+
+      if (branch?.worktreeLockedReason) {
+        return {
+          id: 'lock',
+          colorId: 'list.warningForeground',
+        };
+      }
+
       return { id: 'folder' };
     default:
       return { id: 'git-branch' };
@@ -488,7 +625,7 @@ function summarizeHookChildren(
       } else {
         hasDisabled = true;
       }
-    } else {
+    } else if (child.kind !== 'remote') {
       const nestedState = summarizeHookChildren(child.children);
       hasEnabled ||= nestedState.hasEnabled;
       hasDisabled ||= nestedState.hasDisabled;
@@ -503,4 +640,40 @@ function summarizeHookChildren(
     hasEnabled,
     hasDisabled,
   };
+}
+
+function summarizeRemoteUrl(remoteUrl: string): string {
+  const normalizedRemoteUrl = remoteUrl.replace(/\.git$/iu, '');
+  const sshLikeMatch = normalizedRemoteUrl.match(/^[^@]+@([^:]+):(.+)$/u);
+  if (sshLikeMatch) {
+    return `${sshLikeMatch[1]}/${sshLikeMatch[2]}`;
+  }
+
+  try {
+    const parsedUrl = new URL(normalizedRemoteUrl);
+    return `${parsedUrl.host}${parsedUrl.pathname}`;
+  } catch {
+    return normalizedRemoteUrl;
+  }
+}
+
+function buildWorktreeContextValue(branch: BranchInfo): string {
+  const baseContextValue = branch.isCurrent ? 'currentWorktree' : 'worktree';
+  const stateSuffixes = [];
+
+  if (branch.worktreeRef?.startsWith('detached at ')) {
+    stateSuffixes.push('detached');
+  }
+
+  if (branch.worktreeLockedReason) {
+    stateSuffixes.push('locked');
+  }
+
+  if (branch.worktreePrunableReason) {
+    stateSuffixes.push('prunable');
+  }
+
+  return stateSuffixes.length > 0
+    ? `${baseContextValue}:${stateSuffixes.join(':')}`
+    : baseContextValue;
 }

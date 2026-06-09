@@ -1,6 +1,14 @@
 export type RemoteTrackingState = 'live' | 'stale';
 export type HookSource = 'local' | 'shared';
 
+export interface RemoteConfigInfo {
+  name: string;
+  fetchUrl: string;
+  pushUrl: string;
+  isDefault?: boolean;
+  hostProvider?: string;
+}
+
 export interface BranchInfo {
   name: string;
   isCurrent: boolean;
@@ -40,13 +48,28 @@ export interface BranchSyncState {
 
 export type BranchSortOrder = 'alphabetical' | 'recent';
 export type TagSortOrder = BranchSortOrder | 'versionAscending' | 'versionDescending';
-export type TreeContainerScope = 'local' | 'remote' | 'tag' | 'stash' | 'worktree' | 'hook';
+export type TreeContainerScope = 'local' | 'remote' | 'remoteConfig' | 'tag' | 'stash' | 'worktree' | 'hook';
+
+export interface TreeRepository {
+  kind: 'repository';
+  label: string;
+  path: string;
+  repoRoot: string;
+  description?: string;
+  isActive?: boolean;
+  currentBranchBusy?: boolean;
+  currentBranchNeedsPublish?: boolean;
+  expanded?: boolean;
+  children: TreeSection[];
+}
 
 export interface TreeSection {
   kind: 'section';
   label: string;
   path: string;
   scope: TreeContainerScope;
+  repoRoot: string;
+  expanded?: boolean;
   children: TreeChildNode[];
 }
 
@@ -55,6 +78,8 @@ export interface TreeFolder {
   label: string;
   path: string;
   scope: TreeContainerScope;
+  repoRoot: string;
+  expanded?: boolean;
   children: TreeChildNode[];
 }
 
@@ -64,7 +89,17 @@ export interface TreeBranch {
   fullName: string;
   label: string;
   path: string;
+  repoRoot: string;
 }
 
-export type TreeChildNode = TreeFolder | TreeBranch;
-export type BranchTreeNode = TreeSection | TreeFolder | TreeBranch;
+export interface TreeRemote {
+  kind: 'remote';
+  info: RemoteConfigInfo;
+  fullName: string;
+  label: string;
+  path: string;
+  repoRoot: string;
+}
+
+export type TreeChildNode = TreeFolder | TreeBranch | TreeRemote;
+export type BranchTreeNode = TreeRepository | TreeSection | TreeFolder | TreeBranch | TreeRemote;

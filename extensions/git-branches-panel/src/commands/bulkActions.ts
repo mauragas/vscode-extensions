@@ -74,9 +74,21 @@ export function registerBulkActionCommands(
   commandContext: CommandContext
 ): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('gitBranchesPanel.showAdvancedActions', async () => {
-      await handleShowAdvancedActions(commandContext);
+    vscode.commands.registerCommand('gitBranchesPanel.showAdvancedActions', async (item?: BranchTreeItem) => {
+      await handleShowAdvancedActions(item, commandContext);
     }),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.showRepositoryActions',
+      async (item?: BranchTreeItem) => {
+        await handleShowRepositoryActions(item, commandContext);
+      }
+    ),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.showAllRepositoriesActions',
+      async () => {
+        await handleShowAllRepositoriesActions(commandContext);
+      }
+    ),
     vscode.commands.registerCommand(
       'gitBranchesPanel.syncAllBranches',
       async (item?: BranchTreeItem) => {
@@ -118,26 +130,61 @@ export function registerBulkActionCommands(
     }),
     vscode.commands.registerCommand(
       'gitBranchesPanel.pruneMissingUpstreamBranches',
+      async (item?: BranchTreeItem) => {
+        await handlePruneMissingUpstreamBranches(item, commandContext);
+      }
+    ),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.syncAllRepositoriesBranches',
       async () => {
-        await handlePruneMissingUpstreamBranches(commandContext);
+        await handleSyncAllRepositoriesBranches(commandContext);
+      }
+    ),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.pullAllRepositoriesChanges',
+      async () => {
+        await handlePullAllRepositoriesChanges(commandContext);
       }
     )
   );
 }
 
-async function handleShowAdvancedActions(commandContext: CommandContext): Promise<void> {
-  const selection = await vscode.window.showQuickPick(
-    buildRepositoryActionItems(commandContext),
-    {
-      placeHolder: 'Choose an advanced repository action',
-    }
-  );
+async function handleShowAdvancedActions(
+  item: BranchTreeItem | undefined,
+  commandContext: CommandContext
+): Promise<void> {
+  if (item?.repoRoot) {
+    await commandContext.provider.setActiveRepositoryFromItem(item);
+  }
 
-  if (!selection) {
+  if (shouldShowAllRepositoriesActions(commandContext, item)) {
+    await handleShowAllRepositoriesActions(commandContext);
     return;
   }
 
-  await selection.run();
+  await showActionQuickPick(
+    buildRepositoryActionItems(commandContext, item),
+    buildRepositoryActionsPlaceHolder(item)
+  );
+}
+
+async function handleShowRepositoryActions(
+  item: BranchTreeItem | undefined,
+  commandContext: CommandContext
+): Promise<void> {
+  await showActionQuickPick(
+    buildRepositoryActionItems(commandContext, item),
+    buildRepositoryActionsPlaceHolder(item)
+  );
+}
+
+async function handleShowAllRepositoriesActions(
+  commandContext: CommandContext
+): Promise<void> {
+  await showActionQuickPick(
+    buildAllRepositoriesActionItems(commandContext),
+    'Choose an all-repositories action'
+  );
 }
 
 async function handleSyncFolderBranches(
@@ -488,8 +535,11 @@ async function handleDeleteFolderTags(
   );
 }
 
-async function handlePruneMissingUpstreamBranches(commandContext: CommandContext): Promise<void> {
-  const repoRoot = await commandContext.requireRepoRoot();
+async function handlePruneMissingUpstreamBranches(
+  item: BranchTreeItem | undefined,
+  commandContext: CommandContext
+): Promise<void> {
+  const repoRoot = await commandContext.requireRepoRoot(item?.repoRoot);
   if (!repoRoot) {
     return;
   }
@@ -518,49 +568,305 @@ async function handlePruneMissingUpstreamBranches(commandContext: CommandContext
   }
 }
 
-function buildRepositoryActionItems(commandContext: CommandContext): AdvancedActionItem[] {
+async function handleSyncAllRepositoriesBranches(commandContext: CommandContext): Promise<void> {
+  const repositories = commandContext.provider.getRepositoryDescriptors();
+  if (repositories.length === 0) {
+    vscode.window.showInformationMessage('No Git repositories are currently available.');
+    return;
+  }
+
+  const summaries: string[] = [];
+  const failures: string[] = [];
+  let shouldRefreshRemoteState = false;
+
+  for (const repository of repositories) {
+    try {
+      await fetchRemoteState(repository.repoRoot);
+      const branches = getAllLocalBranches(await getBranches(repository.repoRoot));
+      if (branches.length === 0) {
+        summaries.push(`${repository.label}: no local branches`);
+        continue;
+      }
+
+      const result = await syncAllLocalBranches(repository.repoRoot, branches);
+      shouldRefreshRemoteState ||= result.processed.some((branch) => branch.didPush);
+      summaries.push(
+        buildRepositoryWideSummary(repository.label, result.processed.length + result.failed.length, {
+          changedCount: result.processed.filter((branch) => branch.didPull || branch.didPush).length,
+          unchangedCount: countUpToDateSyncs(result.processed),
+          skippedCount: result.skippedNeedsPublish.length,
+          failedCount: result.failed.length,
+          skippedLabel: 'need publishing',
+        })
+      );
+
+      if (result.failed.length > 0) {
+        failures.push(`${repository.label}: ${formatFailureList(result.failed)}`);
+      }
+    } catch (error) {
+      failures.push(`${repository.label}: ${getErrorMessage(error)}`);
+    }
+  }
+
+  await commandContext.refresh({
+    fetchRemoteState: shouldRefreshRemoteState,
+    forceFetchRemoteState: shouldRefreshRemoteState,
+  });
+
+  const message = [`Synced tracked branches across ${repositories.length} repositories.`, ...summaries]
+    .filter(Boolean)
+    .join(' ');
+
+  if (failures.length > 0) {
+    vscode.window.showWarningMessage(`${message} Failures: ${failures.join('; ')}.`);
+    return;
+  }
+
+  vscode.window.showInformationMessage(message);
+}
+
+async function handlePullAllRepositoriesChanges(commandContext: CommandContext): Promise<void> {
+  const repositories = commandContext.provider.getRepositoryDescriptors();
+  if (repositories.length === 0) {
+    vscode.window.showInformationMessage('No Git repositories are currently available.');
+    return;
+  }
+
+  const summaries: string[] = [];
+  const failures: string[] = [];
+
+  for (const repository of repositories) {
+    try {
+      await fetchRemoteState(repository.repoRoot);
+      const branches = getAllLocalBranches(await getBranches(repository.repoRoot));
+      if (branches.length === 0) {
+        summaries.push(`${repository.label}: no local branches`);
+        continue;
+      }
+
+      const result = await pullAllLocalBranches(repository.repoRoot, branches);
+      summaries.push(
+        buildRepositoryWideSummary(repository.label, result.processed.length + result.failed.length, {
+          changedCount: result.processed.filter((branch) => branch.didPull).length,
+          unchangedCount: countUpToDateSyncs(result.processed),
+          skippedCount: result.skippedNeedsPublish.length,
+          failedCount: result.failed.length,
+          skippedLabel: 'need publishing',
+        })
+      );
+
+      if (result.failed.length > 0) {
+        failures.push(`${repository.label}: ${formatFailureList(result.failed)}`);
+      }
+    } catch (error) {
+      failures.push(`${repository.label}: ${getErrorMessage(error)}`);
+    }
+  }
+
+  await commandContext.refresh({ fetchRemoteState: false });
+
+  const message = [`Pulled tracked branches across ${repositories.length} repositories.`, ...summaries]
+    .filter(Boolean)
+    .join(' ');
+
+  if (failures.length > 0) {
+    vscode.window.showWarningMessage(`${message} Failures: ${failures.join('; ')}.`);
+    return;
+  }
+
+  vscode.window.showInformationMessage(message);
+}
+
+function buildRepositoryActionItems(
+  commandContext: CommandContext,
+  item?: BranchTreeItem
+): AdvancedActionItem[] {
+  const actionTarget = item?.repoRoot ? item : undefined;
+
   return [
     {
+      actionId: 'compareTwoRefs',
+      label: '$(diff-multiple) Compare two refs…',
+      description: 'Pick any two branches, remote branches, tags, or stashes and open a file comparison',
+      run: async () => {
+        await executeCommandWithOptionalItem('gitBranchesPanel.compareTwoRefs', actionTarget);
+      },
+    },
+    {
+      actionId: 'addRemote',
+      label: '$(add) Add remote…',
+      description: 'Add a new fetch/push remote to the active repository',
+      run: async () => {
+        await executeCommandWithOptionalItem('gitBranchesPanel.addRemote', actionTarget);
+      },
+    },
+    {
+      actionId: 'pruneWorktrees',
+      label: '$(clear-all) Prune worktrees…',
+      description: 'Remove stale worktree metadata for missing or broken linked worktrees',
+      run: async () => {
+        await executeCommandWithOptionalItem('gitBranchesPanel.pruneWorktrees', actionTarget);
+      },
+    },
+    {
       actionId: 'pruneMissingUpstream',
-      label: 'Prune local branches with missing upstream',
+      label: '$(trash) Prune local branches with missing upstream',
       description: 'Delete non-current local branches whose tracked upstream no longer exists',
       run: async () => {
-        await vscode.commands.executeCommand('gitBranchesPanel.pruneMissingUpstreamBranches');
+        await executeCommandWithOptionalItem(
+          'gitBranchesPanel.pruneMissingUpstreamBranches',
+          actionTarget
+        );
       },
     },
     {
       actionId: 'pushAllTags',
-      label: 'Push all tags…',
+      label: '$(cloud-upload) Push all tags…',
       description: 'Choose a remote and push every local tag',
       run: async () => {
-        await vscode.commands.executeCommand('gitBranchesPanel.pushAllTags');
+        await executeCommandWithOptionalItem('gitBranchesPanel.pushAllTags', actionTarget);
       },
     },
     {
       actionId: 'fetchAllPrune',
-      label: 'Fetch all (prune)',
+      label: '$(repo-fetch) Fetch all (prune)',
       description: 'Fetch every remote and prune deleted remote refs',
       run: async () => {
-        await vscode.commands.executeCommand('gitBranchesPanel.fetchAllPrune');
+        await executeCommandWithOptionalItem('gitBranchesPanel.fetchAllPrune', actionTarget);
       },
     },
     {
       actionId: 'cleanRepository',
-      label: 'Clean repository…',
+      label: '$(trash) Clean repository…',
       description: 'Run git clean -fdx to remove untracked and ignored files',
       run: async () => {
-        await vscode.commands.executeCommand('gitBranchesPanel.cleanRepository');
+        await executeCommandWithOptionalItem('gitBranchesPanel.cleanRepository', actionTarget);
       },
     },
     {
       actionId: 'refresh',
-      label: 'Refresh branch tree',
+      label: '$(refresh) Refresh branch tree',
       description: 'Reload the currently visible tree sections',
+      run: async () => {
+        await commandContext.refresh(
+          actionTarget?.repoRoot
+            ? {
+                repoRoots: [actionTarget.repoRoot],
+                fetchRemoteState: false,
+              }
+            : { fetchRemoteState: false }
+        );
+      },
+    },
+  ];
+}
+
+function buildAllRepositoriesActionItems(commandContext: CommandContext): AdvancedActionItem[] {
+  return [
+    {
+      actionId: 'syncAllRepositoriesBranches',
+      label: '$(sync) Sync all repositories branches',
+      description: 'Sync tracked local branches across every visible repository',
+      run: async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.syncAllRepositoriesBranches');
+      },
+    },
+    {
+      actionId: 'pullAllRepositoriesChanges',
+      label: '$(repo-pull) Pull all repositories changes',
+      description: 'Pull tracked local branches across every visible repository',
+      run: async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.pullAllRepositoriesChanges');
+      },
+    },
+    {
+      actionId: 'fetchAllRepositories',
+      label: '$(repo-fetch) Fetch all repositories',
+      description: 'Fetch every visible repository',
+      run: async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.fetchAllRepositories');
+      },
+    },
+    {
+      actionId: 'fetchAllRepositoriesPrune',
+      label: '$(clear-all) Fetch all repositories (prune)',
+      description: 'Fetch and prune every visible repository',
+      run: async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.fetchAllRepositoriesPrune');
+      },
+    },
+    {
+      actionId: 'refreshAllRepositories',
+      label: '$(refresh) Refresh branch tree',
+      description: 'Reload all visible repositories and sections',
       run: async () => {
         await commandContext.refresh({ fetchRemoteState: false });
       },
     },
   ];
+}
+
+function shouldShowAllRepositoriesActions(
+  commandContext: CommandContext,
+  item: BranchTreeItem | undefined
+): boolean {
+  if (item?.repoRoot) {
+    return false;
+  }
+
+  const repositoryDescriptors = commandContext.provider.getRepositoryDescriptors();
+  const visibleRepoRoots =
+    typeof commandContext.provider.getVisibleRepoRoots === 'function'
+      ? commandContext.provider.getVisibleRepoRoots()
+      : repositoryDescriptors.map((repository) => repository.repoRoot);
+
+  return repositoryDescriptors.length > 1 && visibleRepoRoots.length > 1;
+}
+
+async function showActionQuickPick(
+  actionItems: AdvancedActionItem[],
+  placeHolder: string
+): Promise<void> {
+  const selection = await vscode.window.showQuickPick(actionItems, {
+    placeHolder,
+  });
+
+  if (!selection) {
+    return;
+  }
+
+  await selection.run();
+}
+
+function buildRepositoryActionsPlaceHolder(item: BranchTreeItem | undefined): string {
+  const repositoryLabel = getTreeItemLabel(item);
+  return repositoryLabel
+    ? `Choose an action for '${repositoryLabel}'`
+    : 'Choose an advanced repository action';
+}
+
+function getTreeItemLabel(item: BranchTreeItem | undefined): string | undefined {
+  if (!item) {
+    return undefined;
+  }
+
+  if (typeof item.label === 'string') {
+    return item.label;
+  }
+
+  return typeof item.label?.label === 'string' ? item.label.label : undefined;
+}
+
+async function executeCommandWithOptionalItem(
+  commandId: string,
+  item: BranchTreeItem | undefined
+): Promise<void> {
+  if (item) {
+    await vscode.commands.executeCommand(commandId, item);
+    return;
+  }
+
+  await vscode.commands.executeCommand(commandId);
 }
 
 async function syncFolderBranches(
@@ -934,6 +1240,38 @@ function buildFolderSyncResultMessage(folderLabel: string, result: BulkSyncResul
   }
 
   return parts.join(' ');
+}
+
+function buildRepositoryWideSummary(
+  repositoryLabel: string,
+  processedCount: number,
+  options: {
+    changedCount: number;
+    unchangedCount: number;
+    skippedCount: number;
+    failedCount: number;
+    skippedLabel: string;
+  }
+): string {
+  const detailParts: string[] = [];
+
+  if (options.changedCount > 0) {
+    detailParts.push(`${options.changedCount} updated`);
+  }
+
+  if (options.unchangedCount > 0) {
+    detailParts.push(`${options.unchangedCount} already up to date`);
+  }
+
+  if (options.skippedCount > 0) {
+    detailParts.push(`${options.skippedCount} ${options.skippedLabel}`);
+  }
+
+  if (options.failedCount > 0) {
+    detailParts.push(`${options.failedCount} failed`);
+  }
+
+  return `${repositoryLabel}: processed ${processedCount} branches${detailParts.length > 0 ? ` (${detailParts.join(', ')})` : ''}.`;
 }
 
 function buildFolderPushResultMessage(folderLabel: string, result: BulkPushResult): string {

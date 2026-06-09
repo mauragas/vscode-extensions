@@ -1,8 +1,8 @@
 {
   "name": "git-branches-panel",
   "displayName": "Git Branches Panel",
-  "description": "Tree view for local and remote Git branches, stashes, worktrees, and tags with grouping, sync state, and quick actions.",
-  "version": "1.7.0",
+  "description": "Tree view for branches, tags, stashes, worktrees, hooks, and remotes across one or multiple Git repositories with grouping, search, filtering, compare/history workflows, remote-host integration, worktree maintenance, sync state, and quick actions.",
+  "version": "2.0.0",
   "publisher": "karolis-mauragas",
   "license": "MIT",
   "repository": {
@@ -77,6 +77,90 @@
         "icon": "$(gear)"
       },
       {
+        "command": "gitBranchesPanel.selectRepository",
+        "title": "Select Active Repository",
+        "icon": "$(repo)"
+      },
+      {
+        "command": "gitBranchesPanel.focusActiveEditorRepository",
+        "title": "Focus Repository from Active Editor"
+      },
+      {
+        "command": "gitBranchesPanel.addRemote",
+        "title": "Add Remote...",
+        "icon": "$(add)"
+      },
+      {
+        "command": "gitBranchesPanel.fetchRemote",
+        "title": "Fetch Remote",
+        "icon": "$(repo-fetch)"
+      },
+      {
+        "command": "gitBranchesPanel.fetchRemotePrune",
+        "title": "Fetch Remote (Prune)",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "gitBranchesPanel.copyRemoteFetchUrl",
+        "title": "Copy Fetch URL",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "gitBranchesPanel.copyRemotePushUrl",
+        "title": "Copy Push URL",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "gitBranchesPanel.openRemoteHomepage",
+        "title": "Open Remote Homepage",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "gitBranchesPanel.renameRemote",
+        "title": "Rename Remote...",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "gitBranchesPanel.setRemoteFetchUrl",
+        "title": "Set Fetch URL...",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "gitBranchesPanel.setRemotePushUrl",
+        "title": "Set Push URL...",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "gitBranchesPanel.removeRemote",
+        "title": "Remove Remote",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "gitBranchesPanel.findRef",
+        "title": "Find Ref...",
+        "icon": "$(search)"
+      },
+      {
+        "command": "gitBranchesPanel.setFilter",
+        "title": "Set Filter...",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "gitBranchesPanel.clearFilter",
+        "title": "Clear Filter",
+        "icon": "$(close)"
+      },
+      {
+        "command": "gitBranchesPanel.toggleShowOnlyPinned",
+        "title": "Toggle Show Only Pinned",
+        "icon": "$(pin)"
+      },
+      {
+        "command": "gitBranchesPanel.showNeedsAttention",
+        "title": "Show Needs Attention",
+        "icon": "$(warning)"
+      },
+      {
         "command": "gitBranchesPanel.fetchAll",
         "title": "Fetch All",
         "icon": "$(repo-fetch)"
@@ -87,7 +171,27 @@
         "icon": "$(clear-all)"
       },
       {
+        "command": "gitBranchesPanel.fetchAllRepositories",
+        "title": "Fetch All Repositories",
+        "icon": "$(repo-fetch)"
+      },
+      {
+        "command": "gitBranchesPanel.fetchAllRepositoriesPrune",
+        "title": "Fetch All Repositories (Prune)",
+        "icon": "$(clear-all)"
+      },
+      {
         "command": "gitBranchesPanel.showAdvancedActions",
+        "title": "More Actions",
+        "icon": "$(ellipsis)"
+      },
+      {
+        "command": "gitBranchesPanel.showAllRepositoriesActions",
+        "title": "More Actions",
+        "icon": "$(ellipsis)"
+      },
+      {
+        "command": "gitBranchesPanel.showRepositoryActions",
         "title": "More Actions",
         "icon": "$(ellipsis)"
       },
@@ -115,6 +219,16 @@
         "command": "gitBranchesPanel.syncCurrentBranch",
         "title": "Sync Current Branch",
         "icon": "$(sync)"
+      },
+      {
+        "command": "gitBranchesPanel.syncAllRepositoriesBranches",
+        "title": "Sync All Repositories Branches",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "gitBranchesPanel.pullAllRepositoriesChanges",
+        "title": "Pull All Repositories Changes",
+        "icon": "$(repo-pull)"
       },
       {
         "command": "gitBranchesPanel.publishCurrentBranch",
@@ -197,9 +311,84 @@
         "icon": "$(tag)"
       },
       {
+        "command": "gitBranchesPanel.pushTag",
+        "title": "Push Tag",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "gitBranchesPanel.deleteRemoteTag",
+        "title": "Delete Remote Tag",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "gitBranchesPanel.compareTagWithCurrent",
+        "title": "Compare Tag with Current Branch",
+        "icon": "$(diff-multiple)"
+      },
+      {
+        "command": "gitBranchesPanel.showTagDetails",
+        "title": "Show Tag Details",
+        "icon": "$(note)"
+      },
+      {
+        "command": "gitBranchesPanel.copyTagTargetSha",
+        "title": "Copy Tag Target SHA",
+        "icon": "$(copy)"
+      },
+      {
         "command": "gitBranchesPanel.copyBranchName",
         "title": "Copy Branch Name",
         "icon": "$(copy)"
+      },
+      {
+        "command": "gitBranchesPanel.openBranchOnRemote",
+        "title": "Open Branch on Remote",
+        "icon": "$(globe)"
+      },
+      {
+        "command": "gitBranchesPanel.openComparePage",
+        "title": "Open Compare Page",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "gitBranchesPanel.createPullRequest",
+        "title": "Create Pull Request",
+        "icon": "$(git-pull-request)"
+      },
+      {
+        "command": "gitBranchesPanel.copyBranchUrl",
+        "title": "Copy Branch URL",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "gitBranchesPanel.copyCompareUrl",
+        "title": "Copy Compare URL",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "gitBranchesPanel.compareWithUpstream",
+        "title": "Compare with Upstream",
+        "icon": "$(diff-multiple)"
+      },
+      {
+        "command": "gitBranchesPanel.compareTwoRefs",
+        "title": "Compare Two Refs...",
+        "icon": "$(diff-multiple)"
+      },
+      {
+        "command": "gitBranchesPanel.showBranchCommits",
+        "title": "Show Branch Commits",
+        "icon": "$(history)"
+      },
+      {
+        "command": "gitBranchesPanel.showRefHistory",
+        "title": "Show Ref History",
+        "icon": "$(history)"
+      },
+      {
+        "command": "gitBranchesPanel.openChangedFilesForRef",
+        "title": "Open Changed Files for Ref",
+        "icon": "$(diff-multiple)"
       },
       {
         "command": "gitBranchesPanel.copyTagName",
@@ -220,6 +409,36 @@
         "command": "gitBranchesPanel.compareBranchWithCurrent",
         "title": "Compare with Current Branch",
         "icon": "$(diff-multiple)"
+      },
+      {
+        "command": "gitBranchesPanel.showAdvancedBranchOperations",
+        "title": "Advanced Branch Operations...",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "gitBranchesPanel.rebaseCurrentOntoSelected",
+        "title": "Rebase Current onto Selected",
+        "icon": "$(git-merge)"
+      },
+      {
+        "command": "gitBranchesPanel.rebaseSelectedOntoCurrent",
+        "title": "Rebase Selected onto Current",
+        "icon": "$(git-merge)"
+      },
+      {
+        "command": "gitBranchesPanel.squashMergeIntoCurrent",
+        "title": "Squash Merge into Current",
+        "icon": "$(git-merge)"
+      },
+      {
+        "command": "gitBranchesPanel.resetCurrentToSelected",
+        "title": "Reset Current to Selected...",
+        "icon": "$(discard)"
+      },
+      {
+        "command": "gitBranchesPanel.forcePushWithLease",
+        "title": "Force Push with Lease",
+        "icon": "$(cloud-upload)"
       },
       {
         "command": "gitBranchesPanel.deleteTag",
@@ -341,6 +560,31 @@
         "icon": "$(trash)"
       },
       {
+        "command": "gitBranchesPanel.pruneWorktrees",
+        "title": "Prune Worktrees...",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "gitBranchesPanel.lockWorktree",
+        "title": "Lock Worktree...",
+        "icon": "$(lock)"
+      },
+      {
+        "command": "gitBranchesPanel.unlockWorktree",
+        "title": "Unlock Worktree",
+        "icon": "$(unlock)"
+      },
+      {
+        "command": "gitBranchesPanel.copyWorktreeRef",
+        "title": "Copy Worktree Ref",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "gitBranchesPanel.openWorktreeInTerminal",
+        "title": "Open Worktree in Terminal",
+        "icon": "$(terminal)"
+      },
+      {
         "command": "gitBranchesPanel.syncAllBranches",
         "title": "Sync All Branches",
         "icon": "$(sync)"
@@ -390,7 +634,7 @@
       "view/title": [
         {
           "command": "gitBranchesPanel.newBranch",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showNewBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showNewBranch && !gitBranchesPanel.groupedRepositories",
           "group": "navigation@1"
         },
         {
@@ -399,28 +643,53 @@
           "group": "navigation@2"
         },
         {
+          "command": "gitBranchesPanel.findRef",
+          "when": "view == gitBranchesPanel || view == gitBranchesSCM",
+          "group": "navigation@2.5"
+        },
+        {
           "command": "gitBranchesPanel.branchActionInProgress",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showCurrentBranchAction && gitBranchesPanel.currentBranchBusy",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showCurrentBranchAction && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.currentBranchBusy",
           "group": "navigation@3"
         },
         {
           "command": "gitBranchesPanel.syncCurrentBranch",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showCurrentBranchAction && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showCurrentBranchAction && !gitBranchesPanel.groupedRepositories && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
           "group": "navigation@3"
         },
         {
           "command": "gitBranchesPanel.publishCurrentBranch",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showCurrentBranchAction && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showCurrentBranchAction && !gitBranchesPanel.groupedRepositories && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
           "group": "navigation@3"
         },
         {
+          "command": "gitBranchesPanel.syncAllRepositoriesBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showCurrentBranchAction && gitBranchesPanel.groupedRepositories",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.pullAllRepositoriesChanges",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showPullAllRepositoriesChanges && gitBranchesPanel.groupedRepositories",
+          "group": "navigation@3.5"
+        },
+        {
           "command": "gitBranchesPanel.fetchAll",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showFetchAll",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showFetchAll && !gitBranchesPanel.groupedRepositories",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositories",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showFetchAll && gitBranchesPanel.groupedRepositories",
           "group": "navigation@4"
         },
         {
           "command": "gitBranchesPanel.fetchAllPrune",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showFetchAllPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showFetchAllPrune && !gitBranchesPanel.groupedRepositories",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositoriesPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showFetchAllPrune && gitBranchesPanel.groupedRepositories",
           "group": "navigation@5"
         },
         {
@@ -429,8 +698,23 @@
           "group": "navigation@6"
         },
         {
+          "command": "gitBranchesPanel.selectRepository",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories",
+          "group": "navigation@6.5"
+        },
+        {
+          "command": "gitBranchesPanel.clearFilter",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.filterActive",
+          "group": "navigation@6.6"
+        },
+        {
           "command": "gitBranchesPanel.showAdvancedActions",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showAdvancedActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showAdvancedActions && !gitBranchesPanel.groupedRepositories",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.showAllRepositoriesActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showAdvancedActions && gitBranchesPanel.groupedRepositories",
           "group": "navigation@7"
         },
         {
@@ -467,18 +751,48 @@
         },
         {
           "command": "gitBranchesPanel.pinItem",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && viewItem =~ /^(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|remoteBranch|staleRemoteBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch|stash|worktree|currentWorktree)$/",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && viewItem =~ /^(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|remoteBranch|staleRemoteBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch|stash|(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*)$/",
           "group": "inline@4"
         },
         {
           "command": "gitBranchesPanel.unpinItem",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && viewItem =~ /^pinned:(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|remoteBranch|staleRemoteBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch|stash|worktree|currentWorktree)$/",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && viewItem =~ /^pinned:(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|remoteBranch|staleRemoteBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch|stash|(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*)$/",
           "group": "inline@4"
         },
         {
           "command": "gitBranchesPanel.deleteBranch",
           "when": "viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|missingUpstreamBranch)$/",
           "group": "inline@5"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitBranchesPanel.branchActionInProgress",
+          "when": "viewItem =~ /^(?:activeRepository|repository):busyCurrentBranch$/",
+          "group": "inline@2"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "viewItem =~ /^(?:activeRepository|repository):publishableCurrentBranch$/",
+          "group": "inline@2"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "viewItem == repository || viewItem == activeRepository",
+          "group": "inline@2"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/",
+          "group": "inline@3"
+        },
+        {
+          "command": "gitBranchesPanel.showRepositoryActions",
+          "when": "viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/",
+          "group": "inline@4"
         },
         {
           "command": "gitBranchesPanel.newBranch",
@@ -521,6 +835,26 @@
           "group": "inline@1"
         },
         {
+          "command": "gitBranchesPanel.pruneWorktrees",
+          "when": "viewItem == worktreeSection",
+          "group": "inline@2"
+        },
+        {
+          "command": "gitBranchesPanel.addRemote",
+          "when": "viewItem == remotesSection",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitBranchesPanel.fetchRemote",
+          "when": "viewItem == remoteConfig",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitBranchesPanel.fetchRemotePrune",
+          "when": "viewItem == remoteConfig",
+          "group": "inline@2"
+        },
+        {
           "command": "gitBranchesPanel.enableAllHooks",
           "when": "viewItem =~ /^hooksSection(?::hasEnabled)?(?::hasDisabled)$/",
           "group": "inline@1"
@@ -542,17 +876,17 @@
         },
         {
           "command": "gitBranchesPanel.openWorktree",
-          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*$/",
           "group": "inline@1"
         },
         {
           "command": "gitBranchesPanel.openWorktreeInNewWindow",
-          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*$/",
           "group": "inline@2"
         },
         {
           "command": "gitBranchesPanel.removeWorktree",
-          "when": "viewItem =~ /^(?:pinned:)?(?:worktree)$/",
+          "when": "viewItem =~ /^(?:pinned:)?worktree(?::detached)?$/",
           "group": "inline@3"
         },
         {
@@ -561,9 +895,14 @@
           "group": "inline@1"
         },
         {
-          "command": "gitBranchesPanel.deleteTag",
+          "command": "gitBranchesPanel.pushTag",
           "when": "viewItem == tag",
           "group": "inline@2"
+        },
+        {
+          "command": "gitBranchesPanel.deleteTag",
+          "when": "viewItem == tag",
+          "group": "inline@3"
         },
         {
           "command": "gitBranchesPanel.popStash",
@@ -1441,6 +1780,71 @@
           "group": "1_branchCustom@12"
         },
         {
+          "command": "gitBranchesPanel.openBranchOnRemote",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch)$/",
+          "group": "1_remoteHosting@1"
+        },
+        {
+          "command": "gitBranchesPanel.openComparePage",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch)$/",
+          "group": "1_remoteHosting@2"
+        },
+        {
+          "command": "gitBranchesPanel.createPullRequest",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch)$/",
+          "group": "1_remoteHosting@3"
+        },
+        {
+          "command": "gitBranchesPanel.copyBranchUrl",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch)$/",
+          "group": "1_remoteHosting@4"
+        },
+        {
+          "command": "gitBranchesPanel.copyCompareUrl",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch)$/",
+          "group": "1_remoteHosting@5"
+        },
+        {
+          "command": "gitBranchesPanel.compareWithUpstream",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)$/",
+          "group": "1_history@1"
+        },
+        {
+          "command": "gitBranchesPanel.showBranchCommits",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
+          "group": "1_history@2"
+        },
+        {
+          "command": "gitBranchesPanel.openChangedFilesForRef",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
+          "group": "1_history@3"
+        },
+        {
+          "command": "gitBranchesPanel.rebaseCurrentOntoSelected",
+          "when": "config.gitBranchesPanel.branchContextMenu.showRebaseCurrentOntoSelected && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
+          "group": "2_advanced@1"
+        },
+        {
+          "command": "gitBranchesPanel.rebaseSelectedOntoCurrent",
+          "when": "config.gitBranchesPanel.branchContextMenu.showRebaseSelectedOntoCurrent && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
+          "group": "2_advanced@2"
+        },
+        {
+          "command": "gitBranchesPanel.squashMergeIntoCurrent",
+          "when": "config.gitBranchesPanel.branchContextMenu.showSquashMergeIntoCurrent && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
+          "group": "2_advanced@3"
+        },
+        {
+          "command": "gitBranchesPanel.resetCurrentToSelected",
+          "when": "config.gitBranchesPanel.branchContextMenu.showResetCurrentToSelected && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
+          "group": "2_advanced@4"
+        },
+        {
+          "command": "gitBranchesPanel.forcePushWithLease",
+          "when": "config.gitBranchesPanel.branchContextMenu.showForcePushWithLease && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)$/",
+          "group": "2_advanced@5"
+        },
+        {
           "command": "gitBranchesPanel.showBranchActions",
           "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "2_more@1"
@@ -1456,14 +1860,49 @@
           "group": "1_tag@1.5"
         },
         {
+          "command": "gitBranchesPanel.pushTag",
+          "when": "viewItem == tag",
+          "group": "1_tag@1.6"
+        },
+        {
           "command": "gitBranchesPanel.copyTagName",
           "when": "viewItem == tag",
           "group": "1_tag@2"
         },
         {
+          "command": "gitBranchesPanel.showRefHistory",
+          "when": "viewItem == tag",
+          "group": "1_tag@2.5"
+        },
+        {
+          "command": "gitBranchesPanel.openChangedFilesForRef",
+          "when": "viewItem == tag",
+          "group": "1_tag@2.6"
+        },
+        {
+          "command": "gitBranchesPanel.compareTagWithCurrent",
+          "when": "viewItem == tag",
+          "group": "1_tag@2.7"
+        },
+        {
+          "command": "gitBranchesPanel.showTagDetails",
+          "when": "viewItem == tag",
+          "group": "1_tag@2.8"
+        },
+        {
+          "command": "gitBranchesPanel.copyTagTargetSha",
+          "when": "viewItem == tag",
+          "group": "1_tag@2.9"
+        },
+        {
           "command": "gitBranchesPanel.deleteTag",
           "when": "viewItem == tag",
           "group": "2_tag@1"
+        },
+        {
+          "command": "gitBranchesPanel.deleteRemoteTag",
+          "when": "viewItem == tag",
+          "group": "2_tag@1.5"
         },
         {
           "command": "gitBranchesPanel.applyStash",
@@ -1507,32 +1946,57 @@
         },
         {
           "command": "gitBranchesPanel.openWorktree",
-          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*$/",
           "group": "1_worktree@1"
         },
         {
           "command": "gitBranchesPanel.openWorktreeInNewWindow",
-          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*$/",
           "group": "1_worktree@2"
         },
         {
           "command": "gitBranchesPanel.revealWorktree",
-          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*$/",
           "group": "1_worktree@3"
         },
         {
+          "command": "gitBranchesPanel.openWorktreeInTerminal",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*$/",
+          "group": "1_worktree@3.5"
+        },
+        {
           "command": "gitBranchesPanel.copyWorktreePath",
-          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*$/",
           "group": "1_worktree@4"
         },
         {
+          "command": "gitBranchesPanel.copyWorktreeRef",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*$/",
+          "group": "1_worktree@4.5"
+        },
+        {
           "command": "gitBranchesPanel.renameWorktree",
-          "when": "viewItem =~ /^(?:pinned:)?(?:worktree)$/",
+          "when": "viewItem =~ /^(?:pinned:)?worktree(?::detached)?$/",
           "group": "1_worktree@5"
         },
         {
+          "command": "gitBranchesPanel.lockWorktree",
+          "when": "viewItem =~ /^(?:pinned:)?worktree(?::detached)?$/",
+          "group": "1_worktree@5.5"
+        },
+        {
+          "command": "gitBranchesPanel.unlockWorktree",
+          "when": "viewItem =~ /^(?:pinned:)?worktree(?::detached)?(?::locked)(?::prunable)?$/",
+          "group": "1_worktree@5.6"
+        },
+        {
+          "command": "gitBranchesPanel.pruneWorktrees",
+          "when": "viewItem =~ /^(?:pinned:)?worktree(?::detached)?(?::locked)?(?::prunable)$/",
+          "group": "1_worktree@5.7"
+        },
+        {
           "command": "gitBranchesPanel.removeWorktree",
-          "when": "viewItem =~ /^(?:pinned:)?(?:worktree)$/",
+          "when": "viewItem =~ /^(?:pinned:)?worktree(?::detached)?$/",
           "group": "2_worktree@1"
         },
         {
@@ -1559,6 +2023,31 @@
           "command": "gitBranchesPanel.deleteFolderTags",
           "when": "viewItem == tag-folder",
           "group": "2_folder@3"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/",
+          "group": "1_repository@1"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "viewItem =~ /^(?:activeRepository|repository):publishableCurrentBranch$/",
+          "group": "1_repository@2"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "viewItem == repository || viewItem == activeRepository",
+          "group": "1_repository@2"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/",
+          "group": "1_repository@3"
+        },
+        {
+          "command": "gitBranchesPanel.showRepositoryActions",
+          "when": "viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/",
+          "group": "1_repository@4"
         },
         {
           "command": "gitBranchesPanel.newBranch",
@@ -1611,6 +2100,11 @@
           "group": "1_worktree@0.5"
         },
         {
+          "command": "gitBranchesPanel.pruneWorktrees",
+          "when": "viewItem == worktreeSection",
+          "group": "1_worktree@0.75"
+        },
+        {
           "command": "gitBranchesPanel.createTag",
           "when": "viewItem == tagsSection",
           "group": "1_tags@0.5"
@@ -1619,6 +2113,56 @@
           "command": "gitBranchesPanel.pushAllTags",
           "when": "viewItem == tagsSection",
           "group": "1_tags@1"
+        },
+        {
+          "command": "gitBranchesPanel.addRemote",
+          "when": "viewItem == remotesSection",
+          "group": "1_remotesSection@1"
+        },
+        {
+          "command": "gitBranchesPanel.fetchRemote",
+          "when": "viewItem == remoteConfig",
+          "group": "1_remoteConfig@1"
+        },
+        {
+          "command": "gitBranchesPanel.fetchRemotePrune",
+          "when": "viewItem == remoteConfig",
+          "group": "1_remoteConfig@2"
+        },
+        {
+          "command": "gitBranchesPanel.openRemoteHomepage",
+          "when": "viewItem == remoteConfig",
+          "group": "1_remoteConfig@3"
+        },
+        {
+          "command": "gitBranchesPanel.copyRemoteFetchUrl",
+          "when": "viewItem == remoteConfig",
+          "group": "1_remoteConfig@4"
+        },
+        {
+          "command": "gitBranchesPanel.copyRemotePushUrl",
+          "when": "viewItem == remoteConfig",
+          "group": "1_remoteConfig@5"
+        },
+        {
+          "command": "gitBranchesPanel.renameRemote",
+          "when": "viewItem == remoteConfig",
+          "group": "1_remoteConfig@6"
+        },
+        {
+          "command": "gitBranchesPanel.setRemoteFetchUrl",
+          "when": "viewItem == remoteConfig",
+          "group": "1_remoteConfig@7"
+        },
+        {
+          "command": "gitBranchesPanel.setRemotePushUrl",
+          "when": "viewItem == remoteConfig",
+          "group": "1_remoteConfig@8"
+        },
+        {
+          "command": "gitBranchesPanel.removeRemote",
+          "when": "viewItem == remoteConfig",
+          "group": "2_remoteConfig@1"
         }
       ],
       "scm/title": [
@@ -1716,6 +2260,31 @@
           ],
           "description": "Ordered list of branch right-click actions to show before 'More Branch Actions...'. Remove action ids to hide them; the full fallback menu always remains available from 'More Branch Actions...'."
         },
+        "gitBranchesPanel.branchContextMenu.showRebaseCurrentOntoSelected": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show 'Rebase Current onto Selected' directly in the branch context menu instead of only inside More Branch Actions..."
+        },
+        "gitBranchesPanel.branchContextMenu.showRebaseSelectedOntoCurrent": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show 'Rebase Selected onto Current' directly in the branch context menu for local non-current branches."
+        },
+        "gitBranchesPanel.branchContextMenu.showSquashMergeIntoCurrent": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show 'Squash Merge into Current' directly in the branch context menu."
+        },
+        "gitBranchesPanel.branchContextMenu.showResetCurrentToSelected": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show 'Reset Current to Selected...' directly in the branch context menu."
+        },
+        "gitBranchesPanel.branchContextMenu.showForcePushWithLease": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show 'Force Push with Lease' directly in the branch context menu for tracked local branches."
+        },
         "gitBranchesPanel.sortOrder": {
           "type": "string",
           "enum": [
@@ -1735,6 +2304,174 @@
           ],
           "default": "versionDescending",
           "description": "Sort tags by newest version first, oldest version first, alphabetically, or by most recently updated commit. Version-aware sorting recognizes semver-like suffixes such as `v1.2.3` or `release/v1.2.3` and keeps non-version tags in name order after version tags."
+        },
+        "gitBranchesPanel.multiRepository.mode": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "alwaysGroupByRepository",
+            "singleActiveRepository"
+          ],
+          "default": "auto",
+          "description": "Control how repositories are shown in the tree: keep the old flat view when only one repository is open (`auto`), always wrap sections under repository containers (`alwaysGroupByRepository`), or show only the active repository (`singleActiveRepository`)."
+        },
+        "gitBranchesPanel.multiRepository.followActiveEditor": {
+          "type": "boolean",
+          "default": false,
+          "description": "When enabled, keep the active repository aligned with the Git repository that owns the active editor whenever multi-repository support is in use."
+        },
+        "gitBranchesPanel.sections.local.visible": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the Local section in the tree. Commands can still resolve the current branch even when this section is hidden."
+        },
+        "gitBranchesPanel.sections.remote.visible": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the Remote section with remote-tracking branches."
+        },
+        "gitBranchesPanel.sections.remotes.visible": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show the dedicated Remotes section with fetch, URL, rename, and remove actions for configured remotes."
+        },
+        "gitBranchesPanel.sections.stash.visible": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the Stash section in the tree."
+        },
+        "gitBranchesPanel.sections.worktree.visible": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the Worktree section in the tree."
+        },
+        "gitBranchesPanel.sections.hooks.visible": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the Hooks section when the repository has configured hooks."
+        },
+        "gitBranchesPanel.sections.tags.visible": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the Tags section in the tree."
+        },
+        "gitBranchesPanel.showRemotesSection": {
+          "type": "boolean",
+          "default": false,
+          "description": "Deprecated. Use gitBranchesPanel.sections.remotes.visible instead.",
+          "deprecationMessage": "Deprecated: use gitBranchesPanel.sections.remotes.visible instead."
+        },
+        "gitBranchesPanel.tags.defaultType": {
+          "type": "string",
+          "enum": [
+            "lightweight",
+            "annotated",
+            "signedAnnotated"
+          ],
+          "default": "annotated",
+          "description": "Default tag type to preselect in the Create Tag workflow."
+        },
+        "gitBranchesPanel.tags.pushAfterCreate": {
+          "type": "boolean",
+          "default": false,
+          "description": "After creating a tag, immediately prompt for a remote and push that specific tag."
+        },
+        "gitBranchesPanel.tags.requireMessageForAnnotated": {
+          "type": "boolean",
+          "default": true,
+          "description": "Require a non-empty annotation message for annotated and signed annotated tags. When disabled, leaving the message blank reuses the tag name as the annotation subject."
+        },
+        "gitBranchesPanel.search.includeHooks": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include Git hook items in the Find Ref command results."
+        },
+        "gitBranchesPanel.search.maxResults": {
+          "type": "number",
+          "default": 200,
+          "minimum": 1,
+          "description": "Maximum number of Find Ref results to show after ranking matches."
+        },
+        "gitBranchesPanel.search.autoLoadAllSections": {
+          "type": "boolean",
+          "default": true,
+          "description": "Load all searchable sections before running Find Ref or applying tree filters so results include refs from collapsed sections."
+        },
+        "gitBranchesPanel.remoteHosting.preferredRemote": {
+          "type": "string",
+          "default": "",
+          "description": "Prefer this remote when building branch, compare, and pull-request URLs for local branches that do not already imply a remote through their upstream or remote-tracking metadata."
+        },
+        "gitBranchesPanel.remoteHosting.compareBase": {
+          "type": "string",
+          "enum": [
+            "defaultBranch",
+            "upstream",
+            "currentBranch"
+          ],
+          "default": "defaultBranch",
+          "description": "Choose how browser compare and pull-request URLs resolve their base branch: the remote default branch, the selected branch's configured upstream branch, or the repository's currently checked out branch."
+        },
+        "gitBranchesPanel.remoteHosting.customProviders": {
+          "type": "array",
+          "default": [],
+          "description": "Optional custom remote-host URL templates. Each entry can define `name`, `hostPattern`, `branchUrlTemplate`, `compareUrlTemplate`, and `pullRequestUrlTemplate` with placeholders like `${hostRoot}`, `${namespace}`, `${repo}`, `${branch}`, `${base}`, `${organization}`, `${project}`, and `${remoteName}`.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "hostPattern": {
+                "type": "string"
+              },
+              "branchUrlTemplate": {
+                "type": "string"
+              },
+              "compareUrlTemplate": {
+                "type": "string"
+              },
+              "pullRequestUrlTemplate": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "gitBranchesPanel.history.maxCommits": {
+          "type": "number",
+          "default": 50,
+          "minimum": 1,
+          "description": "Maximum number of commits to load when showing branch or ref history in a quick pick."
+        },
+        "gitBranchesPanel.history.includeMerges": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include merge commits in branch and ref history quick picks."
+        },
+        "gitBranchesPanel.advanced.enableForcePushWithLease": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Force Push with Lease in advanced branch operation pickers and command menus."
+        },
+        "gitBranchesPanel.advanced.defaultResetMode": {
+          "type": "string",
+          "enum": [
+            "soft",
+            "mixed",
+            "hard"
+          ],
+          "default": "mixed",
+          "description": "Default reset mode to preselect when resetting the current branch to another ref."
+        },
+        "gitBranchesPanel.advanced.allowNonCurrentBranchRebase": {
+          "type": "boolean",
+          "default": true,
+          "description": "Allow rebasing a selected non-current local branch onto the current branch through a temporary worktree."
+        },
+        "gitBranchesPanel.advanced.rebaseAutostash": {
+          "type": "boolean",
+          "default": true,
+          "description": "Prefer Git's --autostash behavior when rebasing the current branch and the working tree is dirty."
         },
         "gitBranchesPanel.showCurrentBranchInfo": {
           "type": "boolean",
@@ -1780,17 +2517,22 @@
         "gitBranchesPanel.toolbar.showCurrentBranchAction": {
           "type": "boolean",
           "default": true,
-          "description": "Show the Sync Current Branch or Publish Current Branch quick action in the view toolbar."
+          "description": "Show the Sync Current Branch or Publish Current Branch quick action in the view toolbar. In grouped multi-repository mode, this slot becomes Sync All Repositories Branches."
         },
         "gitBranchesPanel.toolbar.showFetchAll": {
           "type": "boolean",
           "default": true,
-          "description": "Show the Fetch All quick action in the view toolbar."
+          "description": "Show the Fetch All quick action in the view toolbar. In grouped multi-repository mode, this slot becomes Fetch All Repositories."
         },
         "gitBranchesPanel.toolbar.showFetchAllPrune": {
           "type": "boolean",
           "default": true,
-          "description": "Show the Fetch All (Prune) quick action in the view toolbar."
+          "description": "Show the Fetch All (Prune) quick action in the view toolbar. In grouped multi-repository mode, this slot becomes Fetch All Repositories (Prune)."
+        },
+        "gitBranchesPanel.toolbar.showPullAllRepositoriesChanges": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the Pull All Repositories Changes quick action in the toolbar when grouped multi-repository mode is active."
         },
         "gitBranchesPanel.toolbar.showRefresh": {
           "type": "boolean",

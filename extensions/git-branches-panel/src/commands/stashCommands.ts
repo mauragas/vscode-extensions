@@ -285,7 +285,10 @@ async function handleCompareStashWithCurrent(
     return;
   }
 
-  const currentBranch = await commandContext.requireCurrentBranch(NO_CURRENT_BRANCH_MESSAGE);
+  const currentBranch = await commandContext.requireCurrentBranch(
+    NO_CURRENT_BRANCH_MESSAGE,
+    item.repoRoot
+  );
   if (!currentBranch) {
     return;
   }

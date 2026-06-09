@@ -26,6 +26,7 @@ function createVscodeState() {
   return {
     registeredCommands: {},
     executedCommands: [],
+    infoMessages: [],
     warningMessages: [],
     warningResponses: [],
   };
@@ -44,6 +45,10 @@ function createVscodeMock(state) {
       },
     },
     window: {
+      async showInformationMessage(message) {
+        state.infoMessages.push(message);
+        return undefined;
+      },
       async showWarningMessage(message, options, ...items) {
         state.warningMessages.push({ message, options, items });
         if (options && options.modal) {
@@ -60,16 +65,34 @@ function createCommandContext() {
   const state = {
     successRefreshes: [],
     commandErrors: [],
+    setActiveRepositoryCalls: [],
+    refreshCalls: [],
+    repositoryDescriptors: [
+      {
+        repoRoot: '/repo',
+        label: 'repo',
+      },
+    ],
   };
 
   return {
     state,
     context: {
-      provider: {},
+      provider: {
+        async setActiveRepository(repoRoot) {
+          state.setActiveRepositoryCalls.push(repoRoot);
+          return true;
+        },
+        getRepositoryDescriptors() {
+          return state.repositoryDescriptors;
+        },
+      },
       activationTracker: {},
-      async refresh() {},
-      async requireRepoRoot() {
-        return '/repo';
+      async refresh(options = {}) {
+        state.refreshCalls.push(options);
+      },
+      async requireRepoRoot(preferredRepoRoot) {
+        return preferredRepoRoot ?? '/repo';
       },
       async requireCurrentBranch() {
         return undefined;
@@ -130,6 +153,36 @@ test('cleanRepository confirms, cleans the repository, and refreshes once', asyn
   ]);
 });
 
+test('cleanRepository can target the clicked repository item directly', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Clean Repository');
+  const cleanCalls = [];
+
+  const { commandContext } = createRepositoryCommandsModule({
+    vscodeState,
+    gitMock: {
+      async cleanRepository(repoRoot) {
+        cleanCalls.push(repoRoot);
+      },
+      async fetchAllRemotes() {},
+      async fetchRemoteState() {},
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.cleanRepository']({
+    nodeType: 'repository',
+    repoRoot: '/repo-b',
+  });
+
+  assert.deepEqual(cleanCalls, ['/repo-b']);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: 'Removed untracked and ignored files from the repository.',
+      options: { fetchRemoteState: false },
+    },
+  ]);
+});
+
 test('fetchAll fetches remotes and refreshes without pruning', async () => {
   const vscodeState = createVscodeState();
   const fetchCalls = [];
@@ -182,6 +235,122 @@ test('fetchAllPrune fetches remotes with pruning and refreshes once', async () =
   ]);
 });
 
+test('fetchAll can target the clicked repository item directly', async () => {
+  const vscodeState = createVscodeState();
+  const fetchCalls = [];
+
+  const { commandContext } = createRepositoryCommandsModule({
+    vscodeState,
+    gitMock: {
+      async cleanRepository() {},
+      async fetchAllRemotes(repoRoot) {
+        fetchCalls.push(repoRoot);
+      },
+      async fetchRemoteState() {},
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.fetchAll']({
+    nodeType: 'repository',
+    repoRoot: '/repo-b',
+  });
+
+  assert.deepEqual(fetchCalls, ['/repo-b']);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: 'Fetched all remotes and refreshed branch status.',
+      options: { fetchRemoteState: false },
+    },
+  ]);
+});
+
+test('fetchAllRepositories fetches every repository and refreshes once', async () => {
+  const vscodeState = createVscodeState();
+  const fetchCalls = [];
+
+  const { commandContext } = createRepositoryCommandsModule({
+    vscodeState,
+    gitMock: {
+      async cleanRepository() {},
+      async fetchAllRemotes(repoRoot) {
+        fetchCalls.push(repoRoot);
+      },
+      async fetchRemoteState() {},
+    },
+  });
+  commandContext.state.repositoryDescriptors = [
+    { repoRoot: '/repo-a', label: 'repo-a' },
+    { repoRoot: '/repo-b', label: 'repo-b' },
+  ];
+
+  await vscodeState.registeredCommands['gitBranchesPanel.fetchAllRepositories']();
+
+  assert.deepEqual(fetchCalls, ['/repo-a', '/repo-b']);
+  assert.deepEqual(commandContext.state.refreshCalls, [{ fetchRemoteState: false }]);
+  assert.deepEqual(vscodeState.infoMessages.at(-1), 'Fetched all remotes in every repository.');
+});
+
+test('fetchAllRepositories reports partial failures without claiming every repository succeeded', async () => {
+  const vscodeState = createVscodeState();
+  const fetchCalls = [];
+
+  const { commandContext } = createRepositoryCommandsModule({
+    vscodeState,
+    gitMock: {
+      async cleanRepository() {},
+      async fetchAllRemotes(repoRoot) {
+        fetchCalls.push(repoRoot);
+        if (repoRoot === '/repo-b') {
+          throw new Error('network is grumpy');
+        }
+      },
+      async fetchRemoteState() {},
+    },
+  });
+  commandContext.state.repositoryDescriptors = [
+    { repoRoot: '/repo-a', label: 'repo-a' },
+    { repoRoot: '/repo-b', label: 'repo-b' },
+  ];
+
+  await vscodeState.registeredCommands['gitBranchesPanel.fetchAllRepositories']();
+
+  assert.deepEqual(fetchCalls, ['/repo-a', '/repo-b']);
+  assert.deepEqual(commandContext.state.refreshCalls, [{ fetchRemoteState: false }]);
+  assert.equal(
+    vscodeState.warningMessages.at(-1).message,
+    'Fetched remotes for 1 of 2 repositories. Failed: repo-b (network is grumpy).'
+  );
+});
+
+test('fetchAllRepositoriesPrune prunes every repository and refreshes once', async () => {
+  const vscodeState = createVscodeState();
+  const pruneCalls = [];
+
+  const { commandContext } = createRepositoryCommandsModule({
+    vscodeState,
+    gitMock: {
+      async cleanRepository() {},
+      async fetchAllRemotes() {},
+      async fetchRemoteState(repoRoot) {
+        pruneCalls.push(repoRoot);
+      },
+    },
+  });
+  commandContext.state.repositoryDescriptors = [
+    { repoRoot: '/repo-a', label: 'repo-a' },
+    { repoRoot: '/repo-b', label: 'repo-b' },
+  ];
+
+  await vscodeState.registeredCommands['gitBranchesPanel.fetchAllRepositoriesPrune']();
+
+  assert.deepEqual(pruneCalls, ['/repo-a', '/repo-b']);
+  assert.deepEqual(commandContext.state.refreshCalls, [{ fetchRemoteState: false }]);
+  assert.deepEqual(
+    vscodeState.infoMessages.at(-1),
+    'Fetched all remotes with pruning in every repository.'
+  );
+});
+
 test('openSettings opens the extension settings query', async () => {
   const vscodeState = createVscodeState();
 
@@ -202,4 +371,26 @@ test('openSettings opens the extension settings query', async () => {
       args: ['@ext:karolis-mauragas.git-branches-panel'],
     },
   ]);
+});
+
+test('selectRepository can activate the repository from a repository tree item directly', async () => {
+  const vscodeState = createVscodeState();
+
+  const { commandContext } = createRepositoryCommandsModule({
+    vscodeState,
+    gitMock: {
+      async cleanRepository() {},
+      async fetchAllRemotes() {},
+      async fetchRemoteState() {},
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.selectRepository']({
+    nodeType: 'repository',
+    repoRoot: '/repo',
+    label: 'repo',
+  });
+
+  assert.deepEqual(commandContext.state.setActiveRepositoryCalls, ['/repo']);
+  assert.deepEqual(vscodeState.infoMessages, ["Selected repository 'repo'."]);
 });

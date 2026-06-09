@@ -28,6 +28,12 @@ function createVscodeState() {
     registeredCommands: {},
     inputBoxRequests: [],
     inputBoxResponse: undefined,
+    inputBoxResponses: [],
+    clipboardWrites: [],
+    infoMessages: [],
+    warningMessages: [],
+    warningResponses: [],
+    terminals: [],
   };
 }
 
@@ -45,18 +51,37 @@ function createVscodeMock(state) {
     },
     env: {
       clipboard: {
-        async writeText() {},
+        async writeText(value) {
+          state.clipboardWrites.push(value);
+        },
       },
     },
     window: {
-      async showInformationMessage() {
+      createTerminal(options) {
+        const terminal = {
+          options,
+          shown: false,
+          show() {
+            terminal.shown = true;
+          },
+        };
+        state.terminals.push(terminal);
+        return terminal;
+      },
+      async showInformationMessage(message) {
+        state.infoMessages.push(message);
         return undefined;
       },
       async showInputBox(options) {
         state.inputBoxRequests.push(options);
-        return state.inputBoxResponse;
+        return state.inputBoxResponses.length > 0 ? state.inputBoxResponses.shift() : state.inputBoxResponse;
       },
-      async showWarningMessage() {
+      async showWarningMessage(message, options, ...items) {
+        state.warningMessages.push({ message, options, items });
+        if (options && options.modal) {
+          return state.warningResponses.shift();
+        }
+
         return undefined;
       },
     },
@@ -349,4 +374,282 @@ test('renameWorktree ignores the current worktree', async () => {
   });
 
   assert.equal(vscodeState.inputBoxRequests.length, 0);
+});
+
+test('copyWorktreeRef copies the worktree reference and reports success', async () => {
+  const vscodeState = createVscodeState();
+
+  createWorktreeCommandsModule({
+    vscodeState,
+    gitMock: {
+      async createWorktree() {},
+      async renameWorktree() {},
+      async removeWorktree() {},
+      async pruneWorktrees() {},
+      async lockWorktree() {},
+      async unlockWorktree() {},
+      async getWorktrees() {
+        return [];
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.copyWorktreeRef']({
+    nodeType: 'worktree',
+    branchName: '/tmp/repo-feature-demo',
+    branchInfo: {
+      worktreeRef: 'feature/demo',
+    },
+  });
+
+  assert.deepEqual(vscodeState.clipboardWrites, ['feature/demo']);
+  assert.deepEqual(vscodeState.infoMessages, [
+    "Copied worktree reference 'feature/demo' to the clipboard.",
+  ]);
+});
+
+test('openWorktreeInTerminal creates and shows a terminal rooted at the worktree path', async () => {
+  const vscodeState = createVscodeState();
+
+  createWorktreeCommandsModule({
+    vscodeState,
+    gitMock: {
+      async createWorktree() {},
+      async renameWorktree() {},
+      async removeWorktree() {},
+      async pruneWorktrees() {},
+      async lockWorktree() {},
+      async unlockWorktree() {},
+      async getWorktrees() {
+        return [];
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.openWorktreeInTerminal']({
+    nodeType: 'worktree',
+    branchName: '/tmp/repo-feature-demo',
+  });
+
+  assert.equal(vscodeState.terminals.length, 1);
+  assert.deepEqual(vscodeState.terminals[0].options, {
+    name: 'Worktree: repo-feature-demo',
+    cwd: '/tmp/repo-feature-demo',
+  });
+  assert.equal(vscodeState.terminals[0].shown, true);
+});
+
+test('lockWorktree prompts for an optional reason and refreshes the worktree section', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.inputBoxResponses.push('In use elsewhere');
+  const lockWorktreeCalls = [];
+
+  const { commandContext } = createWorktreeCommandsModule({
+    vscodeState,
+    gitMock: {
+      async createWorktree() {},
+      async renameWorktree() {},
+      async removeWorktree() {},
+      async pruneWorktrees() {},
+      async lockWorktree(repoRoot, worktreePath, reason) {
+        lockWorktreeCalls.push({ repoRoot, worktreePath, reason });
+      },
+      async unlockWorktree() {},
+      async getWorktrees() {
+        return [];
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.lockWorktree']({
+    nodeType: 'worktree',
+    branchName: '/tmp/repo-feature-demo',
+    repoRoot: '/repo',
+    branchInfo: {
+      isCurrent: false,
+    },
+  });
+
+  assert.match(vscodeState.inputBoxRequests[0].prompt, /optional lock reason/i);
+  assert.deepEqual(lockWorktreeCalls, [
+    {
+      repoRoot: '/repo',
+      worktreePath: '/tmp/repo-feature-demo',
+      reason: 'In use elsewhere',
+    },
+  ]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: "Locked worktree 'repo-feature-demo' (In use elsewhere).",
+      options: { sections: ['worktree'], repoRoots: ['/repo'], fetchRemoteState: false },
+    },
+  ]);
+});
+
+test('unlockWorktree refreshes the worktree section for locked worktrees', async () => {
+  const vscodeState = createVscodeState();
+  const unlockWorktreeCalls = [];
+
+  const { commandContext } = createWorktreeCommandsModule({
+    vscodeState,
+    gitMock: {
+      async createWorktree() {},
+      async renameWorktree() {},
+      async removeWorktree() {},
+      async pruneWorktrees() {},
+      async lockWorktree() {},
+      async unlockWorktree(repoRoot, worktreePath) {
+        unlockWorktreeCalls.push({ repoRoot, worktreePath });
+      },
+      async getWorktrees() {
+        return [];
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.unlockWorktree']({
+    nodeType: 'worktree',
+    branchName: '/tmp/repo-feature-demo',
+    repoRoot: '/repo',
+    branchInfo: {
+      worktreeLockedReason: 'In use elsewhere',
+    },
+  });
+
+  assert.deepEqual(unlockWorktreeCalls, [
+    {
+      repoRoot: '/repo',
+      worktreePath: '/tmp/repo-feature-demo',
+    },
+  ]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: "Unlocked worktree 'repo-feature-demo'.",
+      options: { sections: ['worktree'], repoRoots: ['/repo'], fetchRemoteState: false },
+    },
+  ]);
+});
+
+test('pruneWorktrees prunes stale worktree metadata and refreshes the worktree section', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Prune');
+  const pruneWorktreeCalls = [];
+
+  const { commandContext } = createWorktreeCommandsModule({
+    vscodeState,
+    gitMock: {
+      async createWorktree() {},
+      async renameWorktree() {},
+      async removeWorktree() {},
+      async pruneWorktrees(repoRoot) {
+        pruneWorktreeCalls.push(repoRoot);
+      },
+      async lockWorktree() {},
+      async unlockWorktree() {},
+      async getWorktrees() {
+        return [
+          {
+            name: '/tmp/repo-missing-worktree',
+            isCurrent: false,
+            scope: 'worktree',
+            worktreePrunableReason: 'gitdir file points to non-existent location',
+          },
+        ];
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.pruneWorktrees']({
+    nodeType: 'section',
+    containerPath: 'section:worktree',
+    repoRoot: '/repo',
+  });
+
+  assert.equal(vscodeState.warningMessages[0].options.modal, true);
+  assert.match(vscodeState.warningMessages[0].message, /Prune stale worktree metadata/i);
+  assert.deepEqual(pruneWorktreeCalls, ['/repo']);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: 'Pruned stale worktree metadata.',
+      options: { sections: ['worktree'], repoRoots: ['/repo'], fetchRemoteState: false },
+    },
+  ]);
+});
+
+test('pruneWorktrees can target the clicked repository item directly', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Prune');
+  const pruneWorktreeCalls = [];
+
+  const { commandContext } = createWorktreeCommandsModule({
+    vscodeState,
+    gitMock: {
+      async createWorktree() {},
+      async renameWorktree() {},
+      async removeWorktree() {},
+      async pruneWorktrees(repoRoot) {
+        pruneWorktreeCalls.push(repoRoot);
+      },
+      async lockWorktree() {},
+      async unlockWorktree() {},
+      async getWorktrees() {
+        return [
+          {
+            name: '/tmp/repo-b-missing-worktree',
+            isCurrent: false,
+            scope: 'worktree',
+            worktreePrunableReason: 'gitdir file points to non-existent location',
+          },
+        ];
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.pruneWorktrees']({
+    nodeType: 'repository',
+    repoRoot: '/repo-b',
+  });
+
+  assert.deepEqual(pruneWorktreeCalls, ['/repo-b']);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: 'Pruned stale worktree metadata.',
+      options: { sections: ['worktree'], repoRoots: ['/repo-b'], fetchRemoteState: false },
+    },
+  ]);
+});
+
+test('pruneWorktrees reports worktree discovery failures through command errors', async () => {
+  const vscodeState = createVscodeState();
+
+  const { commandContext } = createWorktreeCommandsModule({
+    vscodeState,
+    gitMock: {
+      async createWorktree() {},
+      async renameWorktree() {},
+      async removeWorktree() {},
+      async pruneWorktrees() {
+        throw new Error('pruneWorktrees should not be called');
+      },
+      async lockWorktree() {},
+      async unlockWorktree() {},
+      async getWorktrees() {
+        throw new Error('git worktree list failed');
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.pruneWorktrees']({
+    nodeType: 'section',
+    containerPath: 'section:worktree',
+    repoRoot: '/repo',
+  });
+
+  assert.deepEqual(commandContext.state.commandErrors, [
+    {
+      prefix: 'Failed to load worktrees for pruning',
+      message: 'git worktree list failed',
+    },
+  ]);
+  assert.equal(vscodeState.warningMessages.length, 0);
 });

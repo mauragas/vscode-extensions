@@ -64,25 +64,34 @@ function createVscodeMock(commandCalls) {
 function createTreeItemMock() {
   return {
     BranchTreeItem: class BranchTreeItem {
-      constructor(node, repoRoot) {
-        this.nodeType = node.kind === 'branch' ? (node.info?.scope === 'hook' ? 'hook' : 'branch') : node.kind;
+      constructor(node) {
+        this.nodeType =
+          node.kind === 'branch' ? (node.info?.scope === 'hook' ? 'hook' : 'branch') : node.kind;
         this.containerKey =
           node.kind === 'branch'
             ? undefined
-            : node.kind === 'section'
-              ? node.path
-              : `folder:${node.scope ?? 'local'}:${node.path}`;
+            : getContainerKey(node);
         this.containerPath = node.kind === 'branch' ? undefined : node.path;
         this.containerScope = node.kind === 'branch' ? undefined : node.scope;
         this.branchName = node.kind === 'branch' ? node.fullName : undefined;
-        this.repoRoot = repoRoot;
+        this.repoRoot = node.repoRoot;
       }
     },
   };
 }
 
 function getContainerKey(node) {
-  return node.kind === 'section' ? node.path : `folder:${node.scope ?? 'local'}:${node.path}`;
+  if (node.kind === 'repository') {
+    return node.path;
+  }
+
+  if (node.kind === 'section') {
+    return node.repoRoot ? `repo:${node.repoRoot}:${node.path}` : node.path;
+  }
+
+  return node.repoRoot
+    ? `repo:${node.repoRoot}:folder:${node.scope ?? 'local'}:${node.path}`
+    : `folder:${node.scope ?? 'local'}:${node.path}`;
 }
 
 function findContainerNode(nodes, containerKey) {
@@ -138,10 +147,33 @@ function createDataLoader(state) {
     getTreeData() {
       return state.treeData;
     },
+    getRepoRoots() {
+      return state.repoRoots ?? (state.repoRoot ? [state.repoRoot] : []);
+    },
+    getRepositoryDescriptors() {
+      return (
+        state.repositoryDescriptors ??
+        (state.repoRoot
+          ? [
+              {
+                repoRoot: state.repoRoot,
+                label: 'repo',
+              },
+            ]
+          : [])
+      );
+    },
+    hasRepository(repoRoot) {
+      return (state.repoRoots ?? (state.repoRoot ? [state.repoRoot] : [])).includes(repoRoot);
+    },
     getRepoRoot() {
       return state.repoRoot;
     },
-    isSectionLoaded(section) {
+    isSectionLoaded(section, repoRoot) {
+      if (repoRoot && state.loadedSectionsByRepo?.get(repoRoot)) {
+        return Boolean(state.loadedSectionsByRepo.get(repoRoot)?.has(section));
+      }
+
       return Boolean(state.loadedSections?.has(section));
     },
   };
@@ -241,6 +273,7 @@ test('BranchTreeProvider refreshes current branch context and exposes tree items
         label: 'Local',
         path: 'section:local',
         scope: 'local',
+        repoRoot: '/repo',
         children: [],
       },
     ],
@@ -259,6 +292,10 @@ test('BranchTreeProvider refreshes current branch context and exposes tree items
       getStashes() {},
       getWorktrees() {},
       getTags() {},
+    },
+    './gitApi': {
+      getWorkspaceRepositories: async () => [],
+      resolveRepoRootForUri: async () => undefined,
     },
     './treeDataLoader': {
       BranchDataLoader: class BranchDataLoader {},
@@ -284,22 +321,44 @@ test('BranchTreeProvider refreshes current branch context and exposes tree items
   assert.deepEqual(dataLoader.refreshCalls, [{ fetchRemoteState: true }]);
   assert.equal(provider.getRepoRoot(), '/repo');
   assert.equal(provider.getCurrentBranch().name, 'main');
-  assert.deepEqual(commandCalls, [
-    {
-      command: 'setContext',
-      args: ['gitBranchesPanel.currentBranchNeedsPublish', false],
-    },
-    {
-      command: 'setContext',
-      args: ['gitBranchesPanel.currentBranchBusy', false],
-    },
-  ]);
+  assert.ok(
+    commandCalls.some(
+      (call) =>
+        call.command === 'setContext' &&
+        call.args[0] === 'gitBranchesPanel.multipleRepositories' &&
+        call.args[1] === false
+    )
+  );
+  assert.ok(
+    commandCalls.some(
+      (call) =>
+        call.command === 'setContext' &&
+        call.args[0] === 'gitBranchesPanel.groupedRepositories' &&
+        call.args[1] === false
+    )
+  );
+  assert.ok(
+    commandCalls.some(
+      (call) =>
+        call.command === 'setContext' &&
+        call.args[0] === 'gitBranchesPanel.currentBranchNeedsPublish' &&
+        call.args[1] === false
+    )
+  );
+  assert.ok(
+    commandCalls.some(
+      (call) =>
+        call.command === 'setContext' &&
+        call.args[0] === 'gitBranchesPanel.currentBranchBusy' &&
+        call.args[1] === false
+    )
+  );
   assert.equal(treeChangeCount, 1);
 
   const rootChildren = await provider.getChildren();
   assert.equal(rootChildren.length, 1);
   assert.equal(rootChildren[0].containerPath, 'section:local');
-  assert.equal(rootChildren[0].containerKey, 'section:local');
+  assert.equal(rootChildren[0].containerKey, 'repo:/repo:section:local');
   assert.equal(provider.getTreeItem(rootChildren[0]), rootChildren[0]);
 });
 
@@ -316,6 +375,7 @@ test('BranchTreeProvider marks publishable current branches in context', async (
         label: 'Local',
         path: 'section:local',
         scope: 'local',
+        repoRoot: '/repo',
         children: [],
       },
     ],
@@ -335,6 +395,10 @@ test('BranchTreeProvider marks publishable current branches in context', async (
       getWorktrees() {},
       getTags() {},
     },
+    './gitApi': {
+      getWorkspaceRepositories: async () => [],
+      resolveRepoRootForUri: async () => undefined,
+    },
     './treeDataLoader': {
       BranchDataLoader: class BranchDataLoader {},
       getBranchSectionKey: (sectionPath) =>
@@ -351,16 +415,22 @@ test('BranchTreeProvider marks publishable current branches in context', async (
 
   await provider.refresh({ fetchRemoteState: false });
 
-  assert.deepEqual(commandCalls, [
-    {
-      command: 'setContext',
-      args: ['gitBranchesPanel.currentBranchNeedsPublish', true],
-    },
-    {
-      command: 'setContext',
-      args: ['gitBranchesPanel.currentBranchBusy', false],
-    },
-  ]);
+  assert.ok(
+    commandCalls.some(
+      (call) =>
+        call.command === 'setContext' &&
+        call.args[0] === 'gitBranchesPanel.currentBranchNeedsPublish' &&
+        call.args[1] === true
+    )
+  );
+  assert.ok(
+    commandCalls.some(
+      (call) =>
+        call.command === 'setContext' &&
+        call.args[0] === 'gitBranchesPanel.currentBranchBusy' &&
+        call.args[1] === false
+    )
+  );
 });
 
 test('BranchTreeProvider marks busy current branches in context', async () => {
@@ -378,6 +448,7 @@ test('BranchTreeProvider marks busy current branches in context', async () => {
         label: 'Local',
         path: 'section:local',
         scope: 'local',
+        repoRoot: '/repo',
         children: [],
       },
     ],
@@ -397,6 +468,10 @@ test('BranchTreeProvider marks busy current branches in context', async () => {
       getWorktrees() {},
       getTags() {},
     },
+    './gitApi': {
+      getWorkspaceRepositories: async () => [],
+      resolveRepoRootForUri: async () => undefined,
+    },
     './treeDataLoader': {
       BranchDataLoader: class BranchDataLoader {},
       getBranchSectionKey: (sectionPath) =>
@@ -413,16 +488,22 @@ test('BranchTreeProvider marks busy current branches in context', async () => {
 
   await provider.refresh({ fetchRemoteState: false });
 
-  assert.deepEqual(commandCalls, [
-    {
-      command: 'setContext',
-      args: ['gitBranchesPanel.currentBranchNeedsPublish', false],
-    },
-    {
-      command: 'setContext',
-      args: ['gitBranchesPanel.currentBranchBusy', true],
-    },
-  ]);
+  assert.ok(
+    commandCalls.some(
+      (call) =>
+        call.command === 'setContext' &&
+        call.args[0] === 'gitBranchesPanel.currentBranchNeedsPublish' &&
+        call.args[1] === false
+    )
+  );
+  assert.ok(
+    commandCalls.some(
+      (call) =>
+        call.command === 'setContext' &&
+        call.args[0] === 'gitBranchesPanel.currentBranchBusy' &&
+        call.args[1] === true
+    )
+  );
 });
 
 test('BranchTreeProvider loads nested container children and clears branch context when no branch is active', async () => {
@@ -433,7 +514,9 @@ test('BranchTreeProvider loads nested container children and clears branch conte
     repoRoot: '/repo',
     loadedSections: new Set(),
     onRefresh(options) {
-      for (const section of options.sections ?? []) {
+      const sections = options.sections ?? ['local', 'hooks'];
+
+      for (const section of sections) {
         state.loadedSections.add(section);
       }
 
@@ -443,6 +526,7 @@ test('BranchTreeProvider loads nested container children and clears branch conte
           label: 'Local',
           path: 'section:local',
           scope: 'local',
+          repoRoot: '/repo',
           children: state.loadedSections.has('local')
             ? [
                 {
@@ -450,12 +534,14 @@ test('BranchTreeProvider loads nested container children and clears branch conte
                   label: 'feature',
                   path: 'feature',
                   scope: 'local',
+                  repoRoot: '/repo',
                   children: [
                     {
                       kind: 'branch',
                       fullName: 'feature/demo',
                       label: 'demo',
                       path: 'feature/demo',
+                      repoRoot: '/repo',
                       info: {
                         name: 'feature/demo',
                         isCurrent: false,
@@ -471,6 +557,7 @@ test('BranchTreeProvider loads nested container children and clears branch conte
           label: 'Remote',
           path: 'section:remote',
           scope: 'remote',
+          repoRoot: '/repo',
           children: state.loadedSections.has('remote')
             ? [
                 {
@@ -478,6 +565,7 @@ test('BranchTreeProvider loads nested container children and clears branch conte
                   fullName: 'origin/main',
                   label: 'main',
                   path: 'origin/main',
+                  repoRoot: '/repo',
                   info: {
                     name: 'origin/main',
                     isCurrent: false,
@@ -502,6 +590,10 @@ test('BranchTreeProvider loads nested container children and clears branch conte
       getStashes() {},
       getWorktrees() {},
       getTags() {},
+    },
+    './gitApi': {
+      getWorkspaceRepositories: async () => [],
+      resolveRepoRootForUri: async () => undefined,
     },
     './treeDataLoader': {
       BranchDataLoader: class BranchDataLoader {},
@@ -530,15 +622,15 @@ test('BranchTreeProvider loads nested container children and clears branch conte
   const folderChildren = await provider.getChildren(rootChildren[0]);
   const branchChildren = await provider.getChildren(folderChildren[0]);
   const remoteChildren = await provider.getChildren(rootChildren[1]);
-  const descendantBranches = provider.getDescendantBranches('folder:local:feature');
+  const descendantBranches = provider.getDescendantBranches('repo:/repo:folder:local:feature');
 
   assert.deepEqual(dataLoader.refreshCalls, [
-    { sections: ['local', 'hooks'], fetchRemoteState: false },
-    { sections: ['remote'], fetchRemoteState: false },
+    { fetchRemoteState: false },
+    { sections: ['remote'], repoRoots: ['/repo'], fetchRemoteState: false },
   ]);
   assert.equal(rootChildren.length, 2);
   assert.equal(rootChildren[0].containerPath, 'section:local');
-  assert.equal(folderChildren[0].containerKey, 'folder:local:feature');
+  assert.equal(folderChildren[0].containerKey, 'repo:/repo:folder:local:feature');
   assert.equal(folderChildren[0].containerPath, 'feature');
   assert.equal(branchChildren[0].branchName, 'feature/demo');
   assert.equal(remoteChildren[0].branchName, 'origin/main');
@@ -553,5 +645,196 @@ test('BranchTreeProvider loads nested container children and clears branch conte
   assert.deepEqual(commandCalls.at(-1), {
     command: 'setContext',
     args: ['gitBranchesPanel.currentBranchBusy', false],
+  });
+});
+
+test('BranchTreeProvider resolves parent items for grouped repositories and nested branches', async () => {
+  const commandCalls = [];
+  const state = {
+    treeData: [
+      {
+        kind: 'repository',
+        label: 'repo-a',
+        path: 'repo:/repo-a',
+        repoRoot: '/repo-a',
+        children: [
+          {
+            kind: 'section',
+            label: 'Local',
+            path: 'section:local',
+            scope: 'local',
+            repoRoot: '/repo-a',
+            children: [
+              {
+                kind: 'folder',
+                label: 'feature',
+                path: 'feature',
+                scope: 'local',
+                repoRoot: '/repo-a',
+                children: [
+                  {
+                    kind: 'branch',
+                    fullName: 'feature/demo',
+                    label: 'demo',
+                    path: 'feature/demo',
+                    repoRoot: '/repo-a',
+                    info: {
+                      name: 'feature/demo',
+                      isCurrent: false,
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        kind: 'repository',
+        label: 'repo-b',
+        path: 'repo:/repo-b',
+        repoRoot: '/repo-b',
+        children: [],
+      },
+    ],
+    repoRoots: ['/repo-a', '/repo-b'],
+    loadedSections: new Set(['local']),
+  };
+  const dataLoader = createDataLoader(state);
+  const { BranchTreeProvider } = loadFresh('../out/treeProvider.js', {
+    vscode: createVscodeMock(commandCalls),
+    './git': {
+      fetchRemoteState() {},
+      getBranches() {},
+      getHooks() {},
+      getRemoteBranches() {},
+      getRepoRoot() {},
+      getStashes() {},
+      getWorktrees() {},
+      getTags() {},
+    },
+    './gitApi': {
+      getWorkspaceRepositories: async () => [],
+      resolveRepoRootForUri: async () => undefined,
+    },
+    './treeDataLoader': {
+      BranchDataLoader: class BranchDataLoader {},
+      getBranchSectionKey: (sectionPath) =>
+        sectionPath === 'section:local' ? 'local' : undefined,
+    },
+    './treeItem': createTreeItemMock(),
+    './treePresentation': {
+      findContainerNode,
+      findDescendantBranches,
+    },
+  });
+
+  const provider = new BranchTreeProvider({ subscriptions: [] }, dataLoader);
+
+  const repositories = await provider.getChildren();
+  const sections = await provider.getChildren(repositories[0]);
+  const folders = await provider.getChildren(sections[0]);
+  const branches = await provider.getChildren(folders[0]);
+
+  assert.equal(provider.getParent(sections[0]).nodeType, 'repository');
+  assert.equal(provider.getParent(folders[0]).containerPath, 'section:local');
+  assert.equal(provider.getParent(branches[0]).containerPath, 'feature');
+});
+
+test('BranchTreeProvider revealItem clears active filters before resolving the visible item', async () => {
+  const commandCalls = [];
+  const state = {
+    treeData: [
+      {
+        kind: 'section',
+        label: 'Local',
+        path: 'section:local',
+        scope: 'local',
+        repoRoot: '/repo',
+        children: [
+          {
+            kind: 'folder',
+            label: 'feature',
+            path: 'feature',
+            scope: 'local',
+            repoRoot: '/repo',
+            children: [
+              {
+                kind: 'branch',
+                fullName: 'feature/demo',
+                label: 'demo',
+                path: 'feature/demo',
+                repoRoot: '/repo',
+                info: {
+                  name: 'feature/demo',
+                  isCurrent: false,
+                },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    repoRoot: '/repo',
+    loadedSections: new Set(['local']),
+  };
+  const dataLoader = createDataLoader(state);
+  const { BranchTreeProvider } = loadFresh('../out/treeProvider.js', {
+    vscode: createVscodeMock(commandCalls),
+    './git': {
+      fetchRemoteState() {},
+      getBranches() {},
+      getHooks() {},
+      getRemoteBranches() {},
+      getRepoRoot() {},
+      getStashes() {},
+      getWorktrees() {},
+      getTags() {},
+    },
+    './gitApi': {
+      getWorkspaceRepositories: async () => [],
+      resolveRepoRootForUri: async () => undefined,
+    },
+    './treeDataLoader': {
+      BranchDataLoader: class BranchDataLoader {},
+      getBranchSectionKey: (sectionPath) =>
+        sectionPath === 'section:local' ? 'local' : undefined,
+    },
+    './treeItem': createTreeItemMock(),
+    './treePresentation': {
+      findContainerNode,
+      findDescendantBranches,
+    },
+  });
+
+  const provider = new BranchTreeProvider({ subscriptions: [] }, dataLoader);
+  const revealCalls = [];
+
+  provider.registerTreeViews([
+    {
+      async reveal(item, options) {
+        revealCalls.push({ item, options });
+      },
+    },
+  ]);
+
+  await provider.setFilterQuery('missing');
+
+  const staleItem = {
+    nodeType: 'branch',
+    branchName: 'feature/demo',
+    repoRoot: '/repo',
+  };
+
+  const revealed = await provider.revealItem(staleItem, { clearFilter: true });
+
+  assert.equal(revealed, true);
+  assert.equal(revealCalls.length, 1);
+  assert.notEqual(revealCalls[0].item, staleItem);
+  assert.equal(revealCalls[0].item.branchName, 'feature/demo');
+  assert.deepEqual(revealCalls[0].options, {
+    expand: 3,
+    focus: true,
+    select: true,
   });
 });

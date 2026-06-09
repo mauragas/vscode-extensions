@@ -146,6 +146,38 @@ test('buildBranchTooltipContent describes local, remote, stash, hook, tag, and w
 });
 
 test('buildTreeItemPresentation maps sections, folders, and branch types consistently', () => {
+  const inactiveRepositoryPresentation = buildTreeItemPresentation({
+    kind: 'repository',
+    label: 'repo-a',
+    path: 'repo:/repo-a',
+    repoRoot: '/repo-a',
+    children: [],
+  });
+  const activeRepositoryPresentation = buildTreeItemPresentation({
+    kind: 'repository',
+    label: 'repo-b',
+    path: 'repo:/repo-b',
+    repoRoot: '/repo-b',
+    description: 'apps/repo-b',
+    isActive: true,
+    children: [],
+  });
+  const publishableRepositoryPresentation = buildTreeItemPresentation({
+    kind: 'repository',
+    label: 'repo-c',
+    path: 'repo:/repo-c',
+    repoRoot: '/repo-c',
+    currentBranchNeedsPublish: true,
+    children: [],
+  });
+  const busyRepositoryPresentation = buildTreeItemPresentation({
+    kind: 'repository',
+    label: 'repo-d',
+    path: 'repo:/repo-d',
+    repoRoot: '/repo-d',
+    currentBranchBusy: true,
+    children: [],
+  });
   const localSectionPresentation = buildTreeItemPresentation({
     kind: 'section',
     label: 'Local',
@@ -186,6 +218,13 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
     label: 'Tags',
     path: 'section:tags',
     scope: 'tag',
+    children: [],
+  });
+  const remotesSectionPresentation = buildTreeItemPresentation({
+    kind: 'section',
+    label: 'Remotes',
+    path: 'section:remotes',
+    scope: 'remoteConfig',
     children: [],
   });
   const folderPresentation = buildTreeItemPresentation({
@@ -351,6 +390,65 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
       worktreeRef: 'main',
     },
   });
+  const lockedWorktreePresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: '/tmp/git-branches-panel-locked-worktree',
+    label: 'git-branches-panel-locked-worktree',
+    path: '/tmp/git-branches-panel-locked-worktree',
+    info: {
+      name: '/tmp/git-branches-panel-locked-worktree',
+      isCurrent: false,
+      scope: 'worktree',
+      worktreePath: '/tmp/git-branches-panel-locked-worktree',
+      worktreeRef: 'feature/locked',
+      worktreeLockedReason: 'in use elsewhere',
+    },
+  });
+  const detachedPrunableWorktreePresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: '/tmp/git-branches-panel-prunable-worktree',
+    label: 'git-branches-panel-prunable-worktree',
+    path: '/tmp/git-branches-panel-prunable-worktree',
+    info: {
+      name: '/tmp/git-branches-panel-prunable-worktree',
+      isCurrent: false,
+      scope: 'worktree',
+      worktreePath: '/tmp/git-branches-panel-prunable-worktree',
+      worktreeRef: 'detached at abc1234',
+      worktreePrunableReason: 'gitdir file points to non-existent location',
+    },
+  });
+  const remoteConfigPresentation = buildTreeItemPresentation({
+    kind: 'remote',
+    fullName: 'origin',
+    label: 'origin',
+    path: 'origin',
+    repoRoot: '/repo',
+    info: {
+      name: 'origin',
+      fetchUrl: 'https://github.com/octo/repo.git',
+      pushUrl: 'git@github.com:octo/repo.git',
+      isDefault: true,
+      hostProvider: 'GitHub',
+    },
+  });
+
+  assert.equal(inactiveRepositoryPresentation.nodeType, 'repository');
+  assert.equal(inactiveRepositoryPresentation.contextValue, 'repository');
+  assert.equal(inactiveRepositoryPresentation.icon.id, 'repo');
+  assert.equal(inactiveRepositoryPresentation.icon.colorId, undefined);
+  assert.equal(inactiveRepositoryPresentation.collapsibleState, 'collapsed');
+
+  assert.equal(activeRepositoryPresentation.nodeType, 'repository');
+  assert.equal(activeRepositoryPresentation.contextValue, 'activeRepository');
+  assert.equal(activeRepositoryPresentation.icon.id, 'repo');
+  assert.equal(activeRepositoryPresentation.icon.colorId, 'gitDecoration.addedResourceForeground');
+  assert.equal(activeRepositoryPresentation.collapsibleState, 'expanded');
+  assert.match(activeRepositoryPresentation.tooltip, /Active repository/);
+  assert.match(activeRepositoryPresentation.tooltip, /apps\/repo-b/);
+
+  assert.equal(publishableRepositoryPresentation.contextValue, 'repository:publishableCurrentBranch');
+  assert.equal(busyRepositoryPresentation.contextValue, 'repository:busyCurrentBranch');
 
   assert.equal(localSectionPresentation.nodeType, 'section');
   assert.equal(localSectionPresentation.collapsibleState, 'expanded');
@@ -378,6 +476,10 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(tagsSectionPresentation.nodeType, 'section');
   assert.equal(tagsSectionPresentation.contextValue, 'tagsSection');
 
+  assert.equal(remotesSectionPresentation.nodeType, 'section');
+  assert.equal(remotesSectionPresentation.icon.id, 'repo');
+  assert.equal(remotesSectionPresentation.contextValue, 'remotesSection');
+
   assert.equal(folderPresentation.nodeType, 'folder');
   assert.equal(folderPresentation.id, 'folder:local:feature');
   assert.equal(folderPresentation.containerKey, 'folder:local:feature');
@@ -387,7 +489,7 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
 
   assert.equal(localBranchPresentation.nodeType, 'branch');
   assert.equal(localBranchPresentation.id, 'local:branch:feature/demo');
-  assert.equal(localBranchPresentation.label, '1↑ demo');
+  assert.equal(localBranchPresentation.label, '🟢1↑ demo');
   assert.equal(localBranchPresentation.contextValue, 'branch');
   assert.equal(localBranchPresentation.description, '1 hour ago');
   assert.equal(localBranchPresentation.command.command, 'gitBranchesPanel.activateBranchItem');
@@ -396,7 +498,7 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(publishableBranchPresentation.contextValue, 'publishableBranch');
 
   assert.equal(currentBranchWithSyncPresentation.nodeType, 'currentBranch');
-  assert.equal(currentBranchWithSyncPresentation.label, '● 2↓ 1↑ main');
+  assert.equal(currentBranchWithSyncPresentation.label, '● 🔵2↓ 🟢1↑ main');
   assert.equal(currentBranchWithSyncPresentation.contextValue, 'currentBranch');
   assert.equal(currentBranchWithSyncPresentation.description, '2 hours ago');
 
@@ -448,6 +550,28 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(currentWorktreePresentation.nodeType, 'worktree');
   assert.equal(currentWorktreePresentation.label, '● git-branches-panel-main-worktree');
   assert.equal(currentWorktreePresentation.contextValue, 'currentWorktree');
+
+  assert.equal(lockedWorktreePresentation.nodeType, 'worktree');
+  assert.equal(lockedWorktreePresentation.contextValue, 'worktree:locked');
+  assert.equal(lockedWorktreePresentation.icon.id, 'lock');
+  assert.equal(lockedWorktreePresentation.icon.colorId, 'list.warningForeground');
+  assert.equal(lockedWorktreePresentation.description, 'feature/locked • locked');
+
+  assert.equal(detachedPrunableWorktreePresentation.nodeType, 'worktree');
+  assert.equal(detachedPrunableWorktreePresentation.contextValue, 'worktree:detached:prunable');
+  assert.equal(detachedPrunableWorktreePresentation.icon.id, 'folder');
+  assert.equal(detachedPrunableWorktreePresentation.icon.colorId, 'list.warningForeground');
+  assert.equal(detachedPrunableWorktreePresentation.description, 'detached at abc1234 • prunable');
+
+  assert.equal(remoteConfigPresentation.nodeType, 'remoteConfig');
+  assert.equal(remoteConfigPresentation.id, 'repo:/repo:remote:origin');
+  assert.equal(remoteConfigPresentation.contextValue, 'remoteConfig');
+  assert.equal(remoteConfigPresentation.icon.id, 'repo');
+  assert.equal(remoteConfigPresentation.description, 'GitHub • github.com/octo/repo');
+  assert.match(remoteConfigPresentation.tooltip, /Fetch: https:\/\/github.com\/octo\/repo.git/);
+  assert.match(remoteConfigPresentation.tooltip, /Push: git@github.com:octo\/repo.git/);
+  assert.match(remoteConfigPresentation.tooltip, /Provider: GitHub/);
+  assert.match(remoteConfigPresentation.tooltip, /Default remote/);
 });
 
 test('buildTreeItemPresentation adjusts Hooks section context for bulk enable and disable actions', () => {
@@ -609,7 +733,7 @@ test('buildTreeItemPresentation adds pinned prefixes and busy context values whe
     },
   });
 
-  assert.equal(pinnedBusyBranchPresentation.label, '★ 1↑ demo');
+  assert.equal(pinnedBusyBranchPresentation.label, '★ 🟢1↑ demo');
   assert.equal(pinnedBusyBranchPresentation.contextValue, 'pinned:busyBranch');
   assert.equal(pinnedBusyBranchPresentation.icon.id, 'git-branch');
   assert.match(pinnedBusyBranchPresentation.tooltip, /_Pinned item_/);

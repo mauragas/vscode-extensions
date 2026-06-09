@@ -1,8 +1,10 @@
 import type { BranchTreeNode, TreeContainerScope } from '../branchModel/types';
 
 export type NodeType =
+  | 'repository'
   | 'section'
   | 'folder'
+  | 'remoteConfig'
   | 'branch'
   | 'currentBranch'
   | 'missingUpstreamBranch'
@@ -14,7 +16,7 @@ export type NodeType =
   | 'worktree';
 
 export type TreeItemCollapsibleKind = 'expanded' | 'collapsed' | 'none';
-export type TreeContainerNode = Extract<BranchTreeNode, { kind: 'section' | 'folder' }>;
+export type TreeContainerNode = Extract<BranchTreeNode, { kind: 'repository' | 'section' | 'folder' }>;
 
 export interface TreeItemIconDescriptor {
   id: string;

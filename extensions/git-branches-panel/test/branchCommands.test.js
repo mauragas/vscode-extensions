@@ -874,6 +874,149 @@ test('showBranchActions keeps current-branch checkout available even when the pr
   );
 });
 
+test('showBranchActions exposes compare-with-upstream, history, and advanced actions for tracked local branches', async () => {
+  const vscodeState = createVscodeState();
+
+  createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async getRemoteDefaultBranch() {
+        return 'main';
+      },
+      async getRemoteDetails() {
+        return [
+          {
+            name: 'origin',
+            fetchUrl: 'https://github.com/octo/repo.git',
+            pushUrl: 'https://github.com/octo/repo.git',
+          },
+        ];
+      },
+      async mergeBranchIntoCurrent() {},
+      parseCustomRemoteHostingProviders() {
+        return [];
+      },
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async removeRemoteTrackingRef() {},
+      resolveCompareBaseBranch() {
+        return 'main';
+      },
+      resolveHostedRepository() {
+        return {
+          provider: 'github',
+          providerLabel: 'GitHub',
+          remoteName: 'origin',
+          remoteUrl: 'https://github.com/octo/repo.git',
+          hostRoot: 'https://github.com',
+          namespace: 'octo',
+          repository: 'repo',
+        };
+      },
+      resolveRemoteBranchName(branchName) {
+        return branchName;
+      },
+      resolveRemoteNameForBranch() {
+        return 'origin';
+      },
+      getUpstreamBranchName(upstreamName) {
+        return upstreamName?.split('/').slice(1).join('/');
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      buildBranchWebUrl() {
+        return 'https://github.com/octo/repo/tree/feature/demo';
+      },
+      buildCompareWebUrl() {
+        return 'https://github.com/octo/repo/compare/main...feature/demo';
+      },
+      buildPullRequestWebUrl() {
+        return 'https://github.com/octo/repo/compare/main...feature/demo?expand=1';
+      },
+      async cherryPickRef() {},
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.showBranchActions']({
+    nodeType: 'branch',
+    contextValue: 'branch',
+    branchName: 'feature/demo',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'feature/demo',
+      isCurrent: false,
+      scope: 'local',
+      upstreamName: 'origin/feature/demo',
+    },
+  });
+
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(diff-multiple) Compare with Upstream'
+    )
+  );
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(history) Show Branch Commits'
+    )
+  );
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(diff-multiple) Open Changed Files for Ref'
+    )
+  );
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(git-merge) Rebase Current onto Selected'
+    )
+  );
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(git-merge) Rebase Selected onto Current'
+    )
+  );
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(git-merge) Squash Merge into Current'
+    )
+  );
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(discard) Reset Current to Selected…'
+    )
+  );
+  assert.ok(
+    !vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(tools) Advanced Branch Operations...'
+    )
+  );
+});
+
 test('deleteBranch blocks deletion of protected branches before any git command runs', async () => {
   const vscodeState = createVscodeState();
   vscodeState.configurationValues.protectedBranchNames = ['release/2026.06'];

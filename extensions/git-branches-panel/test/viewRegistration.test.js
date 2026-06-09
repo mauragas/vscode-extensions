@@ -43,6 +43,11 @@ function createVscodeMock(showCurrentBranchInfo, treeViews, state) {
       },
     },
     window: {
+      onDidChangeActiveTextEditor(listener) {
+        state.activeEditorListeners ??= [];
+        state.activeEditorListeners.push(listener);
+        return { dispose() {} };
+      },
       createTreeView: (viewId, options) => {
         const selectionListeners = [];
         const treeView = {
@@ -93,6 +98,13 @@ test('registerBranchViews hides the current branch banner when setting is disabl
       isCurrent: true,
       lastCommitDate: '1 minute ago',
     }),
+    getActiveRepositoryLabel: () => undefined,
+    getFilterSummary: () => '',
+    hasActiveFilter: () => false,
+    hasVisibleResults: () => true,
+    registerTreeViews: () => {},
+    setActiveRepositoryFromItem: async () => {},
+    syncActiveRepositoryToEditorIfEnabled: async () => {},
     onDidChangeTreeData: (listener) => {
       listeners.push(listener);
       return { dispose() {} };
@@ -126,6 +138,13 @@ test('registerBranchViews updates the current branch banner when setting is enab
   };
   const provider = {
     getCurrentBranch: () => currentBranch,
+    getActiveRepositoryLabel: () => undefined,
+    getFilterSummary: () => '',
+    hasActiveFilter: () => false,
+    hasVisibleResults: () => true,
+    registerTreeViews: () => {},
+    setActiveRepositoryFromItem: async () => {},
+    syncActiveRepositoryToEditorIfEnabled: async () => {},
     onDidChangeTreeData: (listener) => {
       listeners.push(listener);
       return { dispose() {} };
@@ -156,6 +175,39 @@ test('registerBranchViews updates the current branch banner when setting is enab
   );
 });
 
+test('registerBranchViews includes the active repository label in the branch banner when available', () => {
+  const treeViews = [];
+  const listeners = [];
+  const vscodeState = createVscodeState();
+  const { registerBranchViews } = loadFresh('../out/viewRegistration.js', {
+    vscode: createVscodeMock(true, treeViews, vscodeState),
+  }, ['../out/pinContext.js']);
+
+  const provider = {
+    getCurrentBranch: () => ({
+      name: 'main',
+      isCurrent: true,
+      lastCommitDate: '1 minute ago',
+    }),
+    getActiveRepositoryLabel: () => 'repo-b',
+    getFilterSummary: () => '',
+    hasActiveFilter: () => false,
+    hasVisibleResults: () => true,
+    registerTreeViews: () => {},
+    setActiveRepositoryFromItem: async () => {},
+    syncActiveRepositoryToEditorIfEnabled: async () => {},
+    onDidChangeTreeData: (listener) => {
+      listeners.push(listener);
+      return { dispose() {} };
+    },
+  };
+
+  registerBranchViews({ subscriptions: [] }, provider);
+
+  assert.equal(treeViews[0].message, 'Current branch (repo-b): main • 1 minute ago');
+  assert.equal(treeViews[1].message, 'Current branch (repo-b): main • 1 minute ago');
+});
+
 test('registerBranchViews keeps per-view pinned-item contexts isolated across both tree views', () => {
   const treeViews = [];
   const listeners = [];
@@ -166,6 +218,13 @@ test('registerBranchViews keeps per-view pinned-item contexts isolated across bo
 
   const provider = {
     getCurrentBranch: () => undefined,
+    getActiveRepositoryLabel: () => undefined,
+    getFilterSummary: () => '',
+    hasActiveFilter: () => false,
+    hasVisibleResults: () => true,
+    registerTreeViews: () => {},
+    setActiveRepositoryFromItem: async () => {},
+    syncActiveRepositoryToEditorIfEnabled: async () => {},
     onDidChangeTreeData: (listener) => {
       listeners.push(listener);
       return { dispose() {} };
@@ -243,4 +302,39 @@ test('registerBranchViews keeps per-view pinned-item contexts isolated across bo
       args: ['gitBranchesPanel.branchesViewSelectedItemPinned', false],
     },
   ]);
+});
+
+test('registerBranchViews shows filter status and a no-results hint when filtering hides every ref', () => {
+  const treeViews = [];
+  const listeners = [];
+  const vscodeState = createVscodeState();
+  const { registerBranchViews } = loadFresh('../out/viewRegistration.js', {
+    vscode: createVscodeMock(false, treeViews, vscodeState),
+  }, ['../out/pinContext.js']);
+
+  const provider = {
+    getCurrentBranch: () => undefined,
+    getActiveRepositoryLabel: () => undefined,
+    getFilterSummary: () => 'Filter: local:feature',
+    hasActiveFilter: () => true,
+    hasVisibleResults: () => false,
+    registerTreeViews: () => {},
+    setActiveRepositoryFromItem: async () => {},
+    syncActiveRepositoryToEditorIfEnabled: async () => {},
+    onDidChangeTreeData: (listener) => {
+      listeners.push(listener);
+      return { dispose() {} };
+    },
+  };
+
+  registerBranchViews({ subscriptions: [] }, provider);
+
+  assert.equal(
+    treeViews[0].message,
+    'Filter: local:feature\n\nNo refs match the current filter.'
+  );
+  assert.equal(
+    treeViews[1].message,
+    'Filter: local:feature\n\nNo refs match the current filter.'
+  );
 });

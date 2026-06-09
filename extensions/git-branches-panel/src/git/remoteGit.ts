@@ -1,4 +1,6 @@
 import type { RemoteTrackingState } from '../branchModel';
+import { resolveHostedRepository } from './hosting';
+import type { RemoteInfo } from './hosting';
 import { listRefs } from './refListing';
 import {
   doesLocalBranchExist,
@@ -16,6 +18,107 @@ export interface CheckoutRemoteBranchResult {
 
 export interface DeleteRemoteBranchOptions {
   skipPushHooks?: boolean;
+}
+
+export interface FetchRemoteOptions {
+  prune?: boolean;
+}
+
+export async function getRemoteDetails(repoRoot: string): Promise<RemoteInfo[]> {
+  const { stdout } = await runGit(repoRoot, ['remote', '-v']);
+  const remotesByName = new Map<string, RemoteInfo>();
+
+  for (const rawLine of stdout.split(/\r?\n/u)) {
+    const line = rawLine.trim();
+    if (!line) {
+      continue;
+    }
+
+    const match = line.match(/^(\S+)\s+(\S+)\s+\((fetch|push)\)$/u);
+    if (!match) {
+      continue;
+    }
+
+    const [, name = '', url = '', type = 'fetch'] = match;
+    const existingRemote = remotesByName.get(name) ?? {
+      name,
+      fetchUrl: '',
+      pushUrl: '',
+      isDefault: name === 'origin',
+    };
+
+    if (type === 'fetch') {
+      existingRemote.fetchUrl = url;
+      if (!existingRemote.pushUrl) {
+        existingRemote.pushUrl = url;
+      }
+    } else {
+      existingRemote.pushUrl = url;
+      if (!existingRemote.fetchUrl) {
+        existingRemote.fetchUrl = url;
+      }
+    }
+
+    remotesByName.set(name, existingRemote);
+  }
+
+  return [...remotesByName.values()]
+    .map((remote) => ({
+      ...remote,
+      hostProvider: resolveHostedRepository(remote)?.providerLabel,
+    }))
+    .sort((left, right) => {
+      if (Boolean(left.isDefault) !== Boolean(right.isDefault)) {
+        return left.isDefault ? -1 : 1;
+      }
+
+      return left.name.localeCompare(right.name);
+    });
+}
+
+export async function addRemote(repoRoot: string, remoteName: string, remoteUrl: string): Promise<void> {
+  await runGit(repoRoot, ['remote', 'add', remoteName, remoteUrl]);
+}
+
+export async function renameRemote(
+  repoRoot: string,
+  remoteName: string,
+  newRemoteName: string
+): Promise<void> {
+  await ensureRemoteExists(repoRoot, remoteName);
+  await runGit(repoRoot, ['remote', 'rename', remoteName, newRemoteName]);
+}
+
+export async function removeRemote(repoRoot: string, remoteName: string): Promise<void> {
+  await ensureRemoteExists(repoRoot, remoteName);
+  await runGit(repoRoot, ['remote', 'remove', remoteName]);
+}
+
+export async function setRemoteFetchUrl(
+  repoRoot: string,
+  remoteName: string,
+  remoteUrl: string
+): Promise<void> {
+  await ensureRemoteExists(repoRoot, remoteName);
+  await runGit(repoRoot, ['remote', 'set-url', remoteName, remoteUrl]);
+}
+
+export async function setRemotePushUrl(
+  repoRoot: string,
+  remoteName: string,
+  remoteUrl: string
+): Promise<void> {
+  await ensureRemoteExists(repoRoot, remoteName);
+  await runGit(repoRoot, ['remote', 'set-url', '--push', remoteName, remoteUrl]);
+}
+
+export async function fetchRemote(
+  repoRoot: string,
+  remoteName: string,
+  options: FetchRemoteOptions = {}
+): Promise<void> {
+  await ensureRemoteExists(repoRoot, remoteName);
+  await runGit(repoRoot, ['fetch', ...(options.prune ? ['--prune'] : []), remoteName]);
 }
 
 export async function getRemoteBranches(repoRoot: string) {
@@ -63,12 +166,28 @@ export async function removeRemoteTrackingRef(
 }
 
 export async function getRemotes(repoRoot: string): Promise<string[]> {
-  const { stdout } = await runGit(repoRoot, ['remote']);
+  return (await getRemoteDetails(repoRoot)).map((remote) => remote.name);
+}
 
-  return stdout
-    .split(/\r?\n/u)
-    .map((remote) => remote.trim())
-    .filter(Boolean);
+export async function getRemoteDefaultBranch(
+  repoRoot: string,
+  remoteName: string
+): Promise<string | undefined> {
+  try {
+    const { stdout } = await runGit(repoRoot, [
+      'symbolic-ref',
+      '--short',
+      `refs/remotes/${remoteName}/HEAD`,
+    ]);
+    const normalizedReference = stdout.trim();
+    const prefix = `${remoteName}/`;
+
+    return normalizedReference.startsWith(prefix)
+      ? normalizedReference.slice(prefix.length)
+      : normalizedReference;
+  } catch {
+    return undefined;
+  }
 }
 
 export async function checkoutRemoteBranch(

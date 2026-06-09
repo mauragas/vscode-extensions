@@ -2,6 +2,66 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0] - 2026-06-09
+
+- Added **Compare with Upstream** for tracked local branches so you can open a file-level comparison against the branch's configured upstream without leaving the tree
+- Added **Compare Two Refs...** to compare any two branches, remote branches, tags, or stashes from the active repository through the extension UI
+- Added **Show Branch Commits** and **Show Ref History** quick-pick workflows with commit actions such as opening changed files, copying commit SHAs, and opening commit details
+- Added **Open Changed Files for Ref** to jump straight to the latest commit's changed files for branches, remote branches, and tags
+- Added a new Git history helper module for ref history, commit details, and commit file-change discovery to keep compare/history logic testable and reusable
+- Added compare/history actions to branch quick actions, branch context menus, tag context menus, and the repository-level advanced actions quick pick
+- Added `gitBranchesPanel.history.maxCommits` and `gitBranchesPanel.history.includeMerges` settings to control history quick-pick size and merge visibility
+- Expanded automated coverage with command, manifest, and Git-backed history tests for compare-with-upstream, arbitrary ref comparison, commit browsing, and changed-file views
+- Added remote-host integration commands to open a branch on its remote, open a compare page, create a pull request, copy a branch URL, and copy a compare URL directly from branch items
+- Added provider-aware hosted URL generation for GitHub, GitLab, Bitbucket, and Azure DevOps using remote URL parsing instead of provider-specific authentication
+- Added `gitBranchesPanel.remoteHosting.preferredRemote`, `gitBranchesPanel.remoteHosting.compareBase`, and `gitBranchesPanel.remoteHosting.customProviders` settings to control how hosted URLs are resolved and customized
+- Added hosted-URL actions to branch context menus and the **More Branch Actions...** quick pick for local, current, publishable, and live remote branches
+- Added remote metadata helpers for fetch/push URL discovery and remote default-branch resolution to support compare and pull-request links
+- Expanded automated coverage for hosted URL parsing, command behavior, manifest contributions, and Git-backed remote metadata helpers
+- Added **Find Ref...** to search branches, remote branches, tags, stashes, worktrees, and optionally hooks across the workspace from one command
+- Added query parsing for search and filters, including prefixes such as `local:`, `remote:`, `tag:`, `stash:`, `worktree:`, `hook:`, and `state:`
+- Added in-view filtering commands: **Set Filter...**, **Clear Filter**, **Toggle Show Only Pinned**, and **Show Needs Attention**
+- Added filter-aware tree rendering that preserves only matching branches while auto-expanding repository, section, and folder ancestors around matches
+- Added a filter banner in the tree view message area, including a no-results hint when the active filter hides every ref
+- Added toolbar search and clear-filter buttons for faster navigation when working in large repositories
+- Added search configuration settings for hook inclusion, result limits, and whether the extension should auto-load collapsed sections before searching or filtering
+- Expanded automated coverage with pure search/filter unit tests plus command, view, and manifest coverage for the new search and filtering workflows
+- Added full multi-repository support so the tree can now show and manage more than one Git repository in the same VS Code workspace
+- Added repository containers that automatically appear when multiple repositories are open, while preserving the old flat section layout when only one repository is present
+- Added `gitBranchesPanel.multiRepository.mode` with `auto`, `alwaysGroupByRepository`, and `singleActiveRepository` options to control how repositories are displayed
+- Added `gitBranchesPanel.multiRepository.followActiveEditor` so the active repository can follow the file you are currently editing
+- Added **Select Active Repository** and **Focus Repository from Active Editor** commands for explicit repository switching in multi-repository workspaces
+- Made current-branch banner, toolbar actions, and command routing repository-aware so item actions and no-item actions target the correct repository
+- Qualified tree identities by repository to prevent section and folder collisions across repositories with matching branch-folder paths
+- Added richer repository-row hover actions so grouped repository nodes can create a branch, sync or publish their current branch, fetch/prune that repository directly from the row, and open a repo-scoped **More Actions** picker
+- Changed grouped multi-repository toolbar behavior so repo-specific quick actions move onto repository rows while the top toolbar exposes all-repositories operations such as sync, pull, fetch, fetch-prune, and an all-repositories-only **More Actions** picker
+- Limited the explicit **Select Active Repository** UI to non-grouped multi-repo workflows such as `singleActiveRepository`, since grouped mode no longer depends on a dedicated selection button
+- Expanded automated coverage for multi-repository loading, provider behavior, manifest contributions, and repo-aware view messaging
+- Added per-section visibility settings under `gitBranchesPanel.sections.*.visible` so Local, Remote, Remotes, Stash, Worktree, Hooks, and Tags can each be shown or hidden independently
+- Changed the dedicated **Remotes** section to start hidden by default through `gitBranchesPanel.sections.remotes.visible = false`, while keeping the older `gitBranchesPanel.showRemotesSection` setting as a deprecated compatibility alias
+- Added a dedicated **Remotes** section that lists configured remotes separately from remote-tracking branches so fetch/push URLs are manageable directly from the tree
+- Added remote management commands to add, fetch, fetch with prune, rename, update fetch/push URLs, open a remote homepage, copy fetch/push URLs, and remove remotes without leaving VS Code
+- Added `gitBranchesPanel.showRemotesSection` as the original Remotes visibility toggle; it is now deprecated in favor of `gitBranchesPanel.sections.remotes.visible`
+- Added per-remote inline and context actions, plus a repository-level **Add remote…** advanced action for discoverability even when the section is hidden or empty
+- Added richer remote metadata loading from `git remote -v`, including default-remote detection and provider labeling when hosted URLs are recognized
+- Expanded automated coverage with command, tree presentation, manifest, and Git-backed remote mutation tests for the new remote management workflows
+- Added worktree maintenance commands to prune stale worktree metadata, lock and unlock linked worktrees, copy worktree refs, and open worktrees directly in a terminal
+- Added worktree state-aware menu visibility so locked and prunable worktrees expose the right maintenance actions while rename/remove stay hidden until the worktree is in a safe state
+- Added worktree icon and context updates for locked and prunable worktrees, while preserving detached and current-worktree cues already shown in descriptions and tooltips
+- Added repository-level and Worktree-section prune entry points so stale worktree metadata can be cleaned up even when you are not interacting with a specific worktree row
+- Expanded automated coverage with command, manifest, tree-presentation, and Git-backed worktree maintenance tests for prune/lock/unlock/ref-copy/terminal workflows
+- Added guided **Create Tag...** flows that choose the target ref, tag type, name, annotation message, and optional immediate push target instead of only creating lightweight tags from one input box
+- Added `gitBranchesPanel.tags.defaultType`, `gitBranchesPanel.tags.pushAfterCreate`, and `gitBranchesPanel.tags.requireMessageForAnnotated` so release-focused tag workflows can be tuned without leaving the extension settings UI
+- Added support for annotated tags, signed annotated tags, single-tag pushes, remote tag deletion, tag-vs-current comparisons, tag detail views, and copying a tag's peeled target SHA
+- Added on-demand tag metadata loading so **Show Tag Details** can surface the tag type, target SHA, author metadata, annotation message, and signature state
+- Added advanced branch operations for **Rebase Current onto Selected**, **Rebase Selected onto Current**, **Squash Merge into Current**, **Reset Current to Selected...**, **Force Push with Lease**, and **Advanced Branch Operations...**
+- Moved the advanced branch commands directly into **More Branch Actions...** by default, and added opt-in `branchContextMenu.show*` settings for surfacing each one back in the first-level branch context menu when preferred
+- Added codicon labels to the repository-level **More Actions** quick pick so entries such as compare, add remote, prune, fetch, and refresh are easier to scan visually
+- Added safety checks for advanced branch operations, including in-progress Git operation detection, dirty-working-tree prompts, reset mode selection, and optional post-rewrite force-push flows with lease protection
+- Reused the existing temporary-worktree sync pattern for non-current branch rebases so rewritten branches can be updated without disturbing the user's active checkout
+- Refreshed inline sync cues so incoming divergence uses blue markers and outgoing divergence uses green markers directly in branch labels
+- Expanded automated coverage with command, manifest, tree-loader, presentation, and Git-backed tests for section visibility, richer tag workflows, advanced branch operations, and the new sync label presentation
+
 ## [1.7.0] - 2026-06-08
 
 - Added a **Hooks** section that appears only when the current repository has configured local `.git/hooks` scripts or shared hooks via `core.hooksPath`

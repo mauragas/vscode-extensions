@@ -23,14 +23,7 @@ function loadFresh(modulePath, mocks) {
 }
 
 function createVscodeMock(options = {}) {
-  const extension = options.gitExtension ?? undefined;
-
   return {
-    extensions: {
-      getExtension() {
-        return extension;
-      },
-    },
     window: {
       activeTextEditor: options.activeTextEditor,
       showErrorMessage() {},
@@ -39,9 +32,14 @@ function createVscodeMock(options = {}) {
   };
 }
 
-function loadSharedModule(vscodeMock) {
+function loadSharedModule(vscodeMock, gitApi) {
   return loadFresh('../out/commands/shared.js', {
     vscode: vscodeMock,
+    '../gitApi': {
+      async getGitApi() {
+        return gitApi;
+      },
+    },
     '../errorUtils': {
       formatErrorMessage(prefix, error) {
         return `${prefix}: ${error instanceof Error ? error.message : String(error)}`;
@@ -58,31 +56,20 @@ function loadSharedModule(vscodeMock) {
 
 test('resolveRepoRootFromScmContext resolves the selected SCM repository via the public Git API', async () => {
   const repositoryCalls = [];
-  const shared = loadSharedModule(
-    createVscodeMock({
-      gitExtension: {
-        isActive: true,
-        exports: {
-          getAPI() {
-            return {
-              repositories: [
-                { rootUri: { fsPath: '/repo-a', path: '/repo-a' } },
-                { rootUri: { fsPath: '/repo-b', path: '/repo-b' } },
-              ],
-              getRepository(uri) {
-                repositoryCalls.push(uri.fsPath);
-                if (uri.fsPath === '/repo-b') {
-                  return { rootUri: { fsPath: '/repo-b', path: '/repo-b' } };
-                }
+  const shared = loadSharedModule(createVscodeMock(), {
+    repositories: [
+      { rootUri: { fsPath: '/repo-a', path: '/repo-a' } },
+      { rootUri: { fsPath: '/repo-b', path: '/repo-b' } },
+    ],
+    getRepository(uri) {
+      repositoryCalls.push(uri.fsPath);
+      if (uri.fsPath === '/repo-b') {
+        return { rootUri: { fsPath: '/repo-b', path: '/repo-b' } };
+      }
 
-                return null;
-              },
-            };
-          },
-        },
-      },
-    })
-  );
+      return null;
+    },
+  });
 
   const repoRoot = await shared.resolveRepoRootFromScmContext({
     rootUri: { fsPath: '/repo-b', path: '/repo-b' },
@@ -94,31 +81,20 @@ test('resolveRepoRootFromScmContext resolves the selected SCM repository via the
 
 test('resolveRepoRootFromScmContext resolves selected SCM resource states via the public Git API', async () => {
   const repositoryCalls = [];
-  const shared = loadSharedModule(
-    createVscodeMock({
-      gitExtension: {
-        isActive: true,
-        exports: {
-          getAPI() {
-            return {
-              repositories: [
-                { rootUri: { fsPath: '/repo-a', path: '/repo-a' } },
-                { rootUri: { fsPath: '/repo-b', path: '/repo-b' } },
-              ],
-              getRepository(uri) {
-                repositoryCalls.push(uri.fsPath);
-                if (uri.fsPath === '/repo-b/src/app.ts') {
-                  return { rootUri: { fsPath: '/repo-b', path: '/repo-b' } };
-                }
+  const shared = loadSharedModule(createVscodeMock(), {
+    repositories: [
+      { rootUri: { fsPath: '/repo-a', path: '/repo-a' } },
+      { rootUri: { fsPath: '/repo-b', path: '/repo-b' } },
+    ],
+    getRepository(uri) {
+      repositoryCalls.push(uri.fsPath);
+      if (uri.fsPath === '/repo-b/src/app.ts') {
+        return { rootUri: { fsPath: '/repo-b', path: '/repo-b' } };
+      }
 
-                return null;
-              },
-            };
-          },
-        },
-      },
-    })
-  );
+      return null;
+    },
+  });
 
   const repoRoot = await shared.resolveRepoRootFromScmContext({
     selectedResourceStates: [
@@ -133,23 +109,12 @@ test('resolveRepoRootFromScmContext resolves selected SCM resource states via th
 });
 
 test('resolveRepoRootFromScmContext falls back to the sole repository when no target is available', async () => {
-  const shared = loadSharedModule(
-    createVscodeMock({
-      gitExtension: {
-        isActive: true,
-        exports: {
-          getAPI() {
-            return {
-              repositories: [{ rootUri: { fsPath: '/only-repo', path: '/only-repo' } }],
-              getRepository() {
-                return null;
-              },
-            };
-          },
-        },
-      },
-    })
-  );
+  const shared = loadSharedModule(createVscodeMock(), {
+    repositories: [{ rootUri: { fsPath: '/only-repo', path: '/only-repo' } }],
+    getRepository() {
+      return null;
+    },
+  });
 
   const repoRoot = await shared.resolveRepoRootFromScmContext(undefined);
 

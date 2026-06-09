@@ -16,6 +16,7 @@ const test = require('node:test');
 
 const {
   applyStash,
+  addRemote,
   cleanRepository,
   cherryPickRef,
   checkoutRemoteBranch,
@@ -23,33 +24,53 @@ const {
   createBranchFromRef,
   createWorktree,
   createTag,
+  deleteRemoteTag,
   deleteRemoteBranch,
   deleteTag,
   dropAllStashes,
   dropStash,
   fetchAllRemotes,
   fetchRemoteState,
+  getChangedFilesForCommit,
+  getCommitDetails,
   getDiffFilesBetweenRefs,
   getBranches,
   getHooks,
+  getRemoteDefaultBranch,
+  getRemoteDetails,
   getRemoteBranchTrackingState,
+  getRefHistory,
   getRemotes,
   getRemoteBranches,
   getStashes,
+  getTagDetails,
   getTags,
   getWorktrees,
+  lockWorktree,
   parseRemoteBranchReference,
   popStash,
+  pruneWorktrees,
   pushBranch,
   pushAllTags,
+  pushTag,
+  fetchRemote,
+  removeRemote,
+  rebaseBranchOnto,
+  renameRemote,
   renameStash,
+  resetCurrentBranchToRef,
   setHookEnabled,
+  setRemoteFetchUrl,
+  setRemotePushUrl,
+  squashMergeIntoCurrent,
+  unlockWorktree,
   removeWorktree,
   renameWorktree,
   stashAllChanges,
   stashStagedChanges,
   stashSilently,
   syncBranch,
+  forcePushBranch,
 } = require('../out/git.js');
 
 function runGit(cwd, args) {
@@ -289,6 +310,86 @@ test('getRemotes lists configured git remotes', async (t) => {
   const remotes = await getRemotes(repoRoot);
 
   assert.deepEqual(remotes, ['origin']);
+});
+
+test('getRemoteDetails returns fetch and push URLs per remote', async (t) => {
+  const { repoRoot, remoteRoot } = createRemoteBackedRepository(t);
+
+  const remoteDetails = await getRemoteDetails(repoRoot);
+
+  assert.deepEqual(remoteDetails, [
+    {
+      name: 'origin',
+      fetchUrl: remoteRoot,
+      pushUrl: remoteRoot,
+      isDefault: true,
+      hostProvider: undefined,
+    },
+  ]);
+});
+
+test('getRemoteDefaultBranch resolves the remote HEAD symbolic ref', async (t) => {
+  const { repoRoot } = createRemoteBackedRepository(t);
+
+  runGit(repoRoot, ['remote', 'set-head', 'origin', '-a']);
+
+  assert.equal(await getRemoteDefaultBranch(repoRoot, 'origin'), 'main');
+});
+
+test('addRemote, renameRemote, setRemoteFetchUrl, setRemotePushUrl, and removeRemote update git remotes', async (t) => {
+  const repoRoot = createTempRepository(t);
+  const remoteA = mkdtempSync(join(tmpdir(), 'git-branches-panel-extra-remote-a-'));
+  const remoteB = mkdtempSync(join(tmpdir(), 'git-branches-panel-extra-remote-b-'));
+
+  t.after(() => {
+    rmSync(remoteA, { recursive: true, force: true });
+    rmSync(remoteB, { recursive: true, force: true });
+  });
+
+  runGit(remoteA, ['init', '--bare']);
+  runGit(remoteB, ['init', '--bare']);
+
+  await addRemote(repoRoot, 'origin', remoteA);
+  assert.deepEqual(await getRemotes(repoRoot), ['origin']);
+
+  await renameRemote(repoRoot, 'origin', 'upstream');
+  assert.deepEqual(await getRemotes(repoRoot), ['upstream']);
+
+  await setRemoteFetchUrl(repoRoot, 'upstream', remoteB);
+  await setRemotePushUrl(repoRoot, 'upstream', remoteA);
+
+  const remoteDetails = await getRemoteDetails(repoRoot);
+  assert.deepEqual(remoteDetails, [
+    {
+      name: 'upstream',
+      fetchUrl: remoteB,
+      pushUrl: remoteA,
+      isDefault: false,
+      hostProvider: undefined,
+    },
+  ]);
+
+  await removeRemote(repoRoot, 'upstream');
+  assert.deepEqual(await getRemotes(repoRoot), []);
+});
+
+test('fetchRemote fetches a specific remote and can prune deleted refs', async (t) => {
+  const { repoRoot, remoteRoot } = createRemoteBackedRepository(t);
+  const collaboratorRoot = cloneRepository(t, remoteRoot);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/stale']);
+  commitFile(repoRoot, 'stale.txt', 'stale\n', 'Add stale branch');
+  runGit(repoRoot, ['push', '-u', 'origin', 'feature/stale']);
+  runGit(repoRoot, ['checkout', 'main']);
+
+  runGit(collaboratorRoot, ['fetch', 'origin']);
+  runGit(collaboratorRoot, ['push', 'origin', '--delete', 'feature/stale']);
+
+  await fetchRemote(repoRoot, 'origin');
+  assert.equal(hasRef(repoRoot, 'refs/remotes/origin/feature/stale'), true);
+
+  await fetchRemote(repoRoot, 'origin', { prune: true });
+  assert.equal(hasRef(repoRoot, 'refs/remotes/origin/feature/stale'), false);
 });
 
 test('pushAllTags pushes local tags to the selected remote', async (t) => {
@@ -589,6 +690,51 @@ test('getWorktrees lists the current and linked worktrees', async (t) => {
   assert.equal(linkedWorktree.worktreeRef, 'feature/worktree');
 });
 
+test('getWorktrees marks missing linked worktrees as prunable', async (t) => {
+  const { repoRoot, worktreeRoot } = createRepositoryWithLinkedWorktree(t);
+
+  rmSync(worktreeRoot, { recursive: true, force: true });
+
+  const worktrees = await getWorktrees(repoRoot);
+  const prunableWorktree = worktrees.find((worktree) => worktree.worktreePath === worktreeRoot);
+
+  assert.ok(prunableWorktree);
+  assert.match(prunableWorktree.worktreePrunableReason, /prunable|non-existent|missing/i);
+});
+
+test('lockWorktree and unlockWorktree toggle the worktree lock state', async (t) => {
+  const { repoRoot, worktreeRoot } = createRepositoryWithLinkedWorktree(t);
+
+  await lockWorktree(repoRoot, worktreeRoot, 'In use elsewhere');
+  const lockedWorktree = (await getWorktrees(repoRoot)).find(
+    (worktree) => worktree.worktreePath === worktreeRoot
+  );
+
+  assert.ok(lockedWorktree);
+  assert.equal(lockedWorktree.worktreeLockedReason, 'In use elsewhere');
+
+  await unlockWorktree(repoRoot, worktreeRoot);
+  const unlockedWorktree = (await getWorktrees(repoRoot)).find(
+    (worktree) => worktree.worktreePath === worktreeRoot
+  );
+
+  assert.ok(unlockedWorktree);
+  assert.equal(unlockedWorktree.worktreeLockedReason, undefined);
+});
+
+test('pruneWorktrees removes stale worktree admin entries for prunable worktrees', async (t) => {
+  const { repoRoot, worktreeRoot } = createRepositoryWithLinkedWorktree(t);
+
+  rmSync(worktreeRoot, { recursive: true, force: true });
+
+  await pruneWorktrees(repoRoot);
+
+  assert.equal(
+    (await getWorktrees(repoRoot)).some((worktree) => worktree.worktreePath === worktreeRoot),
+    false
+  );
+});
+
 test('cherryPickRef applies the selected branch commit onto the current branch', async (t) => {
   const repoRoot = createTempRepository(t);
 
@@ -686,6 +832,66 @@ test('getDiffFilesBetweenRefs reports added, modified, and deleted files between
       { status: 'D', path: 'legacy.txt' },
       { status: 'M', path: 'README.md' },
     ].sort((left, right) => left.path.localeCompare(right.path))
+  );
+});
+
+test('getRefHistory lists recent commits for a branch with metadata', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/history']);
+  commitFile(repoRoot, 'history.txt', 'one\n', 'Add history file');
+  writeFileSync(join(repoRoot, 'history.txt'), 'one\ntwo\n');
+  runGit(repoRoot, ['commit', '-am', 'Update history file', '-m', 'Includes a separate body.']);
+
+  const history = await getRefHistory(repoRoot, 'feature/history', {
+    limit: 2,
+    includeMerges: true,
+  });
+
+  assert.equal(history.length, 2);
+  assert.equal(history[0].subject, 'Update history file');
+  assert.equal(history[0].authorName, 'Test User');
+  assert.ok(history[0].sha.length >= 7);
+  assert.ok(Array.isArray(history[0].parentShas));
+  assert.equal(history[0].body, 'Includes a separate body.');
+});
+
+test('getCommitDetails returns the selected commit metadata', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/details']);
+  writeFileSync(join(repoRoot, 'details.txt'), 'details\n');
+  runGit(repoRoot, ['add', 'details.txt']);
+  runGit(repoRoot, ['commit', '-m', 'Add details file', '-m', 'Commit details body']);
+  const commitSha = runGit(repoRoot, ['rev-parse', 'HEAD']);
+
+  const commitDetails = await getCommitDetails(repoRoot, commitSha);
+
+  assert.ok(commitDetails);
+  assert.equal(commitDetails.sha, commitSha);
+  assert.equal(commitDetails.subject, 'Add details file');
+  assert.equal(commitDetails.shortSha, commitSha.slice(0, 7));
+  assert.equal(commitDetails.body, 'Commit details body');
+});
+
+test('getChangedFilesForCommit reports modified files for a specific commit', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/commit-files']);
+  writeFileSync(join(repoRoot, 'README.md'), '# Test repo\nupdated\n');
+  writeFileSync(join(repoRoot, 'commit-file.txt'), 'new\n');
+  runGit(repoRoot, ['add', 'README.md', 'commit-file.txt']);
+  runGit(repoRoot, ['commit', '-m', 'Update readme and add commit file']);
+  const commitSha = runGit(repoRoot, ['rev-parse', 'HEAD']);
+
+  const changes = await getChangedFilesForCommit(repoRoot, commitSha);
+
+  assert.deepEqual(
+    changes.sort((left, right) => left.path.localeCompare(right.path)),
+    [
+      { status: 'A', path: 'commit-file.txt' },
+      { status: 'M', path: 'README.md' },
+    ]
   );
 });
 
@@ -920,4 +1126,99 @@ test('syncBranch updates the current branch from remote changes', async (t) => {
   });
   assert.equal(runGit(repoRoot, ['log', '-1', '--pretty=%s']), 'Remote change');
   assert.match(readFileSync(join(repoRoot, 'README.md'), 'utf8'), /remote change/);
+});
+
+test('createTag can create annotated tags and getTagDetails reports their metadata', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  await createTag(repoRoot, 'v2.1.0', 'main', {
+    type: 'annotated',
+    message: 'Release 2.1.0',
+  });
+
+  const details = await getTagDetails(repoRoot, 'v2.1.0');
+
+  assert.equal(details.type, 'annotated');
+  assert.equal(details.targetType, 'commit');
+  assert.equal(details.targetSha, runGit(repoRoot, ['rev-parse', 'main^{commit}']));
+  assert.match(details.message, /Release 2\.1\.0/);
+  assert.equal(details.isSigned, false);
+});
+
+test('pushTag pushes a selected tag and deleteRemoteTag removes it from the remote', async (t) => {
+  const { repoRoot, remoteRoot } = createRemoteBackedRepository(t);
+
+  runGit(repoRoot, ['tag', 'v2.2.0']);
+
+  await pushTag(repoRoot, 'origin', 'v2.2.0');
+  assert.equal(hasRef(remoteRoot, 'refs/tags/v2.2.0'), true);
+
+  await deleteRemoteTag(repoRoot, 'origin', 'v2.2.0');
+  assert.equal(hasRef(remoteRoot, 'refs/tags/v2.2.0'), false);
+});
+
+test('squashMergeIntoCurrent stages the combined changes without creating a merge commit', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/squash']);
+  commitFile(repoRoot, 'squash.txt', 'squash me\n', 'Add squash candidate');
+  runGit(repoRoot, ['checkout', 'main']);
+
+  await squashMergeIntoCurrent(repoRoot, 'feature/squash');
+
+  assert.equal(runGit(repoRoot, ['log', '-1', '--pretty=%s']), 'Second commit');
+  assert.equal(runGit(repoRoot, ['diff', '--cached', '--name-only']).trim(), 'squash.txt');
+});
+
+test('resetCurrentBranchToRef moves the current branch to the selected ref', async (t) => {
+  const repoRoot = createTempRepository(t);
+  const initialSha = runGit(repoRoot, ['rev-parse', 'HEAD~1']);
+
+  await resetCurrentBranchToRef(repoRoot, initialSha, 'hard');
+
+  assert.equal(runGit(repoRoot, ['rev-parse', 'HEAD']), initialSha);
+});
+
+test('rebaseBranchOnto can rebase a non-current branch without changing the active checkout', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/rebase']);
+  commitFile(repoRoot, 'feature.txt', 'feature work\n', 'Add feature work');
+  runGit(repoRoot, ['checkout', 'main']);
+  commitFile(repoRoot, 'base.txt', 'base work\n', 'Advance main');
+
+  const mainSha = runGit(repoRoot, ['rev-parse', 'main']);
+
+  await rebaseBranchOnto(repoRoot, 'feature/rebase', 'main');
+
+  assert.equal(runGit(repoRoot, ['rev-parse', '--abbrev-ref', 'HEAD']), 'main');
+  assert.equal(runGit(repoRoot, ['merge-base', 'feature/rebase', 'main']), mainSha);
+  assert.equal(runGit(repoRoot, ['show', 'feature/rebase:feature.txt']).trim(), 'feature work');
+});
+
+test('forcePushBranch pushes rewritten history with lease', async (t) => {
+  const { repoRoot } = createRemoteBackedRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/rewrite']);
+  commitFile(repoRoot, 'rewrite.txt', 'original\n', 'Original rewrite commit');
+  runGit(repoRoot, ['push', '-u', 'origin', 'feature/rewrite']);
+
+  runGit(repoRoot, ['reset', '--hard', 'HEAD~1']);
+  commitFile(repoRoot, 'rewrite.txt', 'rewritten\n', 'Rewritten history');
+  runGit(repoRoot, ['checkout', 'main']);
+
+  const pushResult = await forcePushBranch(repoRoot, 'feature/rewrite');
+
+  assert.deepEqual(pushResult, {
+    branchName: 'feature/rewrite',
+    upstreamName: 'origin/feature/rewrite',
+    didPull: false,
+    didPush: true,
+    publishedUpstream: false,
+  });
+  assert.equal(runGit(repoRoot, ['rev-parse', '--abbrev-ref', 'HEAD']), 'main');
+  assert.equal(
+    runGit(repoRoot, ['ls-remote', '--heads', 'origin', 'feature/rewrite']).split(/\s+/u)[0],
+    runGit(repoRoot, ['rev-parse', 'feature/rewrite'])
+  );
 });
