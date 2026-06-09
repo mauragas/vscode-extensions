@@ -116,6 +116,11 @@ test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, histor
   ]);
   assert.equal(settings['gitBranchesPanel.tags.pushAfterCreate'].default, false);
   assert.equal(settings['gitBranchesPanel.tags.requireMessageForAnnotated'].default, true);
+  assert.equal(settings['gitBranchesPanel.branchContextMenu.showRebaseCurrentOntoSelected'].default, false);
+  assert.equal(settings['gitBranchesPanel.branchContextMenu.showRebaseSelectedOntoCurrent'].default, false);
+  assert.equal(settings['gitBranchesPanel.branchContextMenu.showSquashMergeIntoCurrent'].default, false);
+  assert.equal(settings['gitBranchesPanel.branchContextMenu.showResetCurrentToSelected'].default, false);
+  assert.equal(settings['gitBranchesPanel.branchContextMenu.showForcePushWithLease'].default, false);
   assert.equal(settings['gitBranchesPanel.search.includeHooks'].default, false);
   assert.equal(settings['gitBranchesPanel.search.maxResults'].default, 200);
   assert.equal(settings['gitBranchesPanel.search.autoLoadAllSections'].default, true);
@@ -240,12 +245,52 @@ test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, histor
   );
   assert.ok(
     hasViewItemMenu(
-      'gitBranchesPanel.showAdvancedBranchOperations',
+      'gitBranchesPanel.rebaseCurrentOntoSelected',
       (item) =>
         item.when ===
-          'viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/' &&
-        item.group === '2_more@0.5'
+          'config.gitBranchesPanel.branchContextMenu.showRebaseCurrentOntoSelected && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/' &&
+        item.group === '2_advanced@1'
     )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.rebaseSelectedOntoCurrent',
+      (item) =>
+        item.when ===
+          'config.gitBranchesPanel.branchContextMenu.showRebaseSelectedOntoCurrent && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/' &&
+        item.group === '2_advanced@2'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.squashMergeIntoCurrent',
+      (item) =>
+        item.when ===
+          'config.gitBranchesPanel.branchContextMenu.showSquashMergeIntoCurrent && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/' &&
+        item.group === '2_advanced@3'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.resetCurrentToSelected',
+      (item) =>
+        item.when ===
+          'config.gitBranchesPanel.branchContextMenu.showResetCurrentToSelected && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/' &&
+        item.group === '2_advanced@4'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.forcePushWithLease',
+      (item) =>
+        item.when ===
+          'config.gitBranchesPanel.branchContextMenu.showForcePushWithLease && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)$/' &&
+        item.group === '2_advanced@5'
+    )
+  );
+  assert.equal(
+    hasViewItemMenu('gitBranchesPanel.showAdvancedBranchOperations', () => true),
+    false
   );
   assert.ok(
     hasViewItemMenu(

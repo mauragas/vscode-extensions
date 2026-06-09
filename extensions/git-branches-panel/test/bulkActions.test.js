@@ -160,6 +160,16 @@ test('showAdvancedActions routes the quick-pick selection to the prune command',
   await vscodeState.registeredCommands['gitBranchesPanel.showAdvancedActions']();
 
   assert.equal(vscodeState.quickPickRequests.length, 1);
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (item) => item.label === '$(diff-multiple) Compare two refs…'
+    )
+  );
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (item) => item.label === '$(add) Add remote…'
+    )
+  );
   assert.deepEqual(vscodeState.executedCommands, [
     {
       command: 'gitBranchesPanel.pruneMissingUpstreamBranches',

@@ -522,7 +522,7 @@ function buildRepositoryActionItems(commandContext: CommandContext): AdvancedAct
   return [
     {
       actionId: 'compareTwoRefs',
-      label: 'Compare two refs…',
+      label: '$(diff-multiple) Compare two refs…',
       description: 'Pick any two branches, remote branches, tags, or stashes and open a file comparison',
       run: async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.compareTwoRefs');
@@ -530,7 +530,7 @@ function buildRepositoryActionItems(commandContext: CommandContext): AdvancedAct
     },
     {
       actionId: 'addRemote',
-      label: 'Add remote…',
+      label: '$(add) Add remote…',
       description: 'Add a new fetch/push remote to the active repository',
       run: async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.addRemote');
@@ -538,7 +538,7 @@ function buildRepositoryActionItems(commandContext: CommandContext): AdvancedAct
     },
     {
       actionId: 'pruneWorktrees',
-      label: 'Prune worktrees…',
+      label: '$(clear-all) Prune worktrees…',
       description: 'Remove stale worktree metadata for missing or broken linked worktrees',
       run: async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.pruneWorktrees');
@@ -546,7 +546,7 @@ function buildRepositoryActionItems(commandContext: CommandContext): AdvancedAct
     },
     {
       actionId: 'pruneMissingUpstream',
-      label: 'Prune local branches with missing upstream',
+      label: '$(trash) Prune local branches with missing upstream',
       description: 'Delete non-current local branches whose tracked upstream no longer exists',
       run: async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.pruneMissingUpstreamBranches');
@@ -554,7 +554,7 @@ function buildRepositoryActionItems(commandContext: CommandContext): AdvancedAct
     },
     {
       actionId: 'pushAllTags',
-      label: 'Push all tags…',
+      label: '$(cloud-upload) Push all tags…',
       description: 'Choose a remote and push every local tag',
       run: async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.pushAllTags');
@@ -562,7 +562,7 @@ function buildRepositoryActionItems(commandContext: CommandContext): AdvancedAct
     },
     {
       actionId: 'fetchAllPrune',
-      label: 'Fetch all (prune)',
+      label: '$(repo-fetch) Fetch all (prune)',
       description: 'Fetch every remote and prune deleted remote refs',
       run: async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.fetchAllPrune');
@@ -570,7 +570,7 @@ function buildRepositoryActionItems(commandContext: CommandContext): AdvancedAct
     },
     {
       actionId: 'cleanRepository',
-      label: 'Clean repository…',
+      label: '$(trash) Clean repository…',
       description: 'Run git clean -fdx to remove untracked and ignored files',
       run: async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.cleanRepository');
@@ -578,7 +578,7 @@ function buildRepositoryActionItems(commandContext: CommandContext): AdvancedAct
     },
     {
       actionId: 'refresh',
-      label: 'Refresh branch tree',
+      label: '$(refresh) Refresh branch tree',
       description: 'Reload the currently visible tree sections',
       run: async () => {
         await commandContext.refresh({ fetchRemoteState: false });

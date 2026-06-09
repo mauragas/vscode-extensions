@@ -1735,14 +1735,34 @@
           "group": "1_history@3"
         },
         {
+          "command": "gitBranchesPanel.rebaseCurrentOntoSelected",
+          "when": "config.gitBranchesPanel.branchContextMenu.showRebaseCurrentOntoSelected && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
+          "group": "2_advanced@1"
+        },
+        {
+          "command": "gitBranchesPanel.rebaseSelectedOntoCurrent",
+          "when": "config.gitBranchesPanel.branchContextMenu.showRebaseSelectedOntoCurrent && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
+          "group": "2_advanced@2"
+        },
+        {
+          "command": "gitBranchesPanel.squashMergeIntoCurrent",
+          "when": "config.gitBranchesPanel.branchContextMenu.showSquashMergeIntoCurrent && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
+          "group": "2_advanced@3"
+        },
+        {
+          "command": "gitBranchesPanel.resetCurrentToSelected",
+          "when": "config.gitBranchesPanel.branchContextMenu.showResetCurrentToSelected && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
+          "group": "2_advanced@4"
+        },
+        {
+          "command": "gitBranchesPanel.forcePushWithLease",
+          "when": "config.gitBranchesPanel.branchContextMenu.showForcePushWithLease && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)$/",
+          "group": "2_advanced@5"
+        },
+        {
           "command": "gitBranchesPanel.showBranchActions",
           "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "2_more@1"
-        },
-        {
-          "command": "gitBranchesPanel.showAdvancedBranchOperations",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
-          "group": "2_more@0.5"
         },
         {
           "command": "gitBranchesPanel.checkoutTag",
@@ -2129,6 +2149,31 @@
             "deleteOrCleanup"
           ],
           "description": "Ordered list of branch right-click actions to show before 'More Branch Actions...'. Remove action ids to hide them; the full fallback menu always remains available from 'More Branch Actions...'."
+        },
+        "gitBranchesPanel.branchContextMenu.showRebaseCurrentOntoSelected": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show 'Rebase Current onto Selected' directly in the branch context menu instead of only inside More Branch Actions..."
+        },
+        "gitBranchesPanel.branchContextMenu.showRebaseSelectedOntoCurrent": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show 'Rebase Selected onto Current' directly in the branch context menu for local non-current branches."
+        },
+        "gitBranchesPanel.branchContextMenu.showSquashMergeIntoCurrent": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show 'Squash Merge into Current' directly in the branch context menu."
+        },
+        "gitBranchesPanel.branchContextMenu.showResetCurrentToSelected": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show 'Reset Current to Selected...' directly in the branch context menu."
+        },
+        "gitBranchesPanel.branchContextMenu.showForcePushWithLease": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show 'Force Push with Lease' directly in the branch context menu for tracked local branches."
         },
         "gitBranchesPanel.sortOrder": {
           "type": "string",

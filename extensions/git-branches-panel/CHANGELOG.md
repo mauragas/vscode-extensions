@@ -52,6 +52,8 @@ All notable changes to this project will be documented in this file.
 - Added support for annotated tags, signed annotated tags, single-tag pushes, remote tag deletion, tag-vs-current comparisons, tag detail views, and copying a tag's peeled target SHA
 - Added on-demand tag metadata loading so **Show Tag Details** can surface the tag type, target SHA, author metadata, annotation message, and signature state
 - Added advanced branch operations for **Rebase Current onto Selected**, **Rebase Selected onto Current**, **Squash Merge into Current**, **Reset Current to Selected...**, **Force Push with Lease**, and **Advanced Branch Operations...**
+- Moved the advanced branch commands directly into **More Branch Actions...** by default, and added opt-in `branchContextMenu.show*` settings for surfacing each one back in the first-level branch context menu when preferred
+- Added codicon labels to the repository-level **More Actions** quick pick so entries such as compare, add remote, prune, fetch, and refresh are easier to scan visually
 - Added safety checks for advanced branch operations, including in-progress Git operation detection, dirty-working-tree prompts, reset mode selection, and optional post-rewrite force-push flows with lease protection
 - Reused the existing temporary-worktree sync pattern for non-current branch rebases so rewritten branches can be updated without disturbing the user's active checkout
 - Refreshed inline sync cues so incoming divergence uses blue markers and outgoing divergence uses green markers directly in branch labels

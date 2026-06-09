@@ -7,6 +7,7 @@ import {
 } from '../search/refSearch';
 import type { BranchSectionKey } from '../treeDataLoader';
 import { getVisibleSectionKeys } from '../sectionVisibility';
+import { getAdvancedBranchActionDefinitions } from './advancedBranchCommands';
 import type { CommandContext } from './shared';
 
 const SEARCHABLE_SECTIONS: readonly BranchSectionKey[] = [
@@ -201,9 +202,6 @@ function buildSearchActionItems(
       }),
       createSearchActionItem('$(diff-multiple) Open Changed Files for Ref', async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.openChangedFilesForRef', item);
-      }),
-      createSearchActionItem('$(tools) Advanced Branch Operations...', async () => {
-        await vscode.commands.executeCommand('gitBranchesPanel.showAdvancedBranchOperations', item);
       })
     );
 
@@ -240,9 +238,6 @@ function buildSearchActionItems(
       }),
       createSearchActionItem('$(diff-multiple) Open Changed Files for Ref', async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.openChangedFilesForRef', item);
-      }),
-      createSearchActionItem('$(tools) Advanced Branch Operations...', async () => {
-        await vscode.commands.executeCommand('gitBranchesPanel.showAdvancedBranchOperations', item);
       })
     );
   }
@@ -258,11 +253,16 @@ function buildSearchActionItems(
       createSearchActionItem('$(history) Show Branch Commits', async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.showBranchCommits', item);
       }),
-      createSearchActionItem('$(tools) Advanced Branch Operations...', async () => {
-        await vscode.commands.executeCommand('gitBranchesPanel.showAdvancedBranchOperations', item);
-      }),
       createSearchActionItem('$(trash) Remove Stale Tracking Ref', async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.removeStaleRemoteTrackingRef', item);
+      })
+    );
+  }
+
+  for (const advancedAction of getAdvancedBranchActionDefinitions(item)) {
+    actionItems.push(
+      createSearchActionItem(advancedAction.label, async () => {
+        await vscode.commands.executeCommand(advancedAction.commandId, item);
       })
     );
   }

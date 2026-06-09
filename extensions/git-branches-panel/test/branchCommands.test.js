@@ -874,7 +874,7 @@ test('showBranchActions keeps current-branch checkout available even when the pr
   );
 });
 
-test('showBranchActions exposes compare-with-upstream and history actions for tracked local branches', async () => {
+test('showBranchActions exposes compare-with-upstream, history, and advanced actions for tracked local branches', async () => {
   const vscodeState = createVscodeState();
 
   createBranchCommandsModule({
@@ -988,6 +988,31 @@ test('showBranchActions exposes compare-with-upstream and history actions for tr
   assert.ok(
     vscodeState.quickPickRequests[0].items.some(
       (quickPickItem) => quickPickItem.label === '$(diff-multiple) Open Changed Files for Ref'
+    )
+  );
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(git-merge) Rebase Current onto Selected'
+    )
+  );
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(git-merge) Rebase Selected onto Current'
+    )
+  );
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(git-merge) Squash Merge into Current'
+    )
+  );
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(discard) Reset Current to Selected…'
+    )
+  );
+  assert.ok(
+    !vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(tools) Advanced Branch Operations...'
     )
   );
 });

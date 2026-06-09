@@ -56,6 +56,7 @@ import {
 } from '../extensionHelpers';
 import { BranchTreeItem } from '../treeProvider';
 import { getGitApi, NO_CURRENT_BRANCH_MESSAGE, type CommandContext } from './shared';
+import { getAdvancedBranchActionDefinitions } from './advancedBranchCommands';
 
 const NORMALIZE_NEW_BRANCH_NAMES_SETTING = 'normalizeNewBranchNames';
 const PROTECTED_BRANCH_NAMES_SETTING = 'protectedBranchNames';
@@ -1062,14 +1063,15 @@ function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
       }),
       createBranchActionItem('openChangedFilesForRef', '$(diff-multiple) Open Changed Files for Ref', async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.openChangedFilesForRef', item);
-      }),
-      createBranchActionItem(
-        'showAdvancedBranchOperations',
-        '$(tools) Advanced Branch Operations...',
-        async () => {
-          await vscode.commands.executeCommand('gitBranchesPanel.showAdvancedBranchOperations', item);
-        }
-      )
+      })
+    );
+  }
+
+  for (const advancedAction of getAdvancedBranchActionDefinitions(item)) {
+    items.push(
+      createBranchActionItem(advancedAction.actionId, advancedAction.label, async () => {
+        await vscode.commands.executeCommand(advancedAction.commandId, item);
+      })
     );
   }
 

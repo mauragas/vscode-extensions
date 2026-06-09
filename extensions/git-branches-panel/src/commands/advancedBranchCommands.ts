@@ -18,6 +18,16 @@ const ALLOW_NON_CURRENT_BRANCH_REBASE_SETTING = 'advanced.allowNonCurrentBranchR
 const REBASE_AUTOSTASH_SETTING = 'advanced.rebaseAutostash';
 const FORCE_PUSH_ACTION = 'Force Push with Lease';
 
+export const ADVANCED_BRANCH_ACTION_IDS = [
+  'rebaseCurrentOntoSelected',
+  'rebaseSelectedOntoCurrent',
+  'squashMergeIntoCurrent',
+  'resetCurrentToSelected',
+  'forcePushWithLease',
+] as const;
+
+export type AdvancedBranchActionId = (typeof ADVANCED_BRANCH_ACTION_IDS)[number];
+
 interface AdvancedBranchConfiguration {
   enableForcePushWithLease: boolean;
   defaultResetMode: ResetMode;
@@ -27,6 +37,11 @@ interface AdvancedBranchConfiguration {
 
 interface AdvancedBranchActionQuickPickItem extends vscode.QuickPickItem {
   run(): Promise<void>;
+}
+
+export interface AdvancedBranchActionDefinition extends vscode.QuickPickItem {
+  actionId: AdvancedBranchActionId;
+  commandId: string;
 }
 
 interface AdvancedOperationTarget {
@@ -467,62 +482,15 @@ async function completeRewriteOperation(options: {
 
 function buildAdvancedBranchActionItems(
   target: AdvancedOperationTarget,
-  currentBranch: NonNullable<Awaited<ReturnType<CommandContext['requireCurrentBranch']>>>,
-  configuration: AdvancedBranchConfiguration
+  _currentBranch: NonNullable<Awaited<ReturnType<CommandContext['requireCurrentBranch']>>>,
+  _configuration: AdvancedBranchConfiguration
 ): AdvancedBranchActionQuickPickItem[] {
-  const actionItems: AdvancedBranchActionQuickPickItem[] = [];
-
-  if (canRebaseCurrentOntoSelected(target) && target.branchName !== currentBranch.name) {
-    actionItems.push({
-      label: '$(git-merge) Rebase Current onto Selected',
-      description: `Rebase '${currentBranch.name}' onto '${target.branchName}'`,
-      run: async () => {
-        await vscode.commands.executeCommand('gitBranchesPanel.rebaseCurrentOntoSelected', target);
-      },
-    });
-  }
-
-  if (canRebaseSelectedOntoCurrent(target, configuration) && target.branchName !== currentBranch.name) {
-    actionItems.push({
-      label: '$(git-merge) Rebase Selected onto Current',
-      description: `Rebase '${target.branchName}' onto '${currentBranch.name}' in a temporary worktree`,
-      run: async () => {
-        await vscode.commands.executeCommand('gitBranchesPanel.rebaseSelectedOntoCurrent', target);
-      },
-    });
-  }
-
-  if (canSquashMergeIntoCurrent(target) && target.branchName !== currentBranch.name) {
-    actionItems.push({
-      label: '$(git-merge) Squash Merge into Current',
-      description: `Stage the squashed changes from '${target.branchName}' on '${currentBranch.name}'`,
-      run: async () => {
-        await vscode.commands.executeCommand('gitBranchesPanel.squashMergeIntoCurrent', target);
-      },
-    });
-  }
-
-  if (canResetCurrentToSelected(target) && target.branchName !== currentBranch.name) {
-    actionItems.push({
-      label: '$(discard) Reset Current to Selected…',
-      description: `Move '${currentBranch.name}' to '${target.branchName}' with soft, mixed, or hard reset`,
-      run: async () => {
-        await vscode.commands.executeCommand('gitBranchesPanel.resetCurrentToSelected', target);
-      },
-    });
-  }
-
-  if (canForcePushWithLease(target, configuration)) {
-    actionItems.push({
-      label: '$(cloud-upload) Force Push with Lease',
-      description: `Safely rewrite the remote history for '${target.branchName}'`,
-      run: async () => {
-        await vscode.commands.executeCommand('gitBranchesPanel.forcePushWithLease', target);
-      },
-    });
-  }
-
-  return actionItems;
+  return getAdvancedBranchActionDefinitions(target).map((actionDefinition) => ({
+    ...actionDefinition,
+    run: async () => {
+      await vscode.commands.executeCommand(actionDefinition.commandId, target);
+    },
+  }));
 }
 
 function getAdvancedBranchConfiguration(): AdvancedBranchConfiguration {
@@ -540,6 +508,66 @@ function getAdvancedBranchConfiguration(): AdvancedBranchConfiguration {
     ),
     rebaseAutostash: configuration.get<boolean>(REBASE_AUTOSTASH_SETTING, true),
   };
+}
+
+export function getAdvancedBranchActionDefinitions(
+  item: Pick<BranchTreeItem, 'branchInfo' | 'branchName' | 'nodeType' | 'repoRoot'>
+): AdvancedBranchActionDefinition[] {
+  const target = toAdvancedOperationTarget(item);
+  if (!target) {
+    return [];
+  }
+
+  const configuration = getAdvancedBranchConfiguration();
+  const actionDefinitions: AdvancedBranchActionDefinition[] = [];
+  const isCurrentTarget = target.nodeType === 'currentBranch' || Boolean(target.branchInfo?.isCurrent);
+
+  if (canRebaseCurrentOntoSelected(target) && !isCurrentTarget) {
+    actionDefinitions.push({
+      actionId: 'rebaseCurrentOntoSelected',
+      commandId: 'gitBranchesPanel.rebaseCurrentOntoSelected',
+      label: '$(git-merge) Rebase Current onto Selected',
+      description: 'Rebase the currently checked out branch onto the selected ref',
+    });
+  }
+
+  if (canRebaseSelectedOntoCurrent(target, configuration) && !isCurrentTarget) {
+    actionDefinitions.push({
+      actionId: 'rebaseSelectedOntoCurrent',
+      commandId: 'gitBranchesPanel.rebaseSelectedOntoCurrent',
+      label: '$(git-merge) Rebase Selected onto Current',
+      description: 'Rebase the selected local branch onto the current branch in a temporary worktree',
+    });
+  }
+
+  if (canSquashMergeIntoCurrent(target) && !isCurrentTarget) {
+    actionDefinitions.push({
+      actionId: 'squashMergeIntoCurrent',
+      commandId: 'gitBranchesPanel.squashMergeIntoCurrent',
+      label: '$(git-merge) Squash Merge into Current',
+      description: 'Stage a squash merge of the selected ref into the current branch',
+    });
+  }
+
+  if (canResetCurrentToSelected(target) && !isCurrentTarget) {
+    actionDefinitions.push({
+      actionId: 'resetCurrentToSelected',
+      commandId: 'gitBranchesPanel.resetCurrentToSelected',
+      label: '$(discard) Reset Current to Selected…',
+      description: 'Reset the current branch to the selected ref with soft, mixed, or hard mode',
+    });
+  }
+
+  if (canForcePushWithLease(target, configuration)) {
+    actionDefinitions.push({
+      actionId: 'forcePushWithLease',
+      commandId: 'gitBranchesPanel.forcePushWithLease',
+      label: '$(cloud-upload) Force Push with Lease',
+      description: 'Force-push the selected tracked local branch with lease protection',
+    });
+  }
+
+  return actionDefinitions;
 }
 
 async function resolveAdvancedOperationTarget(

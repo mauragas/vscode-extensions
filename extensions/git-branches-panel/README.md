@@ -39,7 +39,7 @@ section opens first, while Remote, Stash, Worktree, Hooks, and Tags stay collaps
 - 🧭 **Focused default expansion** — Local starts expanded while other sections and nested folders start collapsed
 - ✅ **Current branch first** — highlighted with a `●` prefix and a green icon
 - 🪄 **Optional current branch banner** — keep or hide the top `Current branch: ...` summary from settings, now off by default for a quieter tree
-- 🧭 **Customizable branch right-click menu** — reorder or hide the primary branch actions from settings while **More Branch Actions...** always stays available as the full fallback picker
+- 🧭 **Customizable branch right-click menu** — reorder or hide the primary branch actions from settings while **More Branch Actions...** always stays available as the full fallback picker and now includes the advanced rebase/reset/squash/force-push flows directly
 - 🎛️ **Configurable toolbar quick actions** — show or hide each extension-view toolbar button independently from settings
 - 🧺 **Changes-view stash buttons** — surface stash shortcuts in the built-in **Changes** view title bar, with **Stash all changes silently** enabled there by default
 - 🖱️ **Section hover quick actions** — hover Local, Remote, Stash, Worktree, and Tags groups to reveal section-specific inline buttons for high-frequency actions
@@ -132,7 +132,7 @@ section opens first, while Remote, Stash, Worktree, Hooks, and Tags stay collaps
 | Copy Tag Target SHA | Copy the peeled target SHA for the selected tag |
 | Cherry-pick into Current Branch | Cherry-pick the selected branch into the currently checked out branch |
 | Compare with Current Branch | Open a multi-file comparison between the selected branch and the checked out branch |
-| Advanced Branch Operations... | Open a quick pick of advanced ref-rewrite actions for the selected branch or ref |
+| Advanced Branch Operations... | Open the standalone advanced branch operation picker from the Command Palette when you want those actions outside the normal branch menu flow |
 | Rebase Current onto Selected | Rebase the checked out branch onto the selected branch, remote branch, or tag |
 | Rebase Selected onto Current | Rebase a selected non-current local branch onto the current branch in a temporary worktree |
 | Squash Merge into Current | Stage a squash merge of the selected ref into the current branch without creating a commit |
@@ -225,7 +225,12 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 | `gitBranchesPanel.normalizeNewBranchNames` | `false` | Apply extra lowercase kebab-case normalization after branch creation first sanitizes the entered text into a valid Git branch name, stripping special characters other than `-` while preserving `/` folder separators |
 | `gitBranchesPanel.newBranchPrefixes` | `["feature", "bugfix", "hotfix"]` | Optional prefixes to offer before the new-branch input opens; use an empty array to disable the picker |
 | `gitBranchesPanel.protectedBranchNames` | `["main", "master", "develop"]` | Branch names to protect from delete actions; remote branches also honor the short branch name, so `main` protects `origin/main` |
-| `gitBranchesPanel.branchContextMenu.primaryActions` | `["syncOrPublish", "checkout", "newBranchFromSelected", "newBranchFromSelectedAndCheckout", "createWorktree", "renameBranch", "createTag", "copyBranchName", "compareWithCurrent", "mergeIntoCurrent", "cherryPickIntoCurrent", "deleteOrCleanup"]` | Ordered list of primary branch right-click actions; remove ids to hide them, while **More Branch Actions...** remains the full fallback picker |
+| `gitBranchesPanel.branchContextMenu.primaryActions` | `["syncOrPublish", "checkout", "newBranchFromSelected", "newBranchFromSelectedAndCheckout", "createWorktree", "renameBranch", "createTag", "copyBranchName", "compareWithCurrent", "mergeIntoCurrent", "cherryPickIntoCurrent", "deleteOrCleanup"]` | Ordered list of primary branch right-click actions; remove ids to hide them, while **More Branch Actions...** remains the full fallback picker with the advanced branch commands included there by default |
+| `gitBranchesPanel.branchContextMenu.showRebaseCurrentOntoSelected` | `false` | Show **Rebase Current onto Selected** directly in the first-level branch context menu |
+| `gitBranchesPanel.branchContextMenu.showRebaseSelectedOntoCurrent` | `false` | Show **Rebase Selected onto Current** directly in the first-level branch context menu for local non-current branches |
+| `gitBranchesPanel.branchContextMenu.showSquashMergeIntoCurrent` | `false` | Show **Squash Merge into Current** directly in the first-level branch context menu |
+| `gitBranchesPanel.branchContextMenu.showResetCurrentToSelected` | `false` | Show **Reset Current to Selected...** directly in the first-level branch context menu |
+| `gitBranchesPanel.branchContextMenu.showForcePushWithLease` | `false` | Show **Force Push with Lease** directly in the first-level branch context menu for tracked local branches |
 | `gitBranchesPanel.sortOrder` | `alphabetical` | `alphabetical` or `recent` |
 | `gitBranchesPanel.tagSortOrder` | `versionDescending` | `versionDescending`, `versionAscending`, `alphabetical`, or `recent`; version-aware sorting recognizes semver-like suffixes such as `v1.2.3` or `release/v1.2.3` and keeps non-version tags after version tags |
 | `gitBranchesPanel.multiRepository.mode` | `auto` | Show repository containers only when needed (`auto`), always group sections under repositories (`alwaysGroupByRepository`), or show only the active repository (`singleActiveRepository`) |
@@ -277,6 +282,7 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 - Extend `gitBranchesPanel.protectedBranchNames` with long-lived release or environment branches to add an extra UI safety net before delete commands run
 - Leave `gitBranchesPanel.showCurrentBranchInfo` disabled if you prefer a leaner tree, or turn it back on if you want the current branch banner above the sections again
 - Trim `gitBranchesPanel.branchContextMenu.primaryActions` down to a smaller ordered list if you want a shorter right-click menu, knowing **More Branch Actions...** still keeps every supported branch action one click away
+- Turn on any of the `gitBranchesPanel.branchContextMenu.show*` advanced-action toggles if you want rebase, squash-merge, reset, or force-push-with-lease entries visible directly in the first-level branch context menu again
 - Keep `gitBranchesPanel.tagSortOrder` on `versionDescending` for release-style tags, or switch to `recent` or `alphabetical` if your repository uses non-version tag names more heavily
 - Leave `gitBranchesPanel.multiRepository.mode` on `auto` to keep the familiar flat layout for single-repo workspaces while automatically adding repository containers in polyrepo workspaces
 - Switch `gitBranchesPanel.multiRepository.mode` to `singleActiveRepository` if you prefer focusing on one repository at a time while using **Select Active Repository** or **Focus Repository from Active Editor** to move around
@@ -286,7 +292,7 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 - Set `gitBranchesPanel.tags.defaultType = signedAnnotated` if your release process signs tags by default, or leave it on `annotated` for a safer out-of-the-box flow that does not require signing keys
 - Turn on `gitBranchesPanel.tags.pushAfterCreate` if you usually publish release tags immediately after creating them
 - Use **Show Tag Details** and **Copy Tag Target SHA** when you need to verify exactly what a release tag points to without dropping to the terminal
-- Use **Advanced Branch Operations...** on a selected branch to keep rebase, reset, squash-merge, and force-push flows discoverable without cluttering every inline menu
+- Use **More Branch Actions...** on a selected branch to access the advanced rebase, reset, squash-merge, and force-push flows without a second nested picker, or turn on the dedicated `branchContextMenu.show*` settings if you want those commands back in the first-level right-click menu
 - Leave `gitBranchesPanel.advanced.rebaseAutostash` enabled unless you explicitly prefer cancelling rebases whenever the current branch has local changes
 - Disable `gitBranchesPanel.advanced.allowNonCurrentBranchRebase` if you want to keep all rebases scoped to the checked-out branch only
 - Use **Find Ref...** with prefixes like `remote:`, `tag:`, `stash:`, or `state:stale` when repositories get large and you want a faster path than scrolling the tree
