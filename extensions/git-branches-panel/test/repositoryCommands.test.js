@@ -290,6 +290,38 @@ test('fetchAllRepositories fetches every repository and refreshes once', async (
   assert.deepEqual(vscodeState.infoMessages.at(-1), 'Fetched all remotes in every repository.');
 });
 
+test('fetchAllRepositories reports partial failures without claiming every repository succeeded', async () => {
+  const vscodeState = createVscodeState();
+  const fetchCalls = [];
+
+  const { commandContext } = createRepositoryCommandsModule({
+    vscodeState,
+    gitMock: {
+      async cleanRepository() {},
+      async fetchAllRemotes(repoRoot) {
+        fetchCalls.push(repoRoot);
+        if (repoRoot === '/repo-b') {
+          throw new Error('network is grumpy');
+        }
+      },
+      async fetchRemoteState() {},
+    },
+  });
+  commandContext.state.repositoryDescriptors = [
+    { repoRoot: '/repo-a', label: 'repo-a' },
+    { repoRoot: '/repo-b', label: 'repo-b' },
+  ];
+
+  await vscodeState.registeredCommands['gitBranchesPanel.fetchAllRepositories']();
+
+  assert.deepEqual(fetchCalls, ['/repo-a', '/repo-b']);
+  assert.deepEqual(commandContext.state.refreshCalls, [{ fetchRemoteState: false }]);
+  assert.equal(
+    vscodeState.warningMessages.at(-1).message,
+    'Fetched remotes for 1 of 2 repositories. Failed: repo-b (network is grumpy).'
+  );
+});
+
 test('fetchAllRepositoriesPrune prunes every repository and refreshes once', async () => {
   const vscodeState = createVscodeState();
   const pruneCalls = [];

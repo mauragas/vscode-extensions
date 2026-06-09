@@ -126,6 +126,7 @@ async function handleFetchAllRepositories(commandContext: CommandContext): Promi
     },
     {
       successMessage: 'Fetched all remotes in every repository.',
+      partialSuccessPrefix: 'Fetched remotes for',
       errorPrefix: 'Failed to fetch all remotes across repositories',
       noRepositoriesMessage: 'No Git repositories are currently available.',
     }
@@ -140,6 +141,7 @@ async function handleFetchAllRepositoriesPrune(commandContext: CommandContext): 
     },
     {
       successMessage: 'Fetched all remotes with pruning in every repository.',
+      partialSuccessPrefix: 'Fetched and pruned remotes for',
       errorPrefix: 'Failed to fetch and prune remotes across repositories',
       noRepositoriesMessage: 'No Git repositories are currently available.',
     }
@@ -220,6 +222,7 @@ async function runForAllRepositories(
   operation: (repoRoot: string) => Promise<void>,
   options: {
     successMessage: string;
+    partialSuccessPrefix: string;
     errorPrefix: string;
     noRepositoriesMessage: string;
   }
@@ -254,8 +257,10 @@ async function runForAllRepositories(
   await commandContext.refresh({ fetchRemoteState: false });
 
   if (failures.length > 0) {
+    const successCount = repositories.length - failures.length;
+
     vscode.window.showWarningMessage(
-      `${options.successMessage} Some repositories failed: ${failures
+      `${options.partialSuccessPrefix} ${successCount} of ${repositories.length} repositories. Failed: ${failures
         .map((failure) => `${failure.label} (${failure.reason})`)
         .join('; ')}.`
     );

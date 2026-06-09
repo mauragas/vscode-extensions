@@ -32,7 +32,7 @@ import {
   type BranchSectionKey,
   type MultiRepositoryMode,
 } from './treeDataLoader';
-import { BranchTreeItem } from './treeItem';
+import { BranchTreeItem, type NodeType } from './treeItem';
 import { buildPinnedItemKey, PinnedItemsStore } from './pinnedItems';
 import {
   findContainerNode,
@@ -85,6 +85,11 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
 
   getTreeItem(element: BranchTreeItem): vscode.TreeItem {
     return element;
+  }
+
+  getParent(element: BranchTreeItem): BranchTreeItem | undefined {
+    const parentNode = findParentTreeNode(this.getVisibleTreeData(), element);
+    return parentNode ? new BranchTreeItem(parentNode) : undefined;
   }
 
   async getChildren(element?: BranchTreeItem): Promise<BranchTreeItem[]> {
@@ -313,7 +318,9 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     }
 
     await this.setActiveRepositoryFromItem(item);
-    await primaryTreeView.reveal(item, {
+    const revealTarget = findMatchingTreeItem(this.getVisibleTreeData(), item) ?? item;
+
+    await primaryTreeView.reveal(revealTarget, {
       expand: 3,
       focus: true,
       select: true,
@@ -423,6 +430,123 @@ function createBranchDataLoader(
   decorateBranchInfo: NonNullable<BranchDataLoaderDependencies['decorateBranchInfo']>
 ): BranchDataLoader {
   return new BranchDataLoader(createBranchDataLoaderDependencies(decorateBranchInfo));
+}
+
+type TreeContainerNode = Extract<BranchTreeNode, { kind: 'repository' | 'section' | 'folder' }>;
+
+function findMatchingTreeItem(
+  nodes: readonly BranchTreeNode[],
+  item: BranchTreeItem
+): BranchTreeItem | undefined {
+  const node = findMatchingTreeNode(nodes, item);
+  return node ? new BranchTreeItem(node) : undefined;
+}
+
+function findMatchingTreeNode(
+  nodes: readonly BranchTreeNode[],
+  item: BranchTreeItem
+): BranchTreeNode | undefined {
+  for (const node of nodes) {
+    if (doesNodeMatchTreeItem(node, item)) {
+      return node;
+    }
+
+    if (!isTreeContainerNode(node)) {
+      continue;
+    }
+
+    const nestedMatch = findMatchingTreeNode(node.children, item);
+    if (nestedMatch) {
+      return nestedMatch;
+    }
+  }
+
+  return undefined;
+}
+
+function findParentTreeNode(
+  nodes: readonly BranchTreeNode[],
+  item: BranchTreeItem,
+  parent?: TreeContainerNode
+): TreeContainerNode | undefined {
+  for (const node of nodes) {
+    if (doesNodeMatchTreeItem(node, item)) {
+      return parent;
+    }
+
+    if (!isTreeContainerNode(node)) {
+      continue;
+    }
+
+    const nestedParent = findParentTreeNode(node.children, item, node);
+    if (nestedParent) {
+      return nestedParent;
+    }
+  }
+
+  return undefined;
+}
+
+function isTreeContainerNode(node: BranchTreeNode): node is TreeContainerNode {
+  return node.kind === 'repository' || node.kind === 'section' || node.kind === 'folder';
+}
+
+function doesNodeMatchTreeItem(node: BranchTreeNode, item: BranchTreeItem): boolean {
+  switch (node.kind) {
+    case 'repository':
+      return item.nodeType === 'repository' && item.repoRoot === node.repoRoot;
+    case 'section':
+      return (
+        item.nodeType === 'section' &&
+        item.repoRoot === node.repoRoot &&
+        item.containerPath === node.path &&
+        item.containerScope === node.scope
+      );
+    case 'folder':
+      return (
+        item.nodeType === 'folder' &&
+        item.repoRoot === node.repoRoot &&
+        item.containerPath === node.path &&
+        item.containerScope === node.scope
+      );
+    case 'remote':
+      return (
+        item.nodeType === 'remoteConfig' &&
+        item.repoRoot === node.repoRoot &&
+        item.remoteInfo?.name === node.info.name
+      );
+    case 'branch':
+      return (
+        item.repoRoot === node.repoRoot &&
+        item.branchName === node.fullName &&
+        matchesBranchNodeType(item.nodeType, node.info)
+      );
+    default:
+      return false;
+  }
+}
+
+function matchesBranchNodeType(nodeType: NodeType, branch: BranchInfo): boolean {
+  const scope = branch.scope ?? 'local';
+
+  switch (scope) {
+    case 'remote':
+      return nodeType === (branch.remoteTrackingState === 'stale' ? 'staleRemoteBranch' : 'remoteBranch');
+    case 'tag':
+      return nodeType === 'tag';
+    case 'stash':
+      return nodeType === 'stash';
+    case 'worktree':
+      return nodeType === 'worktree';
+    case 'hook':
+      return nodeType === 'hook';
+    default:
+      if (branch.upstreamMissing) {
+        return nodeType === 'missingUpstreamBranch';
+      }
+
+      return branch.isCurrent ? nodeType === 'currentBranch' : nodeType === 'branch';
+  }
 }
 
 function createBranchDataLoaderDependencies(
