@@ -121,6 +121,18 @@ export function registerBulkActionCommands(
       async () => {
         await handlePruneMissingUpstreamBranches(commandContext);
       }
+    ),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.syncAllRepositoriesBranches',
+      async () => {
+        await handleSyncAllRepositoriesBranches(commandContext);
+      }
+    ),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.pullAllRepositoriesChanges',
+      async () => {
+        await handlePullAllRepositoriesChanges(commandContext);
+      }
     )
   );
 }
@@ -523,6 +535,115 @@ async function handlePruneMissingUpstreamBranches(commandContext: CommandContext
   } catch (error) {
     commandContext.showCommandError('Failed to prune local branches with missing upstreams', error);
   }
+}
+
+async function handleSyncAllRepositoriesBranches(commandContext: CommandContext): Promise<void> {
+  const repositories = commandContext.provider.getRepositoryDescriptors();
+  if (repositories.length === 0) {
+    vscode.window.showInformationMessage('No Git repositories are currently available.');
+    return;
+  }
+
+  const summaries: string[] = [];
+  const failures: string[] = [];
+  let shouldRefreshRemoteState = false;
+
+  for (const repository of repositories) {
+    try {
+      await fetchRemoteState(repository.repoRoot);
+      const branches = getAllLocalBranches(await getBranches(repository.repoRoot));
+      if (branches.length === 0) {
+        summaries.push(`${repository.label}: no local branches`);
+        continue;
+      }
+
+      const result = await syncAllLocalBranches(repository.repoRoot, branches);
+      shouldRefreshRemoteState ||= result.processed.some((branch) => branch.didPush);
+      summaries.push(
+        buildRepositoryWideSummary(repository.label, result.processed.length + result.failed.length, {
+          changedCount: result.processed.filter((branch) => branch.didPull || branch.didPush).length,
+          unchangedCount: countUpToDateSyncs(result.processed),
+          skippedCount: result.skippedNeedsPublish.length,
+          failedCount: result.failed.length,
+          skippedLabel: 'need publishing',
+        })
+      );
+
+      if (result.failed.length > 0) {
+        failures.push(`${repository.label}: ${formatFailureList(result.failed)}`);
+      }
+    } catch (error) {
+      failures.push(`${repository.label}: ${getErrorMessage(error)}`);
+    }
+  }
+
+  await commandContext.refresh({
+    fetchRemoteState: shouldRefreshRemoteState,
+    forceFetchRemoteState: shouldRefreshRemoteState,
+  });
+
+  const message = [`Synced tracked branches across ${repositories.length} repositories.`, ...summaries]
+    .filter(Boolean)
+    .join(' ');
+
+  if (failures.length > 0) {
+    vscode.window.showWarningMessage(`${message} Failures: ${failures.join('; ')}.`);
+    return;
+  }
+
+  vscode.window.showInformationMessage(message);
+}
+
+async function handlePullAllRepositoriesChanges(commandContext: CommandContext): Promise<void> {
+  const repositories = commandContext.provider.getRepositoryDescriptors();
+  if (repositories.length === 0) {
+    vscode.window.showInformationMessage('No Git repositories are currently available.');
+    return;
+  }
+
+  const summaries: string[] = [];
+  const failures: string[] = [];
+
+  for (const repository of repositories) {
+    try {
+      await fetchRemoteState(repository.repoRoot);
+      const branches = getAllLocalBranches(await getBranches(repository.repoRoot));
+      if (branches.length === 0) {
+        summaries.push(`${repository.label}: no local branches`);
+        continue;
+      }
+
+      const result = await pullAllLocalBranches(repository.repoRoot, branches);
+      summaries.push(
+        buildRepositoryWideSummary(repository.label, result.processed.length + result.failed.length, {
+          changedCount: result.processed.filter((branch) => branch.didPull).length,
+          unchangedCount: countUpToDateSyncs(result.processed),
+          skippedCount: result.skippedNeedsPublish.length,
+          failedCount: result.failed.length,
+          skippedLabel: 'need publishing',
+        })
+      );
+
+      if (result.failed.length > 0) {
+        failures.push(`${repository.label}: ${formatFailureList(result.failed)}`);
+      }
+    } catch (error) {
+      failures.push(`${repository.label}: ${getErrorMessage(error)}`);
+    }
+  }
+
+  await commandContext.refresh({ fetchRemoteState: false });
+
+  const message = [`Pulled tracked branches across ${repositories.length} repositories.`, ...summaries]
+    .filter(Boolean)
+    .join(' ');
+
+  if (failures.length > 0) {
+    vscode.window.showWarningMessage(`${message} Failures: ${failures.join('; ')}.`);
+    return;
+  }
+
+  vscode.window.showInformationMessage(message);
 }
 
 function buildRepositoryActionItems(commandContext: CommandContext): AdvancedActionItem[] {
@@ -965,6 +1086,38 @@ function buildFolderSyncResultMessage(folderLabel: string, result: BulkSyncResul
   }
 
   return parts.join(' ');
+}
+
+function buildRepositoryWideSummary(
+  repositoryLabel: string,
+  processedCount: number,
+  options: {
+    changedCount: number;
+    unchangedCount: number;
+    skippedCount: number;
+    failedCount: number;
+    skippedLabel: string;
+  }
+): string {
+  const detailParts: string[] = [];
+
+  if (options.changedCount > 0) {
+    detailParts.push(`${options.changedCount} updated`);
+  }
+
+  if (options.unchangedCount > 0) {
+    detailParts.push(`${options.unchangedCount} already up to date`);
+  }
+
+  if (options.skippedCount > 0) {
+    detailParts.push(`${options.skippedCount} ${options.skippedLabel}`);
+  }
+
+  if (options.failedCount > 0) {
+    detailParts.push(`${options.failedCount} failed`);
+  }
+
+  return `${repositoryLabel}: processed ${processedCount} branches${detailParts.length > 0 ? ` (${detailParts.join(', ')})` : ''}.`;
 }
 
 function buildFolderPushResultMessage(folderLabel: string, result: BulkPushResult): string {

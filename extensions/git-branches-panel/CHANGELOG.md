@@ -34,6 +34,8 @@ All notable changes to this project will be documented in this file.
 - Made current-branch banner, toolbar actions, and command routing repository-aware so item actions and no-item actions target the correct repository
 - Qualified tree identities by repository to prevent section and folder collisions across repositories with matching branch-folder paths
 - Added inline repository-row quick actions so grouped repository nodes can select themselves as the active repository and open repo-scoped **More Actions** without first changing the global toolbar context
+- Added richer repository-row hover actions so grouped repository nodes can create a branch, sync or publish their current branch, and fetch/prune that repository directly from the row
+- Changed grouped multi-repository toolbar behavior so repo-specific quick actions move onto repository rows while the top toolbar exposes all-repositories operations such as sync, pull, fetch, and fetch-prune across the shown repositories
 - Expanded automated coverage for multi-repository loading, provider behavior, manifest contributions, and repo-aware view messaging
 - Added per-section visibility settings under `gitBranchesPanel.sections.*.visible` so Local, Remote, Remotes, Stash, Worktree, Hooks, and Tags can each be shown or hidden independently
 - Changed the dedicated **Remotes** section to start hidden by default through `gitBranchesPanel.sections.remotes.visible = false`, while keeping the older `gitBranchesPanel.showRemotesSection` setting as a deprecated compatibility alias

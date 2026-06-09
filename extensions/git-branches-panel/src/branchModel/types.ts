@@ -57,6 +57,8 @@ export interface TreeRepository {
   repoRoot: string;
   description?: string;
   isActive?: boolean;
+  currentBranchBusy?: boolean;
+  currentBranchNeedsPublish?: boolean;
   expanded?: boolean;
   children: TreeSection[];
 }

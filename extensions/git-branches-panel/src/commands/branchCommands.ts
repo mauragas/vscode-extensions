@@ -140,11 +140,11 @@ export function registerBranchDomainCommands(
         await handleShowBranchActions(item);
       }
     ),
-    vscode.commands.registerCommand('gitBranchesPanel.syncCurrentBranch', async () => {
-      await handleSyncCurrentBranch(commandContext);
+    vscode.commands.registerCommand('gitBranchesPanel.syncCurrentBranch', async (item?: BranchTreeItem) => {
+      await handleSyncCurrentBranch(item, commandContext);
     }),
-    vscode.commands.registerCommand('gitBranchesPanel.publishCurrentBranch', async () => {
-      await handlePublishCurrentBranch(commandContext);
+    vscode.commands.registerCommand('gitBranchesPanel.publishCurrentBranch', async (item?: BranchTreeItem) => {
+      await handlePublishCurrentBranch(item, commandContext);
     }),
     vscode.commands.registerCommand('gitBranchesPanel.syncBranch', async (item: BranchTreeItem) => {
       await handleSyncBranch(item, commandContext);
@@ -161,8 +161,8 @@ export function registerBranchDomainCommands(
         await handleRemoveStaleRemoteTrackingRef(item, commandContext);
       }
     ),
-    vscode.commands.registerCommand('gitBranchesPanel.newBranch', async () => {
-      await handleNewBranch(commandContext);
+    vscode.commands.registerCommand('gitBranchesPanel.newBranch', async (item?: BranchTreeItem) => {
+      await handleNewBranch(item, commandContext);
     }),
     vscode.commands.registerCommand(
       'gitBranchesPanel.newBranchFromSelected',
@@ -300,8 +300,11 @@ async function handleShowBranchActions(item: BranchTreeItem | undefined): Promis
   await selection.run();
 }
 
-async function handleSyncCurrentBranch(commandContext: CommandContext): Promise<void> {
-  const repoRoot = await commandContext.requireRepoRoot();
+async function handleSyncCurrentBranch(
+  item: BranchTreeItem | undefined,
+  commandContext: CommandContext
+): Promise<void> {
+  const repoRoot = await commandContext.requireRepoRoot(item?.repoRoot);
   if (!repoRoot) {
     return;
   }
@@ -314,8 +317,11 @@ async function handleSyncCurrentBranch(commandContext: CommandContext): Promise<
   await syncBranchByName(repoRoot, currentBranch.name, commandContext);
 }
 
-async function handlePublishCurrentBranch(commandContext: CommandContext): Promise<void> {
-  const repoRoot = await commandContext.requireRepoRoot();
+async function handlePublishCurrentBranch(
+  item: BranchTreeItem | undefined,
+  commandContext: CommandContext
+): Promise<void> {
+  const repoRoot = await commandContext.requireRepoRoot(item?.repoRoot);
   if (!repoRoot) {
     return;
   }
@@ -442,8 +448,11 @@ async function handleDeleteBranch(
   }
 }
 
-async function handleNewBranch(commandContext: CommandContext): Promise<void> {
-  const repoRoot = await commandContext.requireRepoRoot();
+async function handleNewBranch(
+  item: BranchTreeItem | undefined,
+  commandContext: CommandContext
+): Promise<void> {
+  const repoRoot = await commandContext.requireRepoRoot(item?.repoRoot);
   if (!repoRoot) {
     return;
   }

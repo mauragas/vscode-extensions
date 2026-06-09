@@ -22,6 +22,7 @@ section opens first, while Remote, Stash, Worktree, Hooks, and Tags stay collaps
 - 🗂️ **Multi-repository aware** — automatically switches between a flat single-repo tree and repository containers when multiple Git repositories are open in the workspace
 - 🎯 **Active repository focus** — keep one repository active for toolbar actions and current-branch context, or switch directly to the repository that owns the active editor
 - 🏢 **Repository-row quick actions** — when repositories are grouped, each repository row can now expose inline actions to select it as the active repository and open repo-scoped **More Actions** directly from that row
+- 🧭 **Grouped multi-repo toolbar actions** — when repository containers are visible, the top toolbar switches from active-repository-only branch/fetch shortcuts to workspace-wide actions like syncing, pulling, and fetching across all shown repositories
 - 🔎 **Find Ref...** — search branches, tags, stashes, worktrees, and optionally hooks with query prefixes like `remote:` or `state:stale`
 - 🎚️ **Tree filtering** — filter the visible tree by query text, pinned-only mode, or a **Needs Attention** preset without losing the surrounding repository or folder context
 - 🕘 **Ref history quick picks** — browse branch and tag commits with actions to open changed files, inspect commit details, or copy commit SHAs
@@ -116,7 +117,11 @@ section opens first, while Remote, Stash, Worktree, Hooks, and Tags stay collaps
 | Pull All Branch Changes | Pull changes for every tracked local branch in the repository without pushing outgoing commits |
 | Fetch All | Fetch all remotes and refresh the tree without pruning stale refs |
 | Fetch All (Prune) | Fetch all remotes, prune deleted refs, and refresh the tree |
+| Fetch All Repositories | Fetch every shown repository when grouped multi-repository mode is active |
+| Fetch All Repositories (Prune) | Fetch and prune every shown repository when grouped multi-repository mode is active |
 | Sync Current Branch | Sync the currently checked out branch with its upstream |
+| Sync All Repositories Branches | Sync tracked local branches across every shown repository when grouped multi-repository mode is active |
+| Pull All Repositories Changes | Pull tracked local branches across every shown repository when grouped multi-repository mode is active |
 | Publish Current Branch | Publish the currently checked out branch to its remote |
 | Checkout Branch | Switch to the selected local or remote branch |
 | Checkout Tag | Check out the selected tag in detached HEAD state |
@@ -270,6 +275,7 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 | `gitBranchesPanel.toolbar.showCurrentBranchAction` | `true` | Show the **Sync Current Branch** or **Publish Current Branch** toolbar quick action |
 | `gitBranchesPanel.toolbar.showFetchAll` | `true` | Show the **Fetch All** toolbar quick action |
 | `gitBranchesPanel.toolbar.showFetchAllPrune` | `true` | Show the **Fetch All (Prune)** toolbar quick action |
+| `gitBranchesPanel.toolbar.showPullAllRepositoriesChanges` | `true` | Show the **Pull All Repositories Changes** toolbar quick action while grouped multi-repository mode is active |
 | `gitBranchesPanel.toolbar.showRefresh` | `true` | Show the **Refresh** toolbar quick action |
 | `gitBranchesPanel.toolbar.showAdvancedActions` | `true` | Show the **More Actions** toolbar quick action |
 | `gitBranchesPanel.toolbar.showSettings` | `true` | Show the **Open Extension Settings** toolbar quick action |
@@ -288,6 +294,7 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 - Leave `gitBranchesPanel.multiRepository.mode` on `auto` to keep the familiar flat layout for single-repo workspaces while automatically adding repository containers in polyrepo workspaces
 - Switch `gitBranchesPanel.multiRepository.mode` to `singleActiveRepository` if you prefer focusing on one repository at a time while using **Select Active Repository** or **Focus Repository from Active Editor** to move around
 - Enable `gitBranchesPanel.multiRepository.followActiveEditor` if you want the current-branch banner and toolbar actions to follow the repository that owns the file you are editing
+- In grouped multi-repository mode, use repository-row hover buttons for repo-specific actions like **New Branch**, **Sync / Publish Current Branch**, and **Fetch All (Prune)**, while the top toolbar switches to all-repositories actions
 - Hide any section you rarely use through `gitBranchesPanel.sections.*.visible`; the dedicated Remotes section now starts off by default so the tree can stay leaner unless you actively manage remotes
 - Leave `gitBranchesPanel.sections.remotes.visible` enabled if you want a visible place to fetch, rename, or remove remotes, or keep it hidden if you prefer accessing remote management from commands and the advanced-actions picker only
 - Set `gitBranchesPanel.tags.defaultType = signedAnnotated` if your release process signs tags by default, or leave it on `annotated` for a safer out-of-the-box flow that does not require signing keys

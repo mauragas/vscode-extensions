@@ -77,6 +77,12 @@ function createCommandContext() {
   const state = {
     refreshCalls: [],
     repoRoot: '/repo',
+    repositoryDescriptors: [
+      {
+        repoRoot: '/repo',
+        label: 'repo',
+      },
+    ],
     descendantBranches: new Map(),
     commandErrors: [],
     activeRepositoryItems: [],
@@ -88,6 +94,9 @@ function createCommandContext() {
       provider: {
         getDescendantBranches(containerKey) {
           return state.descendantBranches.get(containerKey) ?? [];
+        },
+        getRepositoryDescriptors() {
+          return state.repositoryDescriptors;
         },
         async setActiveRepositoryFromItem(item) {
           state.activeRepositoryItems.push(item?.repoRoot);
@@ -243,6 +252,120 @@ test('showAdvancedActions scopes the picker to the clicked repository item befor
 
   assert.deepEqual(commandContext.state.activeRepositoryItems, ['/repo-b']);
   assert.deepEqual(commandContext.state.refreshCalls, [{ fetchRemoteState: false }]);
+});
+
+test('syncAllRepositoriesBranches processes every repository and refreshes once', async () => {
+  const vscodeState = createVscodeState();
+  const fetchRemoteStateCalls = [];
+  const syncBranchCalls = [];
+
+  const { commandContext } = createBulkActionsModule({
+    vscodeState,
+    gitMock: {
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async deleteTag() {},
+      async fetchRemoteState(repoRoot) {
+        fetchRemoteStateCalls.push(repoRoot);
+      },
+      async getBranches(repoRoot) {
+        return [
+          {
+            name: repoRoot === '/repo-b' ? 'feature/two' : 'feature/one',
+            isCurrent: false,
+            upstreamName: `origin/${repoRoot === '/repo-b' ? 'feature/two' : 'feature/one'}`,
+            upstreamMissing: false,
+          },
+        ];
+      },
+      async pushBranch() {},
+      async pullBranchChanges() {
+        throw new Error('pullBranchChanges should not be called in this test');
+      },
+      async syncBranch(repoRoot, branchName, options) {
+        syncBranchCalls.push({ repoRoot, branchName, options });
+        return {
+          branchName,
+          upstreamName: `origin/${branchName}`,
+          didPull: false,
+          didPush: repoRoot === '/repo-b',
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+  commandContext.state.repositoryDescriptors = [
+    { repoRoot: '/repo-a', label: 'repo-a' },
+    { repoRoot: '/repo-b', label: 'repo-b' },
+  ];
+
+  await vscodeState.registeredCommands['gitBranchesPanel.syncAllRepositoriesBranches']();
+
+  assert.deepEqual(fetchRemoteStateCalls, ['/repo-a', '/repo-b']);
+  assert.deepEqual(syncBranchCalls, [
+    { repoRoot: '/repo-a', branchName: 'feature/one', options: { refreshRemoteState: false } },
+    { repoRoot: '/repo-b', branchName: 'feature/two', options: { refreshRemoteState: false } },
+  ]);
+  assert.deepEqual(commandContext.state.refreshCalls, [
+    { fetchRemoteState: true, forceFetchRemoteState: true },
+  ]);
+  assert.match(vscodeState.infoMessages.at(-1), /Synced tracked branches across 2 repositories/);
+});
+
+test('pullAllRepositoriesChanges processes every repository and refreshes once', async () => {
+  const vscodeState = createVscodeState();
+  const fetchRemoteStateCalls = [];
+  const pullBranchCalls = [];
+
+  const { commandContext } = createBulkActionsModule({
+    vscodeState,
+    gitMock: {
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async deleteTag() {},
+      async fetchRemoteState(repoRoot) {
+        fetchRemoteStateCalls.push(repoRoot);
+      },
+      async getBranches(repoRoot) {
+        return [
+          {
+            name: repoRoot === '/repo-b' ? 'feature/two' : 'feature/one',
+            isCurrent: false,
+            upstreamName: `origin/${repoRoot === '/repo-b' ? 'feature/two' : 'feature/one'}`,
+            upstreamMissing: false,
+          },
+        ];
+      },
+      async pullBranchChanges(repoRoot, branchName, options) {
+        pullBranchCalls.push({ repoRoot, branchName, options });
+        return {
+          branchName,
+          upstreamName: `origin/${branchName}`,
+          didPull: true,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async pushBranch() {},
+      async syncBranch() {
+        throw new Error('syncBranch should not be called in this test');
+      },
+    },
+  });
+  commandContext.state.repositoryDescriptors = [
+    { repoRoot: '/repo-a', label: 'repo-a' },
+    { repoRoot: '/repo-b', label: 'repo-b' },
+  ];
+
+  await vscodeState.registeredCommands['gitBranchesPanel.pullAllRepositoriesChanges']();
+
+  assert.deepEqual(fetchRemoteStateCalls, ['/repo-a', '/repo-b']);
+  assert.deepEqual(pullBranchCalls, [
+    { repoRoot: '/repo-a', branchName: 'feature/one', options: { refreshRemoteState: false } },
+    { repoRoot: '/repo-b', branchName: 'feature/two', options: { refreshRemoteState: false } },
+  ]);
+  assert.deepEqual(commandContext.state.refreshCalls, [{ fetchRemoteState: false }]);
+  assert.match(vscodeState.infoMessages.at(-1), /Pulled tracked branches across 2 repositories/);
 });
 
 test('pruneMissingUpstreamBranches force deletes stale branches and refreshes once', async () => {

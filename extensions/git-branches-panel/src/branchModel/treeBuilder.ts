@@ -312,6 +312,8 @@ export function buildRepositoryNode(options: {
   label: string;
   description?: string;
   isActive?: boolean;
+  currentBranchBusy?: boolean;
+  currentBranchNeedsPublish?: boolean;
   children: TreeSection[];
 }): TreeRepository {
   return {
@@ -321,6 +323,8 @@ export function buildRepositoryNode(options: {
     repoRoot: options.repoRoot,
     description: options.description,
     isActive: options.isActive,
+    currentBranchBusy: options.currentBranchBusy,
+    currentBranchNeedsPublish: options.currentBranchNeedsPublish,
     children: options.children,
   };
 }

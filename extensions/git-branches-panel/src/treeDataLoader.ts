@@ -2,6 +2,7 @@ import {
   buildBranchTree,
   buildRemoteTree,
   buildRepositoryNode,
+  isPublishableBranch,
   sortBranches,
   type BranchInfo,
   type BranchSortOrder,
@@ -330,11 +331,15 @@ export class BranchDataLoader {
       return undefined;
     }
 
+    const currentBranch = repositoryState.localBranches.find((branch) => branch.isCurrent);
+
     return buildRepositoryNode({
       repoRoot,
       label: repositoryState.descriptor.label,
       description: repositoryState.descriptor.description,
       isActive: repoRoot === activeRepoRoot,
+      currentBranchBusy: Boolean(currentBranch?.isSyncing),
+      currentBranchNeedsPublish: Boolean(currentBranch && isPublishableBranch(currentBranch)),
       children: this.buildSectionNodes(repoRoot),
     });
   }

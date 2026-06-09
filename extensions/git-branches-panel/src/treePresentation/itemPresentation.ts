@@ -25,7 +25,7 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
       nodeType: 'repository',
       label: node.label,
       id: containerKey,
-      contextValue: node.isActive ? 'activeRepository' : 'repository',
+      contextValue: getRepositoryContextValue(node),
       collapsibleState: node.expanded || node.isActive ? 'expanded' : 'collapsed',
       icon: node.isActive
         ? {
@@ -135,6 +135,22 @@ function buildRepositoryTooltipContent(
   }
 
   return tooltipLines.join('\n');
+}
+
+function getRepositoryContextValue(
+  node: Extract<BranchTreeNode, { kind: 'repository' }>
+): string {
+  const baseContextValue = node.isActive ? 'activeRepository' : 'repository';
+
+  if (node.currentBranchBusy) {
+    return `${baseContextValue}:busyCurrentBranch`;
+  }
+
+  if (node.currentBranchNeedsPublish) {
+    return `${baseContextValue}:publishableCurrentBranch`;
+  }
+
+  return baseContextValue;
 }
 
 function buildRemoteItemDescription(info: Extract<BranchTreeNode, { kind: 'remote' }>['info']): string | undefined {

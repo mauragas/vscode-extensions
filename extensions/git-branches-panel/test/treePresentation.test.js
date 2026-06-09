@@ -162,6 +162,22 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
     isActive: true,
     children: [],
   });
+  const publishableRepositoryPresentation = buildTreeItemPresentation({
+    kind: 'repository',
+    label: 'repo-c',
+    path: 'repo:/repo-c',
+    repoRoot: '/repo-c',
+    currentBranchNeedsPublish: true,
+    children: [],
+  });
+  const busyRepositoryPresentation = buildTreeItemPresentation({
+    kind: 'repository',
+    label: 'repo-d',
+    path: 'repo:/repo-d',
+    repoRoot: '/repo-d',
+    currentBranchBusy: true,
+    children: [],
+  });
   const localSectionPresentation = buildTreeItemPresentation({
     kind: 'section',
     label: 'Local',
@@ -430,6 +446,9 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(activeRepositoryPresentation.collapsibleState, 'expanded');
   assert.match(activeRepositoryPresentation.tooltip, /Active repository/);
   assert.match(activeRepositoryPresentation.tooltip, /apps\/repo-b/);
+
+  assert.equal(publishableRepositoryPresentation.contextValue, 'repository:publishableCurrentBranch');
+  assert.equal(busyRepositoryPresentation.contextValue, 'repository:busyCurrentBranch');
 
   assert.equal(localSectionPresentation.nodeType, 'section');
   assert.equal(localSectionPresentation.collapsibleState, 'expanded');

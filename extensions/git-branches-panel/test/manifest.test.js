@@ -42,6 +42,10 @@ test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, histor
     ['gitBranchesPanel.clearFilter', 'Clear Filter'],
     ['gitBranchesPanel.toggleShowOnlyPinned', 'Toggle Show Only Pinned'],
     ['gitBranchesPanel.showNeedsAttention', 'Show Needs Attention'],
+    ['gitBranchesPanel.fetchAllRepositories', 'Fetch All Repositories'],
+    ['gitBranchesPanel.fetchAllRepositoriesPrune', 'Fetch All Repositories (Prune)'],
+    ['gitBranchesPanel.syncAllRepositoriesBranches', 'Sync All Repositories Branches'],
+    ['gitBranchesPanel.pullAllRepositoriesChanges', 'Pull All Repositories Changes'],
     ['gitBranchesPanel.openBranchOnRemote', 'Open Branch on Remote'],
     ['gitBranchesPanel.openComparePage', 'Open Compare Page'],
     ['gitBranchesPanel.createPullRequest', 'Create Pull Request'],
@@ -87,6 +91,10 @@ test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, histor
   assert.equal(getCommand('gitBranchesPanel.findRef').icon, '$(search)');
   assert.equal(getCommand('gitBranchesPanel.openComparePage').icon, '$(link-external)');
   assert.equal(getCommand('gitBranchesPanel.addRemote').icon, '$(add)');
+  assert.equal(getCommand('gitBranchesPanel.fetchAllRepositories').icon, '$(repo-fetch)');
+  assert.equal(getCommand('gitBranchesPanel.fetchAllRepositoriesPrune').icon, '$(clear-all)');
+  assert.equal(getCommand('gitBranchesPanel.syncAllRepositoriesBranches').icon, '$(sync)');
+  assert.equal(getCommand('gitBranchesPanel.pullAllRepositoriesChanges').icon, '$(repo-pull)');
   assert.equal(getCommand('gitBranchesPanel.pruneWorktrees').icon, '$(clear-all)');
   assert.equal(getCommand('gitBranchesPanel.lockWorktree').icon, '$(lock)');
   assert.equal(getCommand('gitBranchesPanel.unlockWorktree').icon, '$(unlock)');
@@ -121,6 +129,7 @@ test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, histor
   assert.equal(settings['gitBranchesPanel.branchContextMenu.showSquashMergeIntoCurrent'].default, false);
   assert.equal(settings['gitBranchesPanel.branchContextMenu.showResetCurrentToSelected'].default, false);
   assert.equal(settings['gitBranchesPanel.branchContextMenu.showForcePushWithLease'].default, false);
+  assert.equal(settings['gitBranchesPanel.toolbar.showPullAllRepositoriesChanges'].default, true);
   assert.equal(settings['gitBranchesPanel.search.includeHooks'].default, false);
   assert.equal(settings['gitBranchesPanel.search.maxResults'].default, 200);
   assert.equal(settings['gitBranchesPanel.search.autoLoadAllSections'].default, true);
@@ -150,6 +159,30 @@ test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, histor
       (item) => item.when.includes('gitBranchesPanel.multipleRepositories')
     )
   );
+  assert.ok(
+    hasViewTitleMenu(
+      'gitBranchesPanel.syncAllRepositoriesBranches',
+      (item) => item.when.includes('gitBranchesPanel.groupedRepositories')
+    )
+  );
+  assert.ok(
+    hasViewTitleMenu(
+      'gitBranchesPanel.pullAllRepositoriesChanges',
+      (item) => item.when.includes('gitBranchesPanel.groupedRepositories')
+    )
+  );
+  assert.ok(
+    hasViewTitleMenu(
+      'gitBranchesPanel.fetchAllRepositories',
+      (item) => item.when.includes('gitBranchesPanel.groupedRepositories')
+    )
+  );
+  assert.ok(
+    hasViewTitleMenu(
+      'gitBranchesPanel.fetchAllRepositoriesPrune',
+      (item) => item.when.includes('gitBranchesPanel.groupedRepositories')
+    )
+  );
   assert.ok(hasViewTitleMenu('gitBranchesPanel.findRef'));
   assert.ok(
     hasViewTitleMenu(
@@ -173,15 +206,39 @@ test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, histor
   assert.ok(
     hasViewItemMenu(
       'gitBranchesPanel.selectRepository',
-      (item) => item.when === 'viewItem == repository' && item.group === 'inline@1'
+      (item) => item.when === 'viewItem =~ /^repository(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' && item.group === 'inline@1'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.newBranch',
+      (item) =>
+        item.when === 'viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' &&
+        item.group === 'inline@2'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.publishCurrentBranch',
+      (item) => item.when === 'viewItem =~ /^(?:activeRepository|repository):publishableCurrentBranch$/' && item.group === 'inline@3'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.syncCurrentBranch',
+      (item) => item.when === 'viewItem == repository || viewItem == activeRepository' && item.group === 'inline@3'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.fetchAllPrune',
+      (item) => item.when === 'viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' && item.group === 'inline@4'
     )
   );
   assert.ok(
     hasViewItemMenu(
       'gitBranchesPanel.showAdvancedActions',
-      (item) =>
-        item.when === 'viewItem == repository || viewItem == activeRepository' &&
-        item.group === 'inline@2'
+      (item) => item.when === 'viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' && item.group === 'inline@5'
     )
   );
   assert.ok(
@@ -260,15 +317,41 @@ test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, histor
   assert.ok(
     hasViewItemMenu(
       'gitBranchesPanel.selectRepository',
-      (item) => item.when === 'viewItem == repository' && item.group === '1_repository@1'
+      (item) => item.when === 'viewItem =~ /^repository(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' && item.group === '1_repository@1'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.newBranch',
+      (item) =>
+        item.when === 'viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' &&
+        item.group === '1_repository@2'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.publishCurrentBranch',
+      (item) => item.when === 'viewItem =~ /^(?:activeRepository|repository):publishableCurrentBranch$/' && item.group === '1_repository@3'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.syncCurrentBranch',
+      (item) => item.when === 'viewItem == repository || viewItem == activeRepository' && item.group === '1_repository@3'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.fetchAllPrune',
+      (item) => item.when === 'viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' && item.group === '1_repository@4'
     )
   );
   assert.ok(
     hasViewItemMenu(
       'gitBranchesPanel.showAdvancedActions',
       (item) =>
-        item.when === 'viewItem == repository || viewItem == activeRepository' &&
-        item.group === '1_repository@2'
+        item.when === 'viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' &&
+        item.group === '1_repository@5'
     )
   );
   assert.ok(

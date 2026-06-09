@@ -17,11 +17,17 @@ export function registerRepositoryCommands(
     vscode.commands.registerCommand('gitBranchesPanel.openSettings', async () => {
       await handleOpenSettings();
     }),
-    vscode.commands.registerCommand('gitBranchesPanel.fetchAll', async () => {
-      await handleFetchAll(commandContext);
+    vscode.commands.registerCommand('gitBranchesPanel.fetchAll', async (item?: BranchTreeItem) => {
+      await handleFetchAll(item, commandContext);
     }),
-    vscode.commands.registerCommand('gitBranchesPanel.fetchAllPrune', async () => {
-      await handleFetchAllPrune(commandContext);
+    vscode.commands.registerCommand('gitBranchesPanel.fetchAllPrune', async (item?: BranchTreeItem) => {
+      await handleFetchAllPrune(item, commandContext);
+    }),
+    vscode.commands.registerCommand('gitBranchesPanel.fetchAllRepositories', async () => {
+      await handleFetchAllRepositories(commandContext);
+    }),
+    vscode.commands.registerCommand('gitBranchesPanel.fetchAllRepositoriesPrune', async () => {
+      await handleFetchAllRepositoriesPrune(commandContext);
     }),
     vscode.commands.registerCommand('gitBranchesPanel.cleanRepository', async () => {
       await handleCleanRepository(commandContext);
@@ -43,8 +49,11 @@ async function handleOpenSettings(): Promise<void> {
   await vscode.commands.executeCommand('workbench.action.openSettings', EXTENSION_SETTINGS_QUERY);
 }
 
-async function handleFetchAll(commandContext: CommandContext): Promise<void> {
-  const repoRoot = await commandContext.requireRepoRoot();
+async function handleFetchAll(
+  item: BranchTreeItem | undefined,
+  commandContext: CommandContext
+): Promise<void> {
+  const repoRoot = await commandContext.requireRepoRoot(item?.repoRoot);
   if (!repoRoot) {
     return;
   }
@@ -60,8 +69,11 @@ async function handleFetchAll(commandContext: CommandContext): Promise<void> {
   }
 }
 
-async function handleFetchAllPrune(commandContext: CommandContext): Promise<void> {
-  const repoRoot = await commandContext.requireRepoRoot();
+async function handleFetchAllPrune(
+  item: BranchTreeItem | undefined,
+  commandContext: CommandContext
+): Promise<void> {
+  const repoRoot = await commandContext.requireRepoRoot(item?.repoRoot);
   if (!repoRoot) {
     return;
   }
@@ -101,6 +113,34 @@ async function handleCleanRepository(commandContext: CommandContext): Promise<vo
   } catch (error) {
     commandContext.showCommandError('Failed to clean the repository', error);
   }
+}
+
+async function handleFetchAllRepositories(commandContext: CommandContext): Promise<void> {
+  await runForAllRepositories(
+    commandContext,
+    async (repoRoot) => {
+      await fetchAllRemotes(repoRoot);
+    },
+    {
+      successMessage: 'Fetched all remotes in every repository.',
+      errorPrefix: 'Failed to fetch all remotes across repositories',
+      noRepositoriesMessage: 'No Git repositories are currently available.',
+    }
+  );
+}
+
+async function handleFetchAllRepositoriesPrune(commandContext: CommandContext): Promise<void> {
+  await runForAllRepositories(
+    commandContext,
+    async (repoRoot) => {
+      await fetchRemoteState(repoRoot);
+    },
+    {
+      successMessage: 'Fetched all remotes with pruning in every repository.',
+      errorPrefix: 'Failed to fetch and prune remotes across repositories',
+      noRepositoriesMessage: 'No Git repositories are currently available.',
+    }
+  );
 }
 
 async function handleSelectRepository(
@@ -170,4 +210,54 @@ async function handleFocusActiveEditorRepository(commandContext: CommandContext)
   if (activeRepositoryLabel) {
     vscode.window.showInformationMessage(`Focused repository '${activeRepositoryLabel}'.`);
   }
+}
+
+async function runForAllRepositories(
+  commandContext: CommandContext,
+  operation: (repoRoot: string) => Promise<void>,
+  options: {
+    successMessage: string;
+    errorPrefix: string;
+    noRepositoriesMessage: string;
+  }
+): Promise<void> {
+  const repositories = commandContext.provider.getRepositoryDescriptors();
+  if (repositories.length === 0) {
+    vscode.window.showInformationMessage(options.noRepositoriesMessage);
+    return;
+  }
+
+  const failures: Array<{ label: string; reason: string }> = [];
+
+  for (const repository of repositories) {
+    try {
+      await operation(repository.repoRoot);
+    } catch (error) {
+      failures.push({
+        label: repository.label,
+        reason: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  if (failures.length === repositories.length) {
+    commandContext.showCommandError(
+      options.errorPrefix,
+      new Error(failures.map((failure) => `${failure.label} (${failure.reason})`).join('; '))
+    );
+    return;
+  }
+
+  await commandContext.refresh({ fetchRemoteState: false });
+
+  if (failures.length > 0) {
+    vscode.window.showWarningMessage(
+      `${options.successMessage} Some repositories failed: ${failures
+        .map((failure) => `${failure.label} (${failure.reason})`)
+        .join('; ')}.`
+    );
+    return;
+  }
+
+  vscode.window.showInformationMessage(options.successMessage);
 }
