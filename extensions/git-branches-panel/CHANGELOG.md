@@ -34,9 +34,11 @@ All notable changes to this project will be documented in this file.
 - Made current-branch banner, toolbar actions, and command routing repository-aware so item actions and no-item actions target the correct repository
 - Qualified tree identities by repository to prevent section and folder collisions across repositories with matching branch-folder paths
 - Expanded automated coverage for multi-repository loading, provider behavior, manifest contributions, and repo-aware view messaging
+- Added per-section visibility settings under `gitBranchesPanel.sections.*.visible` so Local, Remote, Remotes, Stash, Worktree, Hooks, and Tags can each be shown or hidden independently
+- Changed the dedicated **Remotes** section to start hidden by default through `gitBranchesPanel.sections.remotes.visible = false`, while keeping the older `gitBranchesPanel.showRemotesSection` setting as a deprecated compatibility alias
 - Added a dedicated **Remotes** section that lists configured remotes separately from remote-tracking branches so fetch/push URLs are manageable directly from the tree
 - Added remote management commands to add, fetch, fetch with prune, rename, update fetch/push URLs, open a remote homepage, copy fetch/push URLs, and remove remotes without leaving VS Code
-- Added `gitBranchesPanel.showRemotesSection` so the Remotes section can be hidden when you prefer a leaner tree
+- Added `gitBranchesPanel.showRemotesSection` as the original Remotes visibility toggle; it is now deprecated in favor of `gitBranchesPanel.sections.remotes.visible`
 - Added per-remote inline and context actions, plus a repository-level **Add remote…** advanced action for discoverability even when the section is hidden or empty
 - Added richer remote metadata loading from `git remote -v`, including default-remote detection and provider labeling when hosted URLs are recognized
 - Expanded automated coverage with command, tree presentation, manifest, and Git-backed remote mutation tests for the new remote management workflows
@@ -45,6 +47,15 @@ All notable changes to this project will be documented in this file.
 - Added worktree icon and context updates for locked and prunable worktrees, while preserving detached and current-worktree cues already shown in descriptions and tooltips
 - Added repository-level and Worktree-section prune entry points so stale worktree metadata can be cleaned up even when you are not interacting with a specific worktree row
 - Expanded automated coverage with command, manifest, tree-presentation, and Git-backed worktree maintenance tests for prune/lock/unlock/ref-copy/terminal workflows
+- Added guided **Create Tag...** flows that choose the target ref, tag type, name, annotation message, and optional immediate push target instead of only creating lightweight tags from one input box
+- Added `gitBranchesPanel.tags.defaultType`, `gitBranchesPanel.tags.pushAfterCreate`, and `gitBranchesPanel.tags.requireMessageForAnnotated` so release-focused tag workflows can be tuned without leaving the extension settings UI
+- Added support for annotated tags, signed annotated tags, single-tag pushes, remote tag deletion, tag-vs-current comparisons, tag detail views, and copying a tag's peeled target SHA
+- Added on-demand tag metadata loading so **Show Tag Details** can surface the tag type, target SHA, author metadata, annotation message, and signature state
+- Added advanced branch operations for **Rebase Current onto Selected**, **Rebase Selected onto Current**, **Squash Merge into Current**, **Reset Current to Selected...**, **Force Push with Lease**, and **Advanced Branch Operations...**
+- Added safety checks for advanced branch operations, including in-progress Git operation detection, dirty-working-tree prompts, reset mode selection, and optional post-rewrite force-push flows with lease protection
+- Reused the existing temporary-worktree sync pattern for non-current branch rebases so rewritten branches can be updated without disturbing the user's active checkout
+- Refreshed inline sync cues so incoming divergence uses blue markers and outgoing divergence uses green markers directly in branch labels
+- Expanded automated coverage with command, manifest, tree-loader, presentation, and Git-backed tests for section visibility, richer tag workflows, advanced branch operations, and the new sync label presentation
 
 ## [1.7.0] - 2026-06-08
 

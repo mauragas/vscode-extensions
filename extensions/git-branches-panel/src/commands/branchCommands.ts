@@ -1069,7 +1069,7 @@ function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
         async () => {
           await vscode.commands.executeCommand('gitBranchesPanel.showAdvancedBranchOperations', item);
         }
-      })
+      )
     );
   }
 

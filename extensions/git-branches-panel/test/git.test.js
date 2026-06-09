@@ -24,6 +24,7 @@ const {
   createBranchFromRef,
   createWorktree,
   createTag,
+  deleteRemoteTag,
   deleteRemoteBranch,
   deleteTag,
   dropAllStashes,
@@ -42,6 +43,7 @@ const {
   getRemotes,
   getRemoteBranches,
   getStashes,
+  getTagDetails,
   getTags,
   getWorktrees,
   lockWorktree,
@@ -50,13 +52,17 @@ const {
   pruneWorktrees,
   pushBranch,
   pushAllTags,
+  pushTag,
   fetchRemote,
   removeRemote,
+  rebaseBranchOnto,
   renameRemote,
   renameStash,
+  resetCurrentBranchToRef,
   setHookEnabled,
   setRemoteFetchUrl,
   setRemotePushUrl,
+  squashMergeIntoCurrent,
   unlockWorktree,
   removeWorktree,
   renameWorktree,
@@ -64,6 +70,7 @@ const {
   stashStagedChanges,
   stashSilently,
   syncBranch,
+  forcePushBranch,
 } = require('../out/git.js');
 
 function runGit(cwd, args) {
@@ -1116,4 +1123,99 @@ test('syncBranch updates the current branch from remote changes', async (t) => {
   });
   assert.equal(runGit(repoRoot, ['log', '-1', '--pretty=%s']), 'Remote change');
   assert.match(readFileSync(join(repoRoot, 'README.md'), 'utf8'), /remote change/);
+});
+
+test('createTag can create annotated tags and getTagDetails reports their metadata', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  await createTag(repoRoot, 'v2.1.0', 'main', {
+    type: 'annotated',
+    message: 'Release 2.1.0',
+  });
+
+  const details = await getTagDetails(repoRoot, 'v2.1.0');
+
+  assert.equal(details.type, 'annotated');
+  assert.equal(details.targetType, 'commit');
+  assert.equal(details.targetSha, runGit(repoRoot, ['rev-parse', 'main^{commit}']));
+  assert.match(details.message, /Release 2\.1\.0/);
+  assert.equal(details.isSigned, false);
+});
+
+test('pushTag pushes a selected tag and deleteRemoteTag removes it from the remote', async (t) => {
+  const { repoRoot, remoteRoot } = createRemoteBackedRepository(t);
+
+  runGit(repoRoot, ['tag', 'v2.2.0']);
+
+  await pushTag(repoRoot, 'origin', 'v2.2.0');
+  assert.equal(hasRef(remoteRoot, 'refs/tags/v2.2.0'), true);
+
+  await deleteRemoteTag(repoRoot, 'origin', 'v2.2.0');
+  assert.equal(hasRef(remoteRoot, 'refs/tags/v2.2.0'), false);
+});
+
+test('squashMergeIntoCurrent stages the combined changes without creating a merge commit', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/squash']);
+  commitFile(repoRoot, 'squash.txt', 'squash me\n', 'Add squash candidate');
+  runGit(repoRoot, ['checkout', 'main']);
+
+  await squashMergeIntoCurrent(repoRoot, 'feature/squash');
+
+  assert.equal(runGit(repoRoot, ['log', '-1', '--pretty=%s']), 'Second commit');
+  assert.equal(runGit(repoRoot, ['diff', '--cached', '--name-only']).trim(), 'squash.txt');
+});
+
+test('resetCurrentBranchToRef moves the current branch to the selected ref', async (t) => {
+  const repoRoot = createTempRepository(t);
+  const initialSha = runGit(repoRoot, ['rev-parse', 'HEAD~1']);
+
+  await resetCurrentBranchToRef(repoRoot, initialSha, 'hard');
+
+  assert.equal(runGit(repoRoot, ['rev-parse', 'HEAD']), initialSha);
+});
+
+test('rebaseBranchOnto can rebase a non-current branch without changing the active checkout', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/rebase']);
+  commitFile(repoRoot, 'feature.txt', 'feature work\n', 'Add feature work');
+  runGit(repoRoot, ['checkout', 'main']);
+  commitFile(repoRoot, 'base.txt', 'base work\n', 'Advance main');
+
+  const mainSha = runGit(repoRoot, ['rev-parse', 'main']);
+
+  await rebaseBranchOnto(repoRoot, 'feature/rebase', 'main');
+
+  assert.equal(runGit(repoRoot, ['rev-parse', '--abbrev-ref', 'HEAD']), 'main');
+  assert.equal(runGit(repoRoot, ['merge-base', 'feature/rebase', 'main']), mainSha);
+  assert.equal(runGit(repoRoot, ['show', 'feature/rebase:feature.txt']).trim(), 'feature work');
+});
+
+test('forcePushBranch pushes rewritten history with lease', async (t) => {
+  const { repoRoot } = createRemoteBackedRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/rewrite']);
+  commitFile(repoRoot, 'rewrite.txt', 'original\n', 'Original rewrite commit');
+  runGit(repoRoot, ['push', '-u', 'origin', 'feature/rewrite']);
+
+  runGit(repoRoot, ['reset', '--hard', 'HEAD~1']);
+  commitFile(repoRoot, 'rewrite.txt', 'rewritten\n', 'Rewritten history');
+  runGit(repoRoot, ['checkout', 'main']);
+
+  const pushResult = await forcePushBranch(repoRoot, 'feature/rewrite');
+
+  assert.deepEqual(pushResult, {
+    branchName: 'feature/rewrite',
+    upstreamName: 'origin/feature/rewrite',
+    didPull: false,
+    didPush: true,
+    publishedUpstream: false,
+  });
+  assert.equal(runGit(repoRoot, ['rev-parse', '--abbrev-ref', 'HEAD']), 'main');
+  assert.equal(
+    runGit(repoRoot, ['ls-remote', '--heads', 'origin', 'feature/rewrite']).split(/\s+/u)[0],
+    runGit(repoRoot, ['rev-parse', 'feature/rewrite'])
+  );
 });

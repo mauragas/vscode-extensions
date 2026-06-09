@@ -1,4 +1,9 @@
-export { cleanRepository, getRepoRoot } from './git/shared';
+export {
+	cleanRepository,
+	getGitOperationState,
+	getRepoRoot,
+	getWorkingTreeStatus,
+} from './git/shared';
 
 export * from './git/branchGit';
 export * from './git/historyGit';

@@ -28,10 +28,11 @@ section opens first, while Remote, Stash, Worktree, Hooks, and Tags stay collaps
 - 🌐 **Remote-host actions** — open a branch on its remote, open a browser compare page, create a pull request, or copy hosted branch/compare URLs without leaving VS Code
 - 🧭 **Local and remote sections** — local branches are shown first, with remote branches listed in a separate group below them
 - 🔗 **Remotes section** — configured remotes appear in their own section with fetch, rename, URL, homepage, and remove actions that focus on remote configuration rather than remote-tracking branches
+- 🧩 **Per-section visibility** — show or hide Local, Remote, Remotes, Stash, Worktree, Hooks, and Tags independently from settings; the dedicated Remotes section now starts hidden by default
 - 🧺 **Stash section** — stashes are shown between remote branches and tags so parked work stays close at hand
 - 🪵 **Worktree section** — worktrees are shown under stashes so additional checkouts are easy to find and maintain, including prune, lock, unlock, ref-copy, and terminal actions
 - 🪝 **Hooks section** — appears only when the repository has configured Git hooks, showing local `.git/hooks` scripts and any shared hooks from `core.hooksPath` with active/disabled state
-- 🏷️ **Tags section** — tags are shown in their own section below remote branches, with version-like tags newest-first by default
+- 🏷️ **Release-friendly tag workflows** — create lightweight, annotated, or signed annotated tags; optionally push the new tag immediately; push a single tag later; delete a remote tag; compare a tag with the current branch; inspect tag metadata; and copy the peeled target SHA
 - 📁 **Folders first** — folders are listed before branch leaves inside each section
 - ⚡ **Faster first paint** — the tree loads Local branches first so the view opens quickly in larger repositories
 - 📦 **Lazy-loaded sections** — Remote, Stash, Worktree, and Tags are loaded only when you expand them
@@ -44,7 +45,7 @@ section opens first, while Remote, Stash, Worktree, Hooks, and Tags stay collaps
 - 🖱️ **Section hover quick actions** — hover Local, Remote, Stash, Worktree, and Tags groups to reveal section-specific inline buttons for high-frequency actions
 - 🧹 **Quiet branch-name sanitization** — new branch names are cleaned up automatically to stay Git-valid, with optional lowercase kebab-case normalization that also strips extra special characters while preserving `-` and `/`
 - 🕐 **Last commit time** — shown as a relative description and in the tooltip
-- 🔄 **Sync state badges** — incoming and outgoing commits stay visible even when branch names are long
+- 🔄 **Color-coded sync state badges** — incoming markers use blue cues and outgoing markers use green cues so divergence stays readable even when branch names are long
 - ☁️ **Inline sync button** — every branch gets a small sync button, including branches that are not currently checked out
 - 🌀 **Inline sync animation** — branch sync and publish actions swap to a spinning inline indicator while Git is working
 - 🏷️ **Inline action buttons** — checkout, create new branch from selected and checkout, pin/unpin, and delete appear inline alongside sync/publish for quick access
@@ -56,6 +57,7 @@ section opens first, while Remote, Stash, Worktree, Hooks, and Tags stay collaps
 - 📌 **Pin starred items to the top** — pin local or remote branches, stashes, and worktrees so they stay easy to reach
 - 🪵 **Create worktrees from refs** — create a linked worktree directly from a branch or a detached worktree from a tag without checking that ref out first
 - 🍒 **Cherry-pick into current** — cherry-pick a selected branch into the checked out branch from the context menu
+- 🧪 **Advanced branch operations** — safely rebase the current branch onto a selected ref, rebase a non-current local branch through a temporary worktree, squash-merge into the current branch, reset the current branch to a selected ref, and force-push with lease after explicit confirmation
 - 🛡️ **Protected branch safeguards** — block delete actions for configured branch names such as `main`, `master`, and `develop`
 - 🧭 **Branch prefix picker** — optionally prefill new branch names from common folders like `feature/`, `bugfix/`, or `hotfix/`
 - 🆚 **Compare with current branch** — compare a local or remote branch against the currently checked out branch from the context menu
@@ -122,9 +124,20 @@ section opens first, while Remote, Stash, Worktree, Hooks, and Tags stay collaps
 | More Branch Actions... | Open a Quick Pick with iconized branch actions |
 | Create Worktree... | Create a linked worktree from a selected branch or a detached worktree from a selected tag |
 | Rename Branch | Rename the selected branch |
-| Create Tag | Create a local tag on the selected local branch |
+| Create Tag | Run a guided tag flow that chooses the target ref, tag type, name, annotation message, and optional push target |
+| Push Tag | Push the selected local tag to a chosen remote |
+| Delete Remote Tag | Delete the selected tag from a chosen remote after confirmation |
+| Compare Tag with Current Branch | Open a multi-file comparison between the selected tag and the currently checked out branch |
+| Show Tag Details | Open a markdown summary with the tag type, target SHA, author, and message metadata |
+| Copy Tag Target SHA | Copy the peeled target SHA for the selected tag |
 | Cherry-pick into Current Branch | Cherry-pick the selected branch into the currently checked out branch |
 | Compare with Current Branch | Open a multi-file comparison between the selected branch and the checked out branch |
+| Advanced Branch Operations... | Open a quick pick of advanced ref-rewrite actions for the selected branch or ref |
+| Rebase Current onto Selected | Rebase the checked out branch onto the selected branch, remote branch, or tag |
+| Rebase Selected onto Current | Rebase a selected non-current local branch onto the current branch in a temporary worktree |
+| Squash Merge into Current | Stage a squash merge of the selected ref into the current branch without creating a commit |
+| Reset Current to Selected... | Reset the checked out branch to the selected ref using `soft`, `mixed`, or `hard` mode |
+| Force Push with Lease | Push a rewritten local branch to its tracked upstream while protecting against remote races |
 | Remove Stale Tracking Ref | Delete a stale local `refs/remotes/<remote>/...` entry without contacting any remote |
 | Apply Stash | Apply the selected stash without removing it |
 | Apply Latest Stash | Apply the newest stash directly from the Stash section hover/context actions |
@@ -186,7 +199,7 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 
 ### Tag and stash item hover actions
 
-- Hover a specific **tag** item to reveal **Checkout Tag** and **Delete Tag**.
+- Hover a specific **tag** item to reveal **Checkout Tag**, **Push Tag**, and **Delete Tag**.
 - Hover a specific **stash** item to reveal **Pop Stash**, **Apply Stash**, and **Drop Stash**.
 
 ### Hook item actions
@@ -217,7 +230,17 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 | `gitBranchesPanel.tagSortOrder` | `versionDescending` | `versionDescending`, `versionAscending`, `alphabetical`, or `recent`; version-aware sorting recognizes semver-like suffixes such as `v1.2.3` or `release/v1.2.3` and keeps non-version tags after version tags |
 | `gitBranchesPanel.multiRepository.mode` | `auto` | Show repository containers only when needed (`auto`), always group sections under repositories (`alwaysGroupByRepository`), or show only the active repository (`singleActiveRepository`) |
 | `gitBranchesPanel.multiRepository.followActiveEditor` | `false` | Keep the active repository aligned with the Git repository that owns the active editor when multi-repository support is in use |
-| `gitBranchesPanel.showRemotesSection` | `true` | Show the dedicated Remotes section with per-remote fetch, URL, rename, and remove actions |
+| `gitBranchesPanel.sections.local.visible` | `true` | Show the Local section in the tree |
+| `gitBranchesPanel.sections.remote.visible` | `true` | Show the Remote section with remote-tracking branches |
+| `gitBranchesPanel.sections.remotes.visible` | `false` | Show the dedicated Remotes section with per-remote fetch, URL, rename, and remove actions |
+| `gitBranchesPanel.sections.stash.visible` | `true` | Show the Stash section in the tree |
+| `gitBranchesPanel.sections.worktree.visible` | `true` | Show the Worktree section in the tree |
+| `gitBranchesPanel.sections.hooks.visible` | `true` | Show the Hooks section when the repository has configured hooks |
+| `gitBranchesPanel.sections.tags.visible` | `true` | Show the Tags section in the tree |
+| `gitBranchesPanel.showRemotesSection` | `false` | Deprecated compatibility alias for `gitBranchesPanel.sections.remotes.visible` |
+| `gitBranchesPanel.tags.defaultType` | `annotated` | Default tag type to preselect in the guided Create Tag flow (`lightweight`, `annotated`, or `signedAnnotated`) |
+| `gitBranchesPanel.tags.pushAfterCreate` | `false` | After creating a tag, immediately prompt for a remote and push that specific tag |
+| `gitBranchesPanel.tags.requireMessageForAnnotated` | `true` | Require a non-empty annotation message for annotated and signed annotated tags |
 | `gitBranchesPanel.search.includeHooks` | `false` | Include Git hook items in **Find Ref...** results |
 | `gitBranchesPanel.search.maxResults` | `200` | Maximum number of **Find Ref...** results to show after ranking matches |
 | `gitBranchesPanel.search.autoLoadAllSections` | `true` | Load collapsed sections before running **Find Ref...** or applying a tree filter so results include refs outside the currently expanded sections |
@@ -226,6 +249,10 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 | `gitBranchesPanel.remoteHosting.customProviders` | `[]` | Optional custom host matchers and URL templates with placeholders like `${hostRoot}`, `${namespace}`, `${repo}`, `${branch}`, `${base}`, `${organization}`, `${project}`, and `${remoteName}` |
 | `gitBranchesPanel.history.maxCommits` | `50` | Maximum number of commits to load when showing branch or ref history in a quick pick |
 | `gitBranchesPanel.history.includeMerges` | `true` | Include merge commits in branch and ref history quick picks |
+| `gitBranchesPanel.advanced.enableForcePushWithLease` | `true` | Show **Force Push with Lease** inside advanced branch operation pickers and menus |
+| `gitBranchesPanel.advanced.defaultResetMode` | `mixed` | Default reset mode to preselect when resetting the current branch to another ref |
+| `gitBranchesPanel.advanced.allowNonCurrentBranchRebase` | `true` | Allow rebasing a selected non-current local branch onto the current branch through a temporary worktree |
+| `gitBranchesPanel.advanced.rebaseAutostash` | `true` | Prefer `--autostash` when rebasing the current branch and the working tree is dirty |
 | `gitBranchesPanel.showCurrentBranchInfo` | `false` | Show the current branch summary above the tree views |
 | `gitBranchesPanel.showStatusBarBranchAction` | `true` | Deprecated. This setting no longer has any effect because the extension no longer contributes a status bar branch action |
 | `gitBranchesPanel.toolbar.showNewBranch` | `true` | Show the **New Branch** toolbar quick action |
@@ -254,7 +281,14 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 - Leave `gitBranchesPanel.multiRepository.mode` on `auto` to keep the familiar flat layout for single-repo workspaces while automatically adding repository containers in polyrepo workspaces
 - Switch `gitBranchesPanel.multiRepository.mode` to `singleActiveRepository` if you prefer focusing on one repository at a time while using **Select Active Repository** or **Focus Repository from Active Editor** to move around
 - Enable `gitBranchesPanel.multiRepository.followActiveEditor` if you want the current-branch banner and toolbar actions to follow the repository that owns the file you are editing
-- Leave `gitBranchesPanel.showRemotesSection` enabled if you want a visible place to fetch, rename, or remove remotes, or turn it off if you prefer accessing remote management from commands and the advanced-actions picker only
+- Hide any section you rarely use through `gitBranchesPanel.sections.*.visible`; the dedicated Remotes section now starts off by default so the tree can stay leaner unless you actively manage remotes
+- Leave `gitBranchesPanel.sections.remotes.visible` enabled if you want a visible place to fetch, rename, or remove remotes, or keep it hidden if you prefer accessing remote management from commands and the advanced-actions picker only
+- Set `gitBranchesPanel.tags.defaultType = signedAnnotated` if your release process signs tags by default, or leave it on `annotated` for a safer out-of-the-box flow that does not require signing keys
+- Turn on `gitBranchesPanel.tags.pushAfterCreate` if you usually publish release tags immediately after creating them
+- Use **Show Tag Details** and **Copy Tag Target SHA** when you need to verify exactly what a release tag points to without dropping to the terminal
+- Use **Advanced Branch Operations...** on a selected branch to keep rebase, reset, squash-merge, and force-push flows discoverable without cluttering every inline menu
+- Leave `gitBranchesPanel.advanced.rebaseAutostash` enabled unless you explicitly prefer cancelling rebases whenever the current branch has local changes
+- Disable `gitBranchesPanel.advanced.allowNonCurrentBranchRebase` if you want to keep all rebases scoped to the checked-out branch only
 - Use **Find Ref...** with prefixes like `remote:`, `tag:`, `stash:`, or `state:stale` when repositories get large and you want a faster path than scrolling the tree
 - Keep `gitBranchesPanel.search.autoLoadAllSections` enabled if you want search and filtering to include collapsed sections, or turn it off if you prefer faster commands over broader result coverage
 - Turn on `gitBranchesPanel.search.includeHooks` if you want hook scripts to show up in **Find Ref...** results alongside regular Git refs

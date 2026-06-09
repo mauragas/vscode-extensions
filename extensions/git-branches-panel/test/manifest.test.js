@@ -31,7 +31,7 @@ function getInlineViewItemContextCommands() {
   )];
 }
 
-test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, history, remote-management, and worktree-maintenance contributions', () => {
+test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, history, remote-management, worktree, tag, and advanced-branch contributions', () => {
   assert.equal(packageJson.version, '2.0.0');
 
   const expectedCommands = [
@@ -67,6 +67,17 @@ test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, histor
     ['gitBranchesPanel.unlockWorktree', 'Unlock Worktree'],
     ['gitBranchesPanel.copyWorktreeRef', 'Copy Worktree Ref'],
     ['gitBranchesPanel.openWorktreeInTerminal', 'Open Worktree in Terminal'],
+    ['gitBranchesPanel.pushTag', 'Push Tag'],
+    ['gitBranchesPanel.deleteRemoteTag', 'Delete Remote Tag'],
+    ['gitBranchesPanel.compareTagWithCurrent', 'Compare Tag with Current Branch'],
+    ['gitBranchesPanel.showTagDetails', 'Show Tag Details'],
+    ['gitBranchesPanel.copyTagTargetSha', 'Copy Tag Target SHA'],
+    ['gitBranchesPanel.showAdvancedBranchOperations', 'Advanced Branch Operations...'],
+    ['gitBranchesPanel.rebaseCurrentOntoSelected', 'Rebase Current onto Selected'],
+    ['gitBranchesPanel.rebaseSelectedOntoCurrent', 'Rebase Selected onto Current'],
+    ['gitBranchesPanel.squashMergeIntoCurrent', 'Squash Merge into Current'],
+    ['gitBranchesPanel.resetCurrentToSelected', 'Reset Current to Selected...'],
+    ['gitBranchesPanel.forcePushWithLease', 'Force Push with Lease'],
   ];
 
   for (const [commandId, title] of expectedCommands) {
@@ -80,11 +91,31 @@ test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, histor
   assert.equal(getCommand('gitBranchesPanel.lockWorktree').icon, '$(lock)');
   assert.equal(getCommand('gitBranchesPanel.unlockWorktree').icon, '$(unlock)');
   assert.equal(getCommand('gitBranchesPanel.openWorktreeInTerminal').icon, '$(terminal)');
+  assert.equal(getCommand('gitBranchesPanel.pushTag').icon, '$(cloud-upload)');
+  assert.equal(getCommand('gitBranchesPanel.showAdvancedBranchOperations').icon, '$(tools)');
+  assert.equal(getCommand('gitBranchesPanel.resetCurrentToSelected').icon, '$(discard)');
+  assert.equal(getCommand('gitBranchesPanel.forcePushWithLease').icon, '$(cloud-upload)');
 
   const settings = packageJson.contributes.configuration.properties;
   assert.equal(settings['gitBranchesPanel.multiRepository.mode'].default, 'auto');
   assert.equal(settings['gitBranchesPanel.multiRepository.followActiveEditor'].default, false);
-  assert.equal(settings['gitBranchesPanel.showRemotesSection'].default, true);
+  assert.equal(settings['gitBranchesPanel.sections.local.visible'].default, true);
+  assert.equal(settings['gitBranchesPanel.sections.remote.visible'].default, true);
+  assert.equal(settings['gitBranchesPanel.sections.remotes.visible'].default, false);
+  assert.equal(settings['gitBranchesPanel.sections.stash.visible'].default, true);
+  assert.equal(settings['gitBranchesPanel.sections.worktree.visible'].default, true);
+  assert.equal(settings['gitBranchesPanel.sections.hooks.visible'].default, true);
+  assert.equal(settings['gitBranchesPanel.sections.tags.visible'].default, true);
+  assert.equal(settings['gitBranchesPanel.showRemotesSection'].default, false);
+  assert.match(settings['gitBranchesPanel.showRemotesSection'].description, /Deprecated/i);
+  assert.equal(settings['gitBranchesPanel.tags.defaultType'].default, 'annotated');
+  assert.deepEqual(settings['gitBranchesPanel.tags.defaultType'].enum, [
+    'lightweight',
+    'annotated',
+    'signedAnnotated',
+  ]);
+  assert.equal(settings['gitBranchesPanel.tags.pushAfterCreate'].default, false);
+  assert.equal(settings['gitBranchesPanel.tags.requireMessageForAnnotated'].default, true);
   assert.equal(settings['gitBranchesPanel.search.includeHooks'].default, false);
   assert.equal(settings['gitBranchesPanel.search.maxResults'].default, 200);
   assert.equal(settings['gitBranchesPanel.search.autoLoadAllSections'].default, true);
@@ -98,6 +129,15 @@ test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, histor
   assert.deepEqual(settings['gitBranchesPanel.remoteHosting.customProviders'].default, []);
   assert.equal(settings['gitBranchesPanel.history.maxCommits'].default, 50);
   assert.equal(settings['gitBranchesPanel.history.includeMerges'].default, true);
+  assert.equal(settings['gitBranchesPanel.advanced.enableForcePushWithLease'].default, true);
+  assert.equal(settings['gitBranchesPanel.advanced.defaultResetMode'].default, 'mixed');
+  assert.deepEqual(settings['gitBranchesPanel.advanced.defaultResetMode'].enum, [
+    'soft',
+    'mixed',
+    'hard',
+  ]);
+  assert.equal(settings['gitBranchesPanel.advanced.allowNonCurrentBranchRebase'].default, true);
+  assert.equal(settings['gitBranchesPanel.advanced.rebaseAutostash'].default, true);
 
   assert.ok(
     hasViewTitleMenu(
@@ -123,6 +163,12 @@ test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, histor
     hasViewItemMenu(
       'gitBranchesPanel.addRemote',
       (item) => item.when === 'viewItem == remotesSection' && item.group === 'inline@1'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.pushTag',
+      (item) => item.when === 'viewItem == tag' && item.group === 'inline@2'
     )
   );
   assert.ok(
@@ -190,6 +236,39 @@ test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, histor
     hasViewItemMenu(
       'gitBranchesPanel.openRemoteHomepage',
       (item) => item.when === 'viewItem == remoteConfig' && item.group === '1_remoteConfig@3'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.showAdvancedBranchOperations',
+      (item) =>
+        item.when ===
+          'viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/' &&
+        item.group === '2_more@0.5'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.compareTagWithCurrent',
+      (item) => item.when === 'viewItem == tag' && item.group === '1_tag@2.7'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.showTagDetails',
+      (item) => item.when === 'viewItem == tag' && item.group === '1_tag@2.8'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.copyTagTargetSha',
+      (item) => item.when === 'viewItem == tag' && item.group === '1_tag@2.9'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.deleteRemoteTag',
+      (item) => item.when === 'viewItem == tag' && item.group === '2_tag@1.5'
     )
   );
   assert.ok(

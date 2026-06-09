@@ -715,17 +715,17 @@ async function confirmDirtyCurrentBranchAction(
 async function promptForResetMode(defaultMode: ResetMode): Promise<ResetMode | undefined> {
   const resetModes: ResetModeQuickPickItem[] = [
     {
-      mode: 'mixed',
+      mode: 'mixed' as const,
       label: 'Mixed reset',
       description: 'Move HEAD and reset the index while keeping working tree changes',
     },
     {
-      mode: 'soft',
+      mode: 'soft' as const,
       label: 'Soft reset',
       description: 'Move HEAD only and keep staged plus working tree changes',
     },
     {
-      mode: 'hard',
+      mode: 'hard' as const,
       label: 'Hard reset',
       description: 'Move HEAD and discard staged plus unstaged tracked changes',
     },

@@ -514,7 +514,9 @@ test('BranchTreeProvider loads nested container children and clears branch conte
     repoRoot: '/repo',
     loadedSections: new Set(),
     onRefresh(options) {
-      for (const section of options.sections ?? []) {
+      const sections = options.sections ?? ['local', 'hooks'];
+
+      for (const section of sections) {
         state.loadedSections.add(section);
       }
 
@@ -623,7 +625,7 @@ test('BranchTreeProvider loads nested container children and clears branch conte
   const descendantBranches = provider.getDescendantBranches('repo:/repo:folder:local:feature');
 
   assert.deepEqual(dataLoader.refreshCalls, [
-    { sections: ['local', 'hooks'], fetchRemoteState: false },
+    { fetchRemoteState: false },
     { sections: ['remote'], repoRoots: ['/repo'], fetchRemoteState: false },
   ]);
   assert.equal(rootChildren.length, 2);
