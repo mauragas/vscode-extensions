@@ -1,4 +1,5 @@
 import type { RemoteTrackingState } from '../branchModel';
+import type { RemoteInfo } from './hosting';
 import { listRefs } from './refListing';
 import {
   doesLocalBranchExist,
@@ -16,6 +17,46 @@ export interface CheckoutRemoteBranchResult {
 
 export interface DeleteRemoteBranchOptions {
   skipPushHooks?: boolean;
+}
+
+export async function getRemoteDetails(repoRoot: string): Promise<RemoteInfo[]> {
+  const { stdout } = await runGit(repoRoot, ['remote', '-v']);
+  const remotesByName = new Map<string, RemoteInfo>();
+
+  for (const rawLine of stdout.split(/\r?\n/u)) {
+    const line = rawLine.trim();
+    if (!line) {
+      continue;
+    }
+
+    const match = line.match(/^(\S+)\s+(\S+)\s+\((fetch|push)\)$/u);
+    if (!match) {
+      continue;
+    }
+
+    const [, name = '', url = '', type = 'fetch'] = match;
+    const existingRemote = remotesByName.get(name) ?? {
+      name,
+      fetchUrl: '',
+      pushUrl: '',
+    };
+
+    if (type === 'fetch') {
+      existingRemote.fetchUrl = url;
+      if (!existingRemote.pushUrl) {
+        existingRemote.pushUrl = url;
+      }
+    } else {
+      existingRemote.pushUrl = url;
+      if (!existingRemote.fetchUrl) {
+        existingRemote.fetchUrl = url;
+      }
+    }
+
+    remotesByName.set(name, existingRemote);
+  }
+
+  return [...remotesByName.values()].sort((left, right) => left.name.localeCompare(right.name));
 }
 
 export async function getRemoteBranches(repoRoot: string) {
@@ -63,12 +104,28 @@ export async function removeRemoteTrackingRef(
 }
 
 export async function getRemotes(repoRoot: string): Promise<string[]> {
-  const { stdout } = await runGit(repoRoot, ['remote']);
+  return (await getRemoteDetails(repoRoot)).map((remote) => remote.name);
+}
 
-  return stdout
-    .split(/\r?\n/u)
-    .map((remote) => remote.trim())
-    .filter(Boolean);
+export async function getRemoteDefaultBranch(
+  repoRoot: string,
+  remoteName: string
+): Promise<string | undefined> {
+  try {
+    const { stdout } = await runGit(repoRoot, [
+      'symbolic-ref',
+      '--short',
+      `refs/remotes/${remoteName}/HEAD`,
+    ]);
+    const normalizedReference = stdout.trim();
+    const prefix = `${remoteName}/`;
+
+    return normalizedReference.startsWith(prefix)
+      ? normalizedReference.slice(prefix.length)
+      : normalizedReference;
+  } catch {
+    return undefined;
+  }
 }
 
 export async function checkoutRemoteBranch(

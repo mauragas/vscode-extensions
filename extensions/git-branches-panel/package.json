@@ -1,8 +1,8 @@
 {
   "name": "git-branches-panel",
   "displayName": "Git Branches Panel",
-  "description": "Tree view for branches, tags, stashes, worktrees, and hooks across one or multiple Git repositories with grouping, search, filtering, sync state, and quick actions.",
-  "version": "2.1.0",
+  "description": "Tree view for branches, tags, stashes, worktrees, and hooks across one or multiple Git repositories with grouping, search, filtering, remote-host integration, sync state, and quick actions.",
+  "version": "2.2.0",
   "publisher": "karolis-mauragas",
   "license": "MIT",
   "repository": {
@@ -233,6 +233,31 @@
       {
         "command": "gitBranchesPanel.copyBranchName",
         "title": "Copy Branch Name",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "gitBranchesPanel.openBranchOnRemote",
+        "title": "Open Branch on Remote",
+        "icon": "$(globe)"
+      },
+      {
+        "command": "gitBranchesPanel.openComparePage",
+        "title": "Open Compare Page",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "gitBranchesPanel.createPullRequest",
+        "title": "Create Pull Request",
+        "icon": "$(git-pull-request)"
+      },
+      {
+        "command": "gitBranchesPanel.copyBranchUrl",
+        "title": "Copy Branch URL",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "gitBranchesPanel.copyCompareUrl",
+        "title": "Copy Compare URL",
         "icon": "$(copy)"
       },
       {
@@ -1490,6 +1515,31 @@
           "group": "1_branchCustom@12"
         },
         {
+          "command": "gitBranchesPanel.openBranchOnRemote",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch)$/",
+          "group": "1_remoteHosting@1"
+        },
+        {
+          "command": "gitBranchesPanel.openComparePage",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch)$/",
+          "group": "1_remoteHosting@2"
+        },
+        {
+          "command": "gitBranchesPanel.createPullRequest",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch)$/",
+          "group": "1_remoteHosting@3"
+        },
+        {
+          "command": "gitBranchesPanel.copyBranchUrl",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch)$/",
+          "group": "1_remoteHosting@4"
+        },
+        {
+          "command": "gitBranchesPanel.copyCompareUrl",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch)$/",
+          "group": "1_remoteHosting@5"
+        },
+        {
           "command": "gitBranchesPanel.showBranchActions",
           "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "2_more@1"
@@ -1815,6 +1865,46 @@
           "type": "boolean",
           "default": true,
           "description": "Load all searchable sections before running Find Ref or applying tree filters so results include refs from collapsed sections."
+        },
+        "gitBranchesPanel.remoteHosting.preferredRemote": {
+          "type": "string",
+          "default": "",
+          "description": "Prefer this remote when building branch, compare, and pull-request URLs for local branches that do not already imply a remote through their upstream or remote-tracking metadata."
+        },
+        "gitBranchesPanel.remoteHosting.compareBase": {
+          "type": "string",
+          "enum": [
+            "defaultBranch",
+            "upstream",
+            "currentBranch"
+          ],
+          "default": "defaultBranch",
+          "description": "Choose how browser compare and pull-request URLs resolve their base branch: the remote default branch, the selected branch's configured upstream branch, or the repository's currently checked out branch."
+        },
+        "gitBranchesPanel.remoteHosting.customProviders": {
+          "type": "array",
+          "default": [],
+          "description": "Optional custom remote-host URL templates. Each entry can define `name`, `hostPattern`, `branchUrlTemplate`, `compareUrlTemplate`, and `pullRequestUrlTemplate` with placeholders like `${hostRoot}`, `${namespace}`, `${repo}`, `${branch}`, `${base}`, `${organization}`, `${project}`, and `${remoteName}`.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "hostPattern": {
+                "type": "string"
+              },
+              "branchUrlTemplate": {
+                "type": "string"
+              },
+              "compareUrlTemplate": {
+                "type": "string"
+              },
+              "pullRequestUrlTemplate": {
+                "type": "string"
+              }
+            }
+          }
         },
         "gitBranchesPanel.showCurrentBranchInfo": {
           "type": "boolean",

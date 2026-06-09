@@ -14,6 +14,9 @@ import {
 } from '../branchRules';
 import { getErrorMessage } from '../errorUtils';
 import {
+  buildBranchWebUrl,
+  buildCompareWebUrl,
+  buildPullRequestWebUrl,
   cherryPickRef,
   checkoutBranch,
   checkoutRemoteBranch,
@@ -21,13 +24,25 @@ import {
   createBranchFromRef,
   deleteBranch,
   deleteRemoteBranch,
+  getRemoteDefaultBranch,
+  getRemoteDetails,
   getRemoteBranchTrackingState,
   getDiffFilesBetweenRefs,
   mergeBranchIntoCurrent,
+  parseCustomRemoteHostingProviders,
   pushBranch as pushBranchToRemote,
   removeRemoteTrackingRef,
+  resolveCompareBaseBranch,
+  resolveHostedRepository,
+  resolveRemoteBranchName,
+  resolveRemoteNameForBranch,
+  getUpstreamBranchName,
   renameBranch,
   syncBranch,
+  type CompareBaseStrategy,
+  type CustomRemoteHostingProvider,
+  type HostedRepository,
+  type RemoteInfo,
 } from '../git';
 import {
   buildCurrentBranchAlreadyCheckedOutMessage,
@@ -53,6 +68,9 @@ const RETRY_WITHOUT_HOOK_ACTION = 'Retry Without Hook…';
 const RETRY_WITHOUT_HOOK_CONFIRM_ACTION = 'Retry Without Hook';
 const SHOW_DETAILS_ACTION = 'Show Details';
 const OPEN_GIT_OUTPUT_ACTION = 'Open Git Output';
+const REMOTE_HOSTING_PREFERRED_REMOTE_SETTING = 'remoteHosting.preferredRemote';
+const REMOTE_HOSTING_COMPARE_BASE_SETTING = 'remoteHosting.compareBase';
+const REMOTE_HOSTING_CUSTOM_PROVIDERS_SETTING = 'remoteHosting.customProviders';
 
 type RemoteBranchTrackingState = RemoteTrackingState;
 type RemoteBranchDeleteFailureKind =
@@ -81,6 +99,24 @@ interface NewBranchPromptOptions {
   prompt: string;
   currentName?: string;
   normalize: boolean;
+}
+
+interface RemoteHostingConfiguration {
+  preferredRemote?: string;
+  compareBase: CompareBaseStrategy;
+  customProviders: readonly CustomRemoteHostingProvider[];
+}
+
+interface RemoteInfoQuickPickItem extends vscode.QuickPickItem {
+  remoteInfo: RemoteInfo;
+}
+
+interface ResolvedRemoteHostingContext {
+  branchName: string;
+  repoRoot: string;
+  remoteInfo: RemoteInfo;
+  hostedRepository: HostedRepository;
+  compareBaseBranchName?: string;
 }
 
 export function registerBranchDomainCommands(
@@ -144,6 +180,21 @@ export function registerBranchDomainCommands(
     }),
     vscode.commands.registerCommand('gitBranchesPanel.copyBranchName', async (item: BranchTreeItem) => {
       await handleCopyBranchName(item);
+    }),
+    vscode.commands.registerCommand('gitBranchesPanel.openBranchOnRemote', async (item: BranchTreeItem) => {
+      await handleOpenBranchOnRemote(item, commandContext);
+    }),
+    vscode.commands.registerCommand('gitBranchesPanel.openComparePage', async (item: BranchTreeItem) => {
+      await handleOpenComparePage(item, commandContext);
+    }),
+    vscode.commands.registerCommand('gitBranchesPanel.createPullRequest', async (item: BranchTreeItem) => {
+      await handleCreatePullRequest(item, commandContext);
+    }),
+    vscode.commands.registerCommand('gitBranchesPanel.copyBranchUrl', async (item: BranchTreeItem) => {
+      await handleCopyBranchUrl(item, commandContext);
+    }),
+    vscode.commands.registerCommand('gitBranchesPanel.copyCompareUrl', async (item: BranchTreeItem) => {
+      await handleCopyCompareUrl(item, commandContext);
     }),
     vscode.commands.registerCommand(
       'gitBranchesPanel.compareBranchWithCurrent',
@@ -499,6 +550,120 @@ async function handleCopyBranchName(item: BranchTreeItem): Promise<void> {
 
   await vscode.env.clipboard.writeText(item.branchName);
   vscode.window.showInformationMessage(`Copied '${item.branchName}' to the clipboard.`);
+}
+
+async function handleOpenBranchOnRemote(
+  item: BranchTreeItem,
+  commandContext: CommandContext
+): Promise<void> {
+  const hostedContext = await resolveRemoteHostingContext(item, commandContext, false);
+  if (!hostedContext) {
+    return;
+  }
+
+  const branchUrl = buildBranchWebUrl(hostedContext.hostedRepository, hostedContext.branchName);
+  if (!branchUrl) {
+    vscode.window.showErrorMessage(
+      `Remote '${hostedContext.remoteInfo.name}' does not expose a branch page URL template.`
+    );
+    return;
+  }
+
+  await openExternalUrl(branchUrl);
+}
+
+async function handleOpenComparePage(
+  item: BranchTreeItem,
+  commandContext: CommandContext
+): Promise<void> {
+  const hostedContext = await resolveRemoteHostingContext(item, commandContext, true);
+  if (!hostedContext?.compareBaseBranchName) {
+    return;
+  }
+
+  const compareUrl = buildCompareWebUrl(
+    hostedContext.hostedRepository,
+    hostedContext.compareBaseBranchName,
+    hostedContext.branchName
+  );
+  if (!compareUrl) {
+    vscode.window.showErrorMessage(
+      `Remote '${hostedContext.remoteInfo.name}' does not expose a compare page URL template.`
+    );
+    return;
+  }
+
+  await openExternalUrl(compareUrl);
+}
+
+async function handleCreatePullRequest(
+  item: BranchTreeItem,
+  commandContext: CommandContext
+): Promise<void> {
+  const hostedContext = await resolveRemoteHostingContext(item, commandContext, true);
+  if (!hostedContext?.compareBaseBranchName) {
+    return;
+  }
+
+  const pullRequestUrl = buildPullRequestWebUrl(
+    hostedContext.hostedRepository,
+    hostedContext.compareBaseBranchName,
+    hostedContext.branchName
+  );
+  if (!pullRequestUrl) {
+    vscode.window.showErrorMessage(
+      `Remote '${hostedContext.remoteInfo.name}' does not expose a pull request creation URL template.`
+    );
+    return;
+  }
+
+  await openExternalUrl(pullRequestUrl);
+}
+
+async function handleCopyBranchUrl(
+  item: BranchTreeItem,
+  commandContext: CommandContext
+): Promise<void> {
+  const hostedContext = await resolveRemoteHostingContext(item, commandContext, false);
+  if (!hostedContext) {
+    return;
+  }
+
+  const branchUrl = buildBranchWebUrl(hostedContext.hostedRepository, hostedContext.branchName);
+  if (!branchUrl) {
+    vscode.window.showErrorMessage(
+      `Remote '${hostedContext.remoteInfo.name}' does not expose a branch page URL template.`
+    );
+    return;
+  }
+
+  await vscode.env.clipboard.writeText(branchUrl);
+  vscode.window.showInformationMessage(`Copied branch URL for '${item.branchName}' to the clipboard.`);
+}
+
+async function handleCopyCompareUrl(
+  item: BranchTreeItem,
+  commandContext: CommandContext
+): Promise<void> {
+  const hostedContext = await resolveRemoteHostingContext(item, commandContext, true);
+  if (!hostedContext?.compareBaseBranchName) {
+    return;
+  }
+
+  const compareUrl = buildCompareWebUrl(
+    hostedContext.hostedRepository,
+    hostedContext.compareBaseBranchName,
+    hostedContext.branchName
+  );
+  if (!compareUrl) {
+    vscode.window.showErrorMessage(
+      `Remote '${hostedContext.remoteInfo.name}' does not expose a compare page URL template.`
+    );
+    return;
+  }
+
+  await vscode.env.clipboard.writeText(compareUrl);
+  vscode.window.showInformationMessage(`Copied compare URL for '${item.branchName}' to the clipboard.`);
 }
 
 async function handleCompareBranchWithCurrent(
@@ -862,6 +1027,26 @@ function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
     })
   );
 
+  if (supportsRemoteHostingActions(item)) {
+    items.push(
+      createBranchActionItem('openBranchOnRemote', '$(globe) Open Branch on Remote', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.openBranchOnRemote', item);
+      }),
+      createBranchActionItem('openComparePage', '$(link-external) Open Compare Page', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.openComparePage', item);
+      }),
+      createBranchActionItem('createPullRequest', '$(git-pull-request) Create Pull Request', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.createPullRequest', item);
+      }),
+      createBranchActionItem('copyBranchUrl', '$(copy) Copy Branch URL', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.copyBranchUrl', item);
+      }),
+      createBranchActionItem('copyCompareUrl', '$(copy) Copy Compare URL', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.copyCompareUrl', item);
+      })
+    );
+  }
+
   if (!isCurrentBranch) {
     items.push(
       createBranchActionItem(
@@ -957,6 +1142,14 @@ function canCreateWorktreeFromItem(item: BranchTreeItem): boolean {
   );
 }
 
+function supportsRemoteHostingActions(item: BranchTreeItem): boolean {
+  return (
+    item.nodeType === 'branch' ||
+    item.nodeType === 'currentBranch' ||
+    item.nodeType === 'remoteBranch'
+  );
+}
+
 function isDeletionProtectedItem(item: Pick<BranchTreeItem, 'branchName' | 'branchInfo' | 'nodeType'>): boolean {
   if (!item.branchName) {
     return false;
@@ -981,6 +1174,146 @@ function showProtectedBranchDeleteMessage(branchName: string): void {
   vscode.window.showWarningMessage(
     `Branch '${branchName}' is protected from deletion by 'gitBranchesPanel.protectedBranchNames'.`
   );
+}
+
+async function resolveRemoteHostingContext(
+  item: BranchTreeItem,
+  commandContext: CommandContext,
+  needsCompareBase: boolean
+): Promise<ResolvedRemoteHostingContext | undefined> {
+  if (!item.branchName || !item.repoRoot || !supportsRemoteHostingActions(item)) {
+    return undefined;
+  }
+
+  const remoteHostingConfiguration = getRemoteHostingConfiguration();
+  const remoteDetails = await getRemoteDetails(item.repoRoot);
+  if (remoteDetails.length === 0) {
+    vscode.window.showErrorMessage('No git remotes were found for this repository.');
+    return undefined;
+  }
+
+  const remoteInfo = await resolveRemoteInfoForBranch(item, remoteDetails, remoteHostingConfiguration);
+  if (!remoteInfo) {
+    return undefined;
+  }
+
+  const hostedRepository = resolveHostedRepository(remoteInfo, remoteHostingConfiguration.customProviders);
+  if (!hostedRepository) {
+    vscode.window.showErrorMessage(
+      `Remote '${remoteInfo.name}' uses an unsupported hosting URL format: ${remoteInfo.fetchUrl}`
+    );
+    return undefined;
+  }
+
+  const branchName = resolveRemoteBranchName(item.branchName, item.branchInfo);
+  const compareBaseBranchName = needsCompareBase
+    ? await resolveRemoteHostingCompareBaseBranchName(
+        item,
+        commandContext,
+        remoteInfo,
+        remoteHostingConfiguration,
+        branchName
+      )
+    : undefined;
+
+  if (needsCompareBase && !compareBaseBranchName) {
+    vscode.window.showErrorMessage(
+      `Could not determine a compare base for '${item.branchName}'. Check your remote-host integration settings or choose a tracked branch.`
+    );
+    return undefined;
+  }
+
+  return {
+    branchName,
+    repoRoot: item.repoRoot,
+    remoteInfo,
+    hostedRepository,
+    compareBaseBranchName,
+  };
+}
+
+async function resolveRemoteInfoForBranch(
+  item: BranchTreeItem,
+  remoteDetails: readonly RemoteInfo[],
+  remoteHostingConfiguration: RemoteHostingConfiguration
+): Promise<RemoteInfo | undefined> {
+  const branchIdentity = item.branchInfo ?? {
+    scope: item.nodeType === 'remoteBranch' ? 'remote' : 'local',
+  };
+
+  const preferredRemoteName = resolveRemoteNameForBranch(
+    branchIdentity,
+    remoteDetails.map((remote) => remote.name),
+    remoteHostingConfiguration.preferredRemote
+  );
+
+  if (preferredRemoteName) {
+    return remoteDetails.find((remote) => remote.name === preferredRemoteName);
+  }
+
+  const selection = await vscode.window.showQuickPick<RemoteInfoQuickPickItem>(
+    remoteDetails.map((remoteInfo) => ({
+      label: remoteInfo.name,
+      description: remoteInfo.fetchUrl,
+      detail:
+        remoteInfo.pushUrl && remoteInfo.pushUrl !== remoteInfo.fetchUrl
+          ? `Push: ${remoteInfo.pushUrl}`
+          : undefined,
+      remoteInfo,
+    })),
+    {
+      placeHolder: `Select a remote to open hosted URLs for '${item.branchName}'`,
+      matchOnDescription: true,
+      matchOnDetail: true,
+    }
+  );
+
+  return selection?.remoteInfo;
+}
+
+async function resolveRemoteHostingCompareBaseBranchName(
+  item: BranchTreeItem,
+  commandContext: CommandContext,
+  remoteInfo: RemoteInfo,
+  remoteHostingConfiguration: RemoteHostingConfiguration,
+  branchName: string
+): Promise<string | undefined> {
+  const repoRoot = item.repoRoot;
+  if (!repoRoot) {
+    return undefined;
+  }
+
+  const currentBranchName = commandContext.provider.getCurrentBranch(item.repoRoot)?.name;
+  const upstreamBranchName = getUpstreamBranchName(item.branchInfo?.upstreamName);
+  const defaultBranchName = await getRemoteDefaultBranch(repoRoot, remoteInfo.name);
+
+  return resolveCompareBaseBranch({
+    compareBaseStrategy: remoteHostingConfiguration.compareBase,
+    headBranchName: branchName,
+    currentBranchName,
+    upstreamBranchName,
+    defaultBranchName,
+  });
+}
+
+function getRemoteHostingConfiguration(): RemoteHostingConfiguration {
+  const configuration = vscode.workspace.getConfiguration('gitBranchesPanel');
+  const preferredRemote = configuration.get<string>(REMOTE_HOSTING_PREFERRED_REMOTE_SETTING, '').trim();
+
+  return {
+    preferredRemote: preferredRemote || undefined,
+    compareBase: configuration.get<CompareBaseStrategy>(
+      REMOTE_HOSTING_COMPARE_BASE_SETTING,
+      'defaultBranch'
+    ),
+    customProviders: parseCustomRemoteHostingProviders(
+      configuration.get<unknown[]>(REMOTE_HOSTING_CUSTOM_PROVIDERS_SETTING, [])
+    ),
+  };
+}
+
+async function openExternalUrl(url: string): Promise<void> {
+  await vscode.env.openExternal(vscode.Uri.parse(url));
 }
 
 function buildCompareResource(

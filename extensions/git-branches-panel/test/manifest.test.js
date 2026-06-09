@@ -25,8 +25,8 @@ function getInlineViewItemContextCommands() {
   )];
 }
 
-test('package manifest exposes the 2.1.0 branch-menu, worktree, stash, hook, multi-repo, and search contributions', () => {
-  assert.equal(packageJson.version, '2.1.0');
+test('package manifest exposes the 2.2.0 branch-menu, worktree, stash, hook, multi-repo, search, and remote-host contributions', () => {
+  assert.equal(packageJson.version, '2.2.0');
   assert.equal(getCommand('gitBranchesPanel.selectRepository').title, 'Select Active Repository');
   assert.equal(getCommand('gitBranchesPanel.selectRepository').icon, '$(repo)');
   assert.equal(
@@ -39,6 +39,11 @@ test('package manifest exposes the 2.1.0 branch-menu, worktree, stash, hook, mul
   assert.equal(getCommand('gitBranchesPanel.clearFilter').title, 'Clear Filter');
   assert.equal(getCommand('gitBranchesPanel.toggleShowOnlyPinned').title, 'Toggle Show Only Pinned');
   assert.equal(getCommand('gitBranchesPanel.showNeedsAttention').title, 'Show Needs Attention');
+  assert.equal(getCommand('gitBranchesPanel.openBranchOnRemote').title, 'Open Branch on Remote');
+  assert.equal(getCommand('gitBranchesPanel.openComparePage').title, 'Open Compare Page');
+  assert.equal(getCommand('gitBranchesPanel.createPullRequest').title, 'Create Pull Request');
+  assert.equal(getCommand('gitBranchesPanel.copyBranchUrl').title, 'Copy Branch URL');
+  assert.equal(getCommand('gitBranchesPanel.copyCompareUrl').title, 'Copy Compare URL');
   assert.equal(getCommand('gitBranchesPanel.stashSilently').title, 'Stash all changes silently');
   assert.equal(
     getCommand('gitBranchesPanel.stashStagedSilently').title,
@@ -124,6 +129,14 @@ test('package manifest exposes the 2.1.0 branch-menu, worktree, stash, hook, mul
   assert.equal(settings['gitBranchesPanel.search.includeHooks'].default, false);
   assert.equal(settings['gitBranchesPanel.search.maxResults'].default, 200);
   assert.equal(settings['gitBranchesPanel.search.autoLoadAllSections'].default, true);
+  assert.equal(settings['gitBranchesPanel.remoteHosting.preferredRemote'].default, '');
+  assert.equal(settings['gitBranchesPanel.remoteHosting.compareBase'].default, 'defaultBranch');
+  assert.deepEqual(settings['gitBranchesPanel.remoteHosting.compareBase'].enum, [
+    'defaultBranch',
+    'upstream',
+    'currentBranch',
+  ]);
+  assert.deepEqual(settings['gitBranchesPanel.remoteHosting.customProviders'].default, []);
   assert.equal(settings['gitBranchesPanel.showCurrentBranchInfo'].default, false);
   assert.equal(settings['gitBranchesPanel.showStatusBarBranchAction'].default, true);
   assert.match(
@@ -335,6 +348,31 @@ test('package manifest exposes the 2.1.0 branch-menu, worktree, stash, hook, mul
   assert.ok(
     sectionInlineMenus.some(
       (item) => item.command === 'gitBranchesPanel.pushAllTags' && item.when === 'viewItem == tagsSection' && item.group === 'inline@2'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.openBranchOnRemote' && item.group === '1_remoteHosting@1'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.openComparePage' && item.group === '1_remoteHosting@2'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.createPullRequest' && item.group === '1_remoteHosting@3'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.copyBranchUrl' && item.group === '1_remoteHosting@4'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.copyCompareUrl' && item.group === '1_remoteHosting@5'
     )
   );
   assert.ok(

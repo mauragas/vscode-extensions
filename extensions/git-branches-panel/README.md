@@ -2,7 +2,7 @@
 
 `Git Branches Panel` is a Visual Studio Code extension that shows local and
 remote Git branches, stashes, worktrees, hooks, and tags in a dedicated tree view with folder grouping,
-search, filtering, sync status, current-branch context, quick actions, and multi-repository support.
+search, filtering, remote-host integration, sync status, current-branch context, quick actions, and multi-repository support.
 
 This extension lives in the [`vscode-extensions`](../..) repository under `extensions/git-branches-panel/`.
 
@@ -23,6 +23,7 @@ section opens first, while Remote, Stash, Worktree, Hooks, and Tags stay collaps
 - 🎯 **Active repository focus** — keep one repository active for toolbar actions and current-branch context, or switch directly to the repository that owns the active editor
 - 🔎 **Find Ref...** — search branches, tags, stashes, worktrees, and optionally hooks with query prefixes like `remote:` or `state:stale`
 - 🎚️ **Tree filtering** — filter the visible tree by query text, pinned-only mode, or a **Needs Attention** preset without losing the surrounding repository or folder context
+- 🌐 **Remote-host actions** — open a branch on its remote, open a browser compare page, create a pull request, or copy hosted branch/compare URLs without leaving VS Code
 - 🧭 **Local and remote sections** — local branches are shown first, with remote branches listed in a separate group below them
 - 🧺 **Stash section** — stashes are shown between remote branches and tags so parked work stays close at hand
 - 🪵 **Worktree section** — worktrees are shown under stashes so additional checkouts are easy to find and manage
@@ -80,6 +81,11 @@ section opens first, while Remote, Stash, Worktree, Hooks, and Tags stay collaps
 | Show Needs Attention | Filter the visible tree down to stale remote refs, missing-upstream branches, and publishable branches |
 | Select Active Repository | Choose which repository drives the current-branch banner and toolbar actions in multi-repository workspaces |
 | Focus Repository from Active Editor | Switch the active repository to the one that owns the current editor file |
+| Open Branch on Remote | Open the selected branch or remote branch on its hosting provider in the browser |
+| Open Compare Page | Open the selected branch on its hosting provider's compare page using the configured base-branch strategy |
+| Create Pull Request | Open a pull request / merge request creation page for the selected branch on its hosting provider |
+| Copy Branch URL | Copy the hosted browser URL for the selected branch |
+| Copy Compare URL | Copy the hosted compare URL for the selected branch and its resolved base branch |
 | Open Extension Settings | Open the extension's settings filtered in the Settings editor |
 | Stash all changes silently | Stash all tracked and untracked files without prompting for a stash name |
 | Stash staged changes silently | Stash only staged changes without prompting for a stash name |
@@ -190,6 +196,9 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 | `gitBranchesPanel.search.includeHooks` | `false` | Include Git hook items in **Find Ref...** results |
 | `gitBranchesPanel.search.maxResults` | `200` | Maximum number of **Find Ref...** results to show after ranking matches |
 | `gitBranchesPanel.search.autoLoadAllSections` | `true` | Load collapsed sections before running **Find Ref...** or applying a tree filter so results include refs outside the currently expanded sections |
+| `gitBranchesPanel.remoteHosting.preferredRemote` | `""` | Prefer this remote when building hosted branch, compare, and pull-request URLs for local branches that do not already imply a remote |
+| `gitBranchesPanel.remoteHosting.compareBase` | `defaultBranch` | Resolve compare and pull-request base branches from the remote default branch, the selected branch's configured upstream branch, or the current local branch |
+| `gitBranchesPanel.remoteHosting.customProviders` | `[]` | Optional custom host matchers and URL templates with placeholders like `${hostRoot}`, `${namespace}`, `${repo}`, `${branch}`, `${base}`, `${organization}`, `${project}`, and `${remoteName}` |
 | `gitBranchesPanel.showCurrentBranchInfo` | `false` | Show the current branch summary above the tree views |
 | `gitBranchesPanel.showStatusBarBranchAction` | `true` | Deprecated. This setting no longer has any effect because the extension no longer contributes a status bar branch action |
 | `gitBranchesPanel.toolbar.showNewBranch` | `true` | Show the **New Branch** toolbar quick action |
@@ -221,6 +230,9 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 - Use **Find Ref...** with prefixes like `remote:`, `tag:`, `stash:`, or `state:stale` when repositories get large and you want a faster path than scrolling the tree
 - Keep `gitBranchesPanel.search.autoLoadAllSections` enabled if you want search and filtering to include collapsed sections, or turn it off if you prefer faster commands over broader result coverage
 - Turn on `gitBranchesPanel.search.includeHooks` if you want hook scripts to show up in **Find Ref...** results alongside regular Git refs
+- Set `gitBranchesPanel.remoteHosting.preferredRemote` if your branches commonly live on a fork or non-`origin` remote and you want hosted URLs to default there instead of prompting
+- Leave `gitBranchesPanel.remoteHosting.compareBase = defaultBranch` for PR-style compare pages, or switch to `currentBranch` / `upstream` if your workflow prefers browser comparisons against a checked-out or tracked branch
+- Use `gitBranchesPanel.remoteHosting.customProviders` to support self-hosted forge URLs with templates like `${hostRoot}/${namespace}/${repo}/compare/${base}...${branch}`
 - Leave `gitBranchesPanel.toolbar.showStashSilently` off and use the built-in Changes view button by default, or turn the Branches-view stash button back on if you prefer the old placement
 - Enable any of the additional `gitBranchesPanel.changesView.showStash*` settings if you want staged-only stash buttons or stash commands that prompt for an optional message
 - Hide any toolbar quick action you never use to keep the title bar compact

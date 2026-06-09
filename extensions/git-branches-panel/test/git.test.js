@@ -32,6 +32,8 @@ const {
   getDiffFilesBetweenRefs,
   getBranches,
   getHooks,
+  getRemoteDefaultBranch,
+  getRemoteDetails,
   getRemoteBranchTrackingState,
   getRemotes,
   getRemoteBranches,
@@ -289,6 +291,28 @@ test('getRemotes lists configured git remotes', async (t) => {
   const remotes = await getRemotes(repoRoot);
 
   assert.deepEqual(remotes, ['origin']);
+});
+
+test('getRemoteDetails returns fetch and push URLs per remote', async (t) => {
+  const { repoRoot, remoteRoot } = createRemoteBackedRepository(t);
+
+  const remoteDetails = await getRemoteDetails(repoRoot);
+
+  assert.deepEqual(remoteDetails, [
+    {
+      name: 'origin',
+      fetchUrl: remoteRoot,
+      pushUrl: remoteRoot,
+    },
+  ]);
+});
+
+test('getRemoteDefaultBranch resolves the remote HEAD symbolic ref', async (t) => {
+  const { repoRoot } = createRemoteBackedRepository(t);
+
+  runGit(repoRoot, ['remote', 'set-head', 'origin', '-a']);
+
+  assert.equal(await getRemoteDefaultBranch(repoRoot, 'origin'), 'main');
 });
 
 test('pushAllTags pushes local tags to the selected remote', async (t) => {

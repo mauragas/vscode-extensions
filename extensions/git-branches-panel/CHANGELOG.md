@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.0] - 2026-06-09
+
+- Added remote-host integration commands to open a branch on its remote, open a compare page, create a pull request, copy a branch URL, and copy a compare URL directly from branch items
+- Added provider-aware hosted URL generation for GitHub, GitLab, Bitbucket, and Azure DevOps using remote URL parsing instead of provider-specific authentication
+- Added `gitBranchesPanel.remoteHosting.preferredRemote`, `gitBranchesPanel.remoteHosting.compareBase`, and `gitBranchesPanel.remoteHosting.customProviders` settings to control how hosted URLs are resolved and customized
+- Added hosted-URL actions to branch context menus and the **More Branch Actions...** quick pick for local, current, publishable, and live remote branches
+- Added remote metadata helpers for fetch/push URL discovery and remote default-branch resolution to support compare and pull-request links
+- Expanded automated coverage for hosted URL parsing, command behavior, manifest contributions, and Git-backed remote metadata helpers
+
 ## [2.1.0] - 2026-06-09
 
 - Added **Find Ref...** to search branches, remote branches, tags, stashes, worktrees, and optionally hooks across the workspace from one command
