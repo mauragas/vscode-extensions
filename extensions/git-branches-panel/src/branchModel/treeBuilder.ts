@@ -2,12 +2,14 @@ import type {
   BranchInfo,
   BranchSortOrder,
   BranchTreeNode,
+  RemoteConfigInfo,
   TagSortOrder,
   TreeRepository,
   TreeBranch,
   TreeChildNode,
   TreeContainerScope,
   TreeFolder,
+  TreeRemote,
   TreeSection,
 } from './types';
 
@@ -16,6 +18,27 @@ const branchNameCollator = new Intl.Collator(undefined, {
   sensitivity: 'base',
 });
 
+export function buildRemoteTree(
+  remotes: readonly RemoteConfigInfo[],
+  repoRoot: string
+): TreeRemote[] {
+  return [...remotes]
+    .sort((left, right) => {
+      if (Boolean(left.isDefault) !== Boolean(right.isDefault)) {
+        return left.isDefault ? -1 : 1;
+      }
+
+      return branchNameCollator.compare(left.name, right.name);
+    })
+    .map((remote) => ({
+      kind: 'remote',
+      info: remote,
+      fullName: remote.name,
+      label: remote.name,
+      path: remote.name,
+      repoRoot,
+    }));
+}
 const tagVersionPattern =
   /(?:^|[/_-])(v?\d+(?:\.\d+)*)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/u;
 
@@ -249,7 +272,7 @@ export function findFolderNode(
   repoRoot?: string
 ): TreeFolder | undefined {
   for (const node of nodes) {
-    if (node.kind === 'branch') {
+    if (node.kind === 'branch' || node.kind === 'remote') {
       continue;
     }
 

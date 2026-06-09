@@ -25,14 +25,24 @@ function getInlineViewItemContextCommands() {
   )];
 }
 
-test('package manifest exposes the 2.3.0 branch-menu, worktree, stash, hook, multi-repo, search, remote-host, and history contributions', () => {
-  assert.equal(packageJson.version, '2.3.0');
+test('package manifest exposes the 2.4.0 branch-menu, worktree, stash, hook, multi-repo, search, remote-host, history, and remote-management contributions', () => {
+  assert.equal(packageJson.version, '2.4.0');
   assert.equal(getCommand('gitBranchesPanel.selectRepository').title, 'Select Active Repository');
   assert.equal(getCommand('gitBranchesPanel.selectRepository').icon, '$(repo)');
   assert.equal(
     getCommand('gitBranchesPanel.focusActiveEditorRepository').title,
     'Focus Repository from Active Editor'
   );
+  assert.equal(getCommand('gitBranchesPanel.addRemote').title, 'Add Remote...');
+  assert.equal(getCommand('gitBranchesPanel.fetchRemote').title, 'Fetch Remote');
+  assert.equal(getCommand('gitBranchesPanel.fetchRemotePrune').title, 'Fetch Remote (Prune)');
+  assert.equal(getCommand('gitBranchesPanel.copyRemoteFetchUrl').title, 'Copy Fetch URL');
+  assert.equal(getCommand('gitBranchesPanel.copyRemotePushUrl').title, 'Copy Push URL');
+  assert.equal(getCommand('gitBranchesPanel.openRemoteHomepage').title, 'Open Remote Homepage');
+  assert.equal(getCommand('gitBranchesPanel.renameRemote').title, 'Rename Remote...');
+  assert.equal(getCommand('gitBranchesPanel.setRemoteFetchUrl').title, 'Set Fetch URL...');
+  assert.equal(getCommand('gitBranchesPanel.setRemotePushUrl').title, 'Set Push URL...');
+  assert.equal(getCommand('gitBranchesPanel.removeRemote').title, 'Remove Remote');
   assert.equal(getCommand('gitBranchesPanel.findRef').title, 'Find Ref...');
   assert.equal(getCommand('gitBranchesPanel.findRef').icon, '$(search)');
   assert.equal(getCommand('gitBranchesPanel.setFilter').title, 'Set Filter...');
@@ -131,6 +141,7 @@ test('package manifest exposes the 2.3.0 branch-menu, worktree, stash, hook, mul
     'singleActiveRepository',
   ]);
   assert.equal(settings['gitBranchesPanel.multiRepository.followActiveEditor'].default, false);
+  assert.equal(settings['gitBranchesPanel.showRemotesSection'].default, true);
   assert.equal(settings['gitBranchesPanel.search.includeHooks'].default, false);
   assert.equal(settings['gitBranchesPanel.search.maxResults'].default, 200);
   assert.equal(settings['gitBranchesPanel.search.autoLoadAllSections'].default, true);
@@ -249,6 +260,21 @@ test('package manifest exposes the 2.3.0 branch-menu, worktree, stash, hook, mul
   );
   assert.ok(
     sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.addRemote' && item.when === 'viewItem == remotesSection' && item.group === 'inline@1'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.fetchRemote' && item.when === 'viewItem == remoteConfig' && item.group === 'inline@1'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.fetchRemotePrune' && item.when === 'viewItem == remoteConfig' && item.group === 'inline@2'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
       (item) => item.command === 'gitBranchesPanel.enableAllHooks' && item.when === 'viewItem =~ /^hooksSection(?::hasEnabled)?(?::hasDisabled)$/' && item.group === 'inline@1'
     )
   );
@@ -355,6 +381,56 @@ test('package manifest exposes the 2.3.0 branch-menu, worktree, stash, hook, mul
   assert.ok(
     sectionInlineMenus.some(
       (item) => item.command === 'gitBranchesPanel.pushAllTags' && item.when === 'viewItem == tagsSection' && item.group === 'inline@2'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.addRemote' && item.group === '1_remotesSection@1'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.fetchRemote' && item.group === '1_remoteConfig@1'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.fetchRemotePrune' && item.group === '1_remoteConfig@2'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.openRemoteHomepage' && item.group === '1_remoteConfig@3'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.copyRemoteFetchUrl' && item.group === '1_remoteConfig@4'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.copyRemotePushUrl' && item.group === '1_remoteConfig@5'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.renameRemote' && item.group === '1_remoteConfig@6'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.setRemoteFetchUrl' && item.group === '1_remoteConfig@7'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.setRemotePushUrl' && item.group === '1_remoteConfig@8'
+    )
+  );
+  assert.ok(
+    sectionInlineMenus.some(
+      (item) => item.command === 'gitBranchesPanel.removeRemote' && item.group === '2_remoteConfig@1'
     )
   );
   assert.ok(

@@ -1,4 +1,5 @@
 import type { RemoteTrackingState } from '../branchModel';
+import { resolveHostedRepository } from './hosting';
 import type { RemoteInfo } from './hosting';
 import { listRefs } from './refListing';
 import {
@@ -17,6 +18,10 @@ export interface CheckoutRemoteBranchResult {
 
 export interface DeleteRemoteBranchOptions {
   skipPushHooks?: boolean;
+}
+
+export interface FetchRemoteOptions {
+  prune?: boolean;
 }
 
 export async function getRemoteDetails(repoRoot: string): Promise<RemoteInfo[]> {
@@ -39,6 +44,7 @@ export async function getRemoteDetails(repoRoot: string): Promise<RemoteInfo[]> 
       name,
       fetchUrl: '',
       pushUrl: '',
+      isDefault: name === 'origin',
     };
 
     if (type === 'fetch') {
@@ -56,7 +62,63 @@ export async function getRemoteDetails(repoRoot: string): Promise<RemoteInfo[]> 
     remotesByName.set(name, existingRemote);
   }
 
-  return [...remotesByName.values()].sort((left, right) => left.name.localeCompare(right.name));
+  return [...remotesByName.values()]
+    .map((remote) => ({
+      ...remote,
+      hostProvider: resolveHostedRepository(remote)?.providerLabel,
+    }))
+    .sort((left, right) => {
+      if (Boolean(left.isDefault) !== Boolean(right.isDefault)) {
+        return left.isDefault ? -1 : 1;
+      }
+
+      return left.name.localeCompare(right.name);
+    });
+}
+
+export async function addRemote(repoRoot: string, remoteName: string, remoteUrl: string): Promise<void> {
+  await runGit(repoRoot, ['remote', 'add', remoteName, remoteUrl]);
+}
+
+export async function renameRemote(
+  repoRoot: string,
+  remoteName: string,
+  newRemoteName: string
+): Promise<void> {
+  await ensureRemoteExists(repoRoot, remoteName);
+  await runGit(repoRoot, ['remote', 'rename', remoteName, newRemoteName]);
+}
+
+export async function removeRemote(repoRoot: string, remoteName: string): Promise<void> {
+  await ensureRemoteExists(repoRoot, remoteName);
+  await runGit(repoRoot, ['remote', 'remove', remoteName]);
+}
+
+export async function setRemoteFetchUrl(
+  repoRoot: string,
+  remoteName: string,
+  remoteUrl: string
+): Promise<void> {
+  await ensureRemoteExists(repoRoot, remoteName);
+  await runGit(repoRoot, ['remote', 'set-url', remoteName, remoteUrl]);
+}
+
+export async function setRemotePushUrl(
+  repoRoot: string,
+  remoteName: string,
+  remoteUrl: string
+): Promise<void> {
+  await ensureRemoteExists(repoRoot, remoteName);
+  await runGit(repoRoot, ['remote', 'set-url', '--push', remoteName, remoteUrl]);
+}
+
+export async function fetchRemote(
+  repoRoot: string,
+  remoteName: string,
+  options: FetchRemoteOptions = {}
+): Promise<void> {
+  await ensureRemoteExists(repoRoot, remoteName);
+  await runGit(repoRoot, ['fetch', ...(options.prune ? ['--prune'] : []), remoteName]);
 }
 
 export async function getRemoteBranches(repoRoot: string) {

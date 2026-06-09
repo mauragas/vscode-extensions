@@ -1,8 +1,8 @@
 {
   "name": "git-branches-panel",
   "displayName": "Git Branches Panel",
-  "description": "Tree view for branches, tags, stashes, worktrees, and hooks across one or multiple Git repositories with grouping, search, filtering, compare/history workflows, remote-host integration, sync state, and quick actions.",
-  "version": "2.0.0",
+  "description": "Tree view for branches, tags, stashes, worktrees, hooks, and remotes across one or multiple Git repositories with grouping, search, filtering, compare/history workflows, remote-host integration, sync state, and quick actions.",
+  "version": "2.4.0",
   "publisher": "karolis-mauragas",
   "license": "MIT",
   "repository": {
@@ -84,6 +84,56 @@
       {
         "command": "gitBranchesPanel.focusActiveEditorRepository",
         "title": "Focus Repository from Active Editor"
+      },
+      {
+        "command": "gitBranchesPanel.addRemote",
+        "title": "Add Remote...",
+        "icon": "$(add)"
+      },
+      {
+        "command": "gitBranchesPanel.fetchRemote",
+        "title": "Fetch Remote",
+        "icon": "$(repo-fetch)"
+      },
+      {
+        "command": "gitBranchesPanel.fetchRemotePrune",
+        "title": "Fetch Remote (Prune)",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "gitBranchesPanel.copyRemoteFetchUrl",
+        "title": "Copy Fetch URL",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "gitBranchesPanel.copyRemotePushUrl",
+        "title": "Copy Push URL",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "gitBranchesPanel.openRemoteHomepage",
+        "title": "Open Remote Homepage",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "gitBranchesPanel.renameRemote",
+        "title": "Rename Remote...",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "gitBranchesPanel.setRemoteFetchUrl",
+        "title": "Set Fetch URL...",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "gitBranchesPanel.setRemotePushUrl",
+        "title": "Set Push URL...",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "gitBranchesPanel.removeRemote",
+        "title": "Remove Remote",
+        "icon": "$(trash)"
       },
       {
         "command": "gitBranchesPanel.findRef",
@@ -618,6 +668,21 @@
           "command": "gitBranchesPanel.createWorktreeFromCurrentBranch",
           "when": "viewItem == worktreeSection",
           "group": "inline@1"
+        },
+        {
+          "command": "gitBranchesPanel.addRemote",
+          "when": "viewItem == remotesSection",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitBranchesPanel.fetchRemote",
+          "when": "viewItem == remoteConfig",
+          "group": "inline@1"
+        },
+        {
+          "command": "gitBranchesPanel.fetchRemotePrune",
+          "when": "viewItem == remoteConfig",
+          "group": "inline@2"
         },
         {
           "command": "gitBranchesPanel.enableAllHooks",
@@ -1768,6 +1833,56 @@
           "command": "gitBranchesPanel.pushAllTags",
           "when": "viewItem == tagsSection",
           "group": "1_tags@1"
+        },
+        {
+          "command": "gitBranchesPanel.addRemote",
+          "when": "viewItem == remotesSection",
+          "group": "1_remotesSection@1"
+        },
+        {
+          "command": "gitBranchesPanel.fetchRemote",
+          "when": "viewItem == remoteConfig",
+          "group": "1_remoteConfig@1"
+        },
+        {
+          "command": "gitBranchesPanel.fetchRemotePrune",
+          "when": "viewItem == remoteConfig",
+          "group": "1_remoteConfig@2"
+        },
+        {
+          "command": "gitBranchesPanel.openRemoteHomepage",
+          "when": "viewItem == remoteConfig",
+          "group": "1_remoteConfig@3"
+        },
+        {
+          "command": "gitBranchesPanel.copyRemoteFetchUrl",
+          "when": "viewItem == remoteConfig",
+          "group": "1_remoteConfig@4"
+        },
+        {
+          "command": "gitBranchesPanel.copyRemotePushUrl",
+          "when": "viewItem == remoteConfig",
+          "group": "1_remoteConfig@5"
+        },
+        {
+          "command": "gitBranchesPanel.renameRemote",
+          "when": "viewItem == remoteConfig",
+          "group": "1_remoteConfig@6"
+        },
+        {
+          "command": "gitBranchesPanel.setRemoteFetchUrl",
+          "when": "viewItem == remoteConfig",
+          "group": "1_remoteConfig@7"
+        },
+        {
+          "command": "gitBranchesPanel.setRemotePushUrl",
+          "when": "viewItem == remoteConfig",
+          "group": "1_remoteConfig@8"
+        },
+        {
+          "command": "gitBranchesPanel.removeRemote",
+          "when": "viewItem == remoteConfig",
+          "group": "2_remoteConfig@1"
         }
       ],
       "scm/title": [
@@ -1899,6 +2014,11 @@
           "type": "boolean",
           "default": false,
           "description": "When enabled, keep the active repository aligned with the Git repository that owns the active editor whenever multi-repository support is in use."
+        },
+        "gitBranchesPanel.showRemotesSection": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the dedicated Remotes section with per-remote fetch, URL, rename, and remove actions."
         },
         "gitBranchesPanel.search.includeHooks": {
           "type": "boolean",

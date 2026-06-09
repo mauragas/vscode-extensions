@@ -529,6 +529,14 @@ function buildRepositoryActionItems(commandContext: CommandContext): AdvancedAct
       },
     },
     {
+      actionId: 'addRemote',
+      label: 'Add remote…',
+      description: 'Add a new fetch/push remote to the active repository',
+      run: async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.addRemote');
+      },
+    },
+    {
       actionId: 'pruneMissingUpstream',
       label: 'Prune local branches with missing upstream',
       description: 'Delete non-current local branches whose tracked upstream no longer exists',

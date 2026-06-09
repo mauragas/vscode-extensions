@@ -16,6 +16,7 @@ const test = require('node:test');
 
 const {
   applyStash,
+  addRemote,
   cleanRepository,
   cherryPickRef,
   checkoutRemoteBranch,
@@ -47,8 +48,13 @@ const {
   popStash,
   pushBranch,
   pushAllTags,
+  fetchRemote,
+  removeRemote,
+  renameRemote,
   renameStash,
   setHookEnabled,
+  setRemoteFetchUrl,
+  setRemotePushUrl,
   removeWorktree,
   renameWorktree,
   stashAllChanges,
@@ -306,6 +312,8 @@ test('getRemoteDetails returns fetch and push URLs per remote', async (t) => {
       name: 'origin',
       fetchUrl: remoteRoot,
       pushUrl: remoteRoot,
+      isDefault: true,
+      hostProvider: undefined,
     },
   ]);
 });
@@ -316,6 +324,62 @@ test('getRemoteDefaultBranch resolves the remote HEAD symbolic ref', async (t) =
   runGit(repoRoot, ['remote', 'set-head', 'origin', '-a']);
 
   assert.equal(await getRemoteDefaultBranch(repoRoot, 'origin'), 'main');
+});
+
+test('addRemote, renameRemote, setRemoteFetchUrl, setRemotePushUrl, and removeRemote update git remotes', async (t) => {
+  const repoRoot = createTempRepository(t);
+  const remoteA = mkdtempSync(join(tmpdir(), 'git-branches-panel-extra-remote-a-'));
+  const remoteB = mkdtempSync(join(tmpdir(), 'git-branches-panel-extra-remote-b-'));
+
+  t.after(() => {
+    rmSync(remoteA, { recursive: true, force: true });
+    rmSync(remoteB, { recursive: true, force: true });
+  });
+
+  runGit(remoteA, ['init', '--bare']);
+  runGit(remoteB, ['init', '--bare']);
+
+  await addRemote(repoRoot, 'origin', remoteA);
+  assert.deepEqual(await getRemotes(repoRoot), ['origin']);
+
+  await renameRemote(repoRoot, 'origin', 'upstream');
+  assert.deepEqual(await getRemotes(repoRoot), ['upstream']);
+
+  await setRemoteFetchUrl(repoRoot, 'upstream', remoteB);
+  await setRemotePushUrl(repoRoot, 'upstream', remoteA);
+
+  const remoteDetails = await getRemoteDetails(repoRoot);
+  assert.deepEqual(remoteDetails, [
+    {
+      name: 'upstream',
+      fetchUrl: remoteB,
+      pushUrl: remoteA,
+      isDefault: false,
+      hostProvider: undefined,
+    },
+  ]);
+
+  await removeRemote(repoRoot, 'upstream');
+  assert.deepEqual(await getRemotes(repoRoot), []);
+});
+
+test('fetchRemote fetches a specific remote and can prune deleted refs', async (t) => {
+  const { repoRoot, remoteRoot } = createRemoteBackedRepository(t);
+  const collaboratorRoot = cloneRepository(t, remoteRoot);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/stale']);
+  commitFile(repoRoot, 'stale.txt', 'stale\n', 'Add stale branch');
+  runGit(repoRoot, ['push', '-u', 'origin', 'feature/stale']);
+  runGit(repoRoot, ['checkout', 'main']);
+
+  runGit(collaboratorRoot, ['fetch', 'origin']);
+  runGit(collaboratorRoot, ['push', 'origin', '--delete', 'feature/stale']);
+
+  await fetchRemote(repoRoot, 'origin');
+  assert.equal(hasRef(repoRoot, 'refs/remotes/origin/feature/stale'), true);
+
+  await fetchRemote(repoRoot, 'origin', { prune: true });
+  assert.equal(hasRef(repoRoot, 'refs/remotes/origin/feature/stale'), false);
 });
 
 test('pushAllTags pushes local tags to the selected remote', async (t) => {

@@ -4,6 +4,8 @@ export interface RemoteInfo {
   name: string;
   fetchUrl: string;
   pushUrl: string;
+  isDefault?: boolean;
+  hostProvider?: string;
 }
 
 export interface CustomRemoteHostingProvider {
@@ -126,6 +128,23 @@ export function buildBranchWebUrl(
       return `${repository.hostRoot}/${repository.namespace}/${repository.repository}/branch/${encodePathLikeBranch(branchName)}`;
     case 'azureDevOps':
       return `${repository.hostRoot}/${repository.project}/_git/${repository.repository}?version=GB${encodeURIComponent(branchName)}&_a=contents`;
+    default:
+      return undefined;
+  }
+}
+
+export function buildRepositoryHomeUrl(repository: HostedRepository): string | undefined {
+  if (repository.provider === 'custom') {
+    return `${repository.hostRoot}/${repository.namespace}/${repository.repository}`;
+  }
+
+  switch (repository.provider) {
+    case 'github':
+    case 'gitlab':
+    case 'bitbucket':
+      return `${repository.hostRoot}/${repository.namespace}/${repository.repository}`;
+    case 'azureDevOps':
+      return `${repository.hostRoot}/${repository.project}/_git/${repository.repository}`;
     default:
       return undefined;
   }

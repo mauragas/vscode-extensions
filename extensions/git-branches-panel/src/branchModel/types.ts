@@ -1,6 +1,14 @@
 export type RemoteTrackingState = 'live' | 'stale';
 export type HookSource = 'local' | 'shared';
 
+export interface RemoteConfigInfo {
+  name: string;
+  fetchUrl: string;
+  pushUrl: string;
+  isDefault?: boolean;
+  hostProvider?: string;
+}
+
 export interface BranchInfo {
   name: string;
   isCurrent: boolean;
@@ -40,7 +48,7 @@ export interface BranchSyncState {
 
 export type BranchSortOrder = 'alphabetical' | 'recent';
 export type TagSortOrder = BranchSortOrder | 'versionAscending' | 'versionDescending';
-export type TreeContainerScope = 'local' | 'remote' | 'tag' | 'stash' | 'worktree' | 'hook';
+export type TreeContainerScope = 'local' | 'remote' | 'remoteConfig' | 'tag' | 'stash' | 'worktree' | 'hook';
 
 export interface TreeRepository {
   kind: 'repository';
@@ -82,5 +90,14 @@ export interface TreeBranch {
   repoRoot: string;
 }
 
-export type TreeChildNode = TreeFolder | TreeBranch;
-export type BranchTreeNode = TreeRepository | TreeSection | TreeFolder | TreeBranch;
+export interface TreeRemote {
+  kind: 'remote';
+  info: RemoteConfigInfo;
+  fullName: string;
+  label: string;
+  path: string;
+  repoRoot: string;
+}
+
+export type TreeChildNode = TreeFolder | TreeBranch | TreeRemote;
+export type BranchTreeNode = TreeRepository | TreeSection | TreeFolder | TreeBranch | TreeRemote;

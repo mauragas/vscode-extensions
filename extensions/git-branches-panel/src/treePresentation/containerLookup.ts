@@ -20,7 +20,7 @@ export function findContainerNode(
   containerKey: string
 ): TreeContainerNode | undefined {
   for (const node of nodes) {
-    if (node.kind === 'branch') {
+    if (node.kind === 'branch' || node.kind === 'remote') {
       continue;
     }
 
@@ -43,6 +43,10 @@ export function collectDescendantBranches(node: TreeContainerNode): TreeBranch[]
   for (const child of node.children) {
     if (child.kind === 'branch') {
       descendants.push(child);
+      continue;
+    }
+
+    if (child.kind === 'remote') {
       continue;
     }
 

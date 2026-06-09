@@ -1,5 +1,6 @@
 import {
   buildBranchTree,
+  buildRemoteTree,
   buildRepositoryNode,
   sortBranches,
   type BranchInfo,
@@ -11,7 +12,7 @@ import {
 } from './branchModel';
 import { formatErrorMessage } from './errorUtils';
 
-export type BranchSectionKey = 'local' | 'remote' | 'stash' | 'worktree' | 'hooks' | 'tags';
+export type BranchSectionKey = 'local' | 'remote' | 'remotes' | 'stash' | 'worktree' | 'hooks' | 'tags';
 export type MultiRepositoryMode = 'auto' | 'alwaysGroupByRepository' | 'singleActiveRepository';
 
 export interface RepositoryDescriptor {
@@ -40,9 +41,11 @@ export interface BranchDataLoaderDependencies {
     sortOrder: BranchSortOrder;
     tagSortOrder: TagSortOrder;
     multiRepositoryMode: MultiRepositoryMode;
+    showRemotesSection: boolean;
   };
   getBranches(repoRoot: string): Promise<BranchInfo[]>;
   getRemoteBranches(repoRoot: string): Promise<BranchInfo[]>;
+  getRemoteDetails(repoRoot: string): Promise<readonly import('./branchModel').RemoteConfigInfo[]>;
   getStashes(repoRoot: string): Promise<BranchInfo[]>;
   getWorktrees(repoRoot: string): Promise<BranchInfo[]>;
   getHooks(repoRoot: string): Promise<BranchInfo[]>;
@@ -58,6 +61,7 @@ const DEFAULT_SECTIONS: readonly BranchSectionKey[] = ['local', 'hooks'];
 const BRANCH_SECTION_ORDER: readonly BranchSectionKey[] = [
   'local',
   'remote',
+  'remotes',
   'stash',
   'worktree',
   'hooks',
@@ -67,6 +71,7 @@ const BRANCH_SECTION_ORDER: readonly BranchSectionKey[] = [
 const BRANCH_SECTION_LABELS: Record<BranchSectionKey, string> = {
   local: 'Local',
   remote: 'Remote',
+  remotes: 'Remotes',
   stash: 'Stash',
   worktree: 'Worktree',
   hooks: 'Hooks',
@@ -76,6 +81,7 @@ const BRANCH_SECTION_LABELS: Record<BranchSectionKey, string> = {
 const BRANCH_SECTION_PATHS: Record<BranchSectionKey, string> = {
   local: 'section:local',
   remote: 'section:remote',
+  remotes: 'section:remotes',
   stash: 'section:stash',
   worktree: 'section:worktree',
   hooks: 'section:hooks',
@@ -92,6 +98,7 @@ interface LoaderConfiguration {
   sortOrder: BranchSortOrder;
   tagSortOrder: TagSortOrder;
   multiRepositoryMode: MultiRepositoryMode;
+  showRemotesSection: boolean;
 }
 
 interface RepositoryState {
@@ -337,6 +344,8 @@ export class BranchDataLoader {
       return [];
     }
 
+    const configuration = this.dependencies.getConfiguration();
+
     return BRANCH_SECTION_ORDER.map((section) => ({
       kind: 'section',
       label: BRANCH_SECTION_LABELS[section],
@@ -345,7 +354,17 @@ export class BranchDataLoader {
       repoRoot,
       children: repositoryState.sectionStates[section].children,
     }) satisfies TreeSection).filter(
-      (section) => section.scope !== 'hook' || section.children.length > 0
+      (section) => {
+        if (section.scope === 'hook') {
+          return section.children.length > 0;
+        }
+
+        if (section.scope === 'remoteConfig') {
+          return configuration.showRemotesSection ?? true;
+        }
+
+        return true;
+      }
     );
   }
 
@@ -365,6 +384,18 @@ export class BranchDataLoader {
     const decoratedBranches = this.dependencies.decorateBranchInfo
       ? branches.map((branch) => this.dependencies.decorateBranchInfo?.(repoRoot, branch) ?? branch)
       : branches;
+
+    if (section === 'remotes') {
+      latestRepositoryState.sectionStates[section] = {
+        loaded: true,
+        children: buildRemoteTree(
+          await this.dependencies.getRemoteDetails(repoRoot),
+          repoRoot
+        ),
+      };
+      return;
+    }
+
     const sortedBranches = sortBranches(
       decoratedBranches,
       section === 'tags' ? configuration.tagSortOrder : configuration.sortOrder
@@ -400,6 +431,8 @@ export class BranchDataLoader {
         return this.dependencies.getHooks(repoRoot);
       case 'tags':
         return this.dependencies.getTags(repoRoot);
+      case 'remotes':
+        return Promise.resolve([]);
       default:
         return Promise.resolve([]);
     }
@@ -435,6 +468,7 @@ function createEmptySectionStates(): Record<BranchSectionKey, SectionState> {
   return {
     local: createEmptySectionState(),
     remote: createEmptySectionState(),
+    remotes: createEmptySectionState(),
     stash: createEmptySectionState(),
     worktree: createEmptySectionState(),
     hooks: createEmptySectionState(),
@@ -449,6 +483,10 @@ function toTreeContainerScope(section: BranchSectionKey) {
 
   if (section === 'hooks') {
     return 'hook';
+  }
+
+  if (section === 'remotes') {
+    return 'remoteConfig';
   }
 
   return section;

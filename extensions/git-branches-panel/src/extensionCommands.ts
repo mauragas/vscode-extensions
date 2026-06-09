@@ -6,6 +6,7 @@ import { registerHookCommands } from './commands/hookCommands';
 import { registerHistoryCommands } from './commands/historyCommands';
 import { registerItemCommands } from './commands/itemCommands';
 import { registerRepositoryCommands } from './commands/repositoryCommands';
+import { registerRemoteCommands } from './commands/remoteCommands';
 import { registerSearchCommands } from './commands/searchCommands';
 import { createCommandContext } from './commands/shared';
 import { registerStashCommands } from './commands/stashCommands';
@@ -22,6 +23,7 @@ export function registerBranchCommands(
   const commandContext = createCommandContext(provider, activationTracker);
 
   registerRepositoryCommands(context, commandContext);
+  registerRemoteCommands(context, commandContext);
   registerSearchCommands(context, commandContext);
   registerHistoryCommands(context, commandContext);
   registerBulkActionCommands(context, commandContext);

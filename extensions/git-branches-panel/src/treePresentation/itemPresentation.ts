@@ -68,6 +68,20 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
     };
   }
 
+  if (node.kind === 'remote') {
+    return {
+      nodeType: 'remoteConfig',
+      label: node.label,
+      id: `repo:${node.repoRoot}:remote:${node.info.name}`,
+      contextValue: 'remoteConfig',
+      collapsibleState: 'none',
+      icon: { id: 'repo' },
+      description: buildRemoteItemDescription(node.info),
+      tooltip: buildRemoteTooltipContent(node),
+      branchName: undefined,
+    };
+  }
+
   const nodeType = resolveNodeType(node.info);
   const syncStatus = shouldShowSyncStatus(nodeType) ? formatSyncStatus(node.info) : '';
   const description = buildTreeItemDescription(node.info, syncStatus);
@@ -108,6 +122,35 @@ function buildRepositoryTooltipContent(
 
   if (node.description) {
     tooltipLines.push('', `Workspace path: ${node.description}`);
+  }
+
+  return tooltipLines.join('\n');
+}
+
+function buildRemoteItemDescription(info: Extract<BranchTreeNode, { kind: 'remote' }>['info']): string | undefined {
+  const parts = [info.hostProvider, summarizeRemoteUrl(info.fetchUrl)].filter(Boolean);
+  if (parts.length === 0) {
+    return undefined;
+  }
+
+  return parts.join(' • ');
+}
+
+function buildRemoteTooltipContent(
+  node: Extract<BranchTreeNode, { kind: 'remote' }>
+): string {
+  const tooltipLines = [`**${node.info.name}**`, '', `Fetch: ${node.info.fetchUrl}`];
+
+  if (node.info.pushUrl !== node.info.fetchUrl) {
+    tooltipLines.push('', `Push: ${node.info.pushUrl}`);
+  }
+
+  if (node.info.hostProvider) {
+    tooltipLines.push('', `Provider: ${node.info.hostProvider}`);
+  }
+
+  if (node.info.isDefault) {
+    tooltipLines.push('', '_Default remote_');
   }
 
   return tooltipLines.join('\n');
@@ -251,6 +294,8 @@ function getSectionContextValue(node: Extract<BranchTreeNode, { kind: 'section' 
       return 'localSection';
     case 'remote':
       return 'remoteSection';
+    case 'remoteConfig':
+      return 'remotesSection';
     case 'stash':
       return 'stashSection';
     case 'worktree':
@@ -270,6 +315,8 @@ function getSectionIconId(scope: TreeContainerScope): string {
   switch (scope) {
     case 'remote':
       return 'cloud';
+    case 'remoteConfig':
+      return 'repo';
     case 'stash':
       return 'archive';
     case 'worktree':
@@ -520,7 +567,7 @@ function summarizeHookChildren(
       } else {
         hasDisabled = true;
       }
-    } else {
+    } else if (child.kind !== 'remote') {
       const nestedState = summarizeHookChildren(child.children);
       hasEnabled ||= nestedState.hasEnabled;
       hasDisabled ||= nestedState.hasDisabled;
@@ -535,4 +582,19 @@ function summarizeHookChildren(
     hasEnabled,
     hasDisabled,
   };
+}
+
+function summarizeRemoteUrl(remoteUrl: string): string {
+  const normalizedRemoteUrl = remoteUrl.replace(/\.git$/iu, '');
+  const sshLikeMatch = normalizedRemoteUrl.match(/^[^@]+@([^:]+):(.+)$/u);
+  if (sshLikeMatch) {
+    return `${sshLikeMatch[1]}/${sshLikeMatch[2]}`;
+  }
+
+  try {
+    const parsedUrl = new URL(normalizedRemoteUrl);
+    return `${parsedUrl.host}${parsedUrl.pathname}`;
+  } catch {
+    return normalizedRemoteUrl;
+  }
 }

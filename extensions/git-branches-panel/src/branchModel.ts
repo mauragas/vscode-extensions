@@ -1,6 +1,7 @@
 export type {
   BranchInfo,
   HookSource,
+  RemoteConfigInfo,
   RemoteTrackingState,
   BranchSortOrder,
   TagSortOrder,
@@ -9,6 +10,7 @@ export type {
   BranchTreeNode,
   TreeContainerScope,
   TreeBranch,
+  TreeRemote,
   TreeChildNode,
   TreeFolder,
   TreeSection,
@@ -27,6 +29,7 @@ export {
   buildRepositoryNode,
   buildBranchSections,
   buildBranchTree,
+  buildRemoteTree,
   findFolderNode,
   sortBranches,
 } from './branchModel/treeBuilder';

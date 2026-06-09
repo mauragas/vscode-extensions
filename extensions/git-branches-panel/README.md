@@ -1,7 +1,7 @@
 # Git Branches Panel
 
 `Git Branches Panel` is a Visual Studio Code extension that shows local and
-remote Git branches, stashes, worktrees, hooks, and tags in a dedicated tree view with folder grouping,
+remote Git branches, stashes, worktrees, hooks, tags, and remotes in a dedicated tree view with folder grouping,
 search, filtering, compare/history workflows, remote-host integration, sync status, current-branch context, quick actions, and multi-repository support.
 
 This extension lives in the [`vscode-extensions`](../..) repository under `extensions/git-branches-panel/`.
@@ -27,6 +27,7 @@ section opens first, while Remote, Stash, Worktree, Hooks, and Tags stay collaps
 - 🆚 **Richer compare workflows** — compare a branch with its upstream, compare any two refs, or open changed files for the latest commit on a selected ref
 - 🌐 **Remote-host actions** — open a branch on its remote, open a browser compare page, create a pull request, or copy hosted branch/compare URLs without leaving VS Code
 - 🧭 **Local and remote sections** — local branches are shown first, with remote branches listed in a separate group below them
+- 🔗 **Remotes section** — configured remotes appear in their own section with fetch, rename, URL, homepage, and remove actions that focus on remote configuration rather than remote-tracking branches
 - 🧺 **Stash section** — stashes are shown between remote branches and tags so parked work stays close at hand
 - 🪵 **Worktree section** — worktrees are shown under stashes so additional checkouts are easy to find and manage
 - 🪝 **Hooks section** — appears only when the repository has configured Git hooks, showing local `.git/hooks` scripts and any shared hooks from `core.hooksPath` with active/disabled state
@@ -83,6 +84,16 @@ section opens first, while Remote, Stash, Worktree, Hooks, and Tags stay collaps
 | Show Needs Attention | Filter the visible tree down to stale remote refs, missing-upstream branches, and publishable branches |
 | Select Active Repository | Choose which repository drives the current-branch banner and toolbar actions in multi-repository workspaces |
 | Focus Repository from Active Editor | Switch the active repository to the one that owns the current editor file |
+| Add Remote... | Add a new remote to the active repository, optionally with a separate push URL |
+| Fetch Remote | Fetch a specific configured remote |
+| Fetch Remote (Prune) | Fetch a specific configured remote and prune deleted remote-tracking refs |
+| Copy Fetch URL | Copy a remote's fetch URL |
+| Copy Push URL | Copy a remote's push URL |
+| Open Remote Homepage | Open the hosted repository page for a configured remote |
+| Rename Remote... | Rename a configured remote |
+| Set Fetch URL... | Change the fetch URL for a configured remote |
+| Set Push URL... | Change the push URL for a configured remote |
+| Remove Remote | Remove a configured remote from the repository |
 | Compare with Upstream | Compare a tracked local branch with its configured upstream branch |
 | Compare Two Refs... | Pick any two branches, remote branches, tags, or stashes from the active repository and open a file comparison |
 | Show Branch Commits | Browse commit history for a selected branch or remote branch and open commit-level actions |
@@ -200,6 +211,7 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 | `gitBranchesPanel.tagSortOrder` | `versionDescending` | `versionDescending`, `versionAscending`, `alphabetical`, or `recent`; version-aware sorting recognizes semver-like suffixes such as `v1.2.3` or `release/v1.2.3` and keeps non-version tags after version tags |
 | `gitBranchesPanel.multiRepository.mode` | `auto` | Show repository containers only when needed (`auto`), always group sections under repositories (`alwaysGroupByRepository`), or show only the active repository (`singleActiveRepository`) |
 | `gitBranchesPanel.multiRepository.followActiveEditor` | `false` | Keep the active repository aligned with the Git repository that owns the active editor when multi-repository support is in use |
+| `gitBranchesPanel.showRemotesSection` | `true` | Show the dedicated Remotes section with per-remote fetch, URL, rename, and remove actions |
 | `gitBranchesPanel.search.includeHooks` | `false` | Include Git hook items in **Find Ref...** results |
 | `gitBranchesPanel.search.maxResults` | `200` | Maximum number of **Find Ref...** results to show after ranking matches |
 | `gitBranchesPanel.search.autoLoadAllSections` | `true` | Load collapsed sections before running **Find Ref...** or applying a tree filter so results include refs outside the currently expanded sections |
@@ -236,12 +248,14 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 - Leave `gitBranchesPanel.multiRepository.mode` on `auto` to keep the familiar flat layout for single-repo workspaces while automatically adding repository containers in polyrepo workspaces
 - Switch `gitBranchesPanel.multiRepository.mode` to `singleActiveRepository` if you prefer focusing on one repository at a time while using **Select Active Repository** or **Focus Repository from Active Editor** to move around
 - Enable `gitBranchesPanel.multiRepository.followActiveEditor` if you want the current-branch banner and toolbar actions to follow the repository that owns the file you are editing
+- Leave `gitBranchesPanel.showRemotesSection` enabled if you want a visible place to fetch, rename, or remove remotes, or turn it off if you prefer accessing remote management from commands and the advanced-actions picker only
 - Use **Find Ref...** with prefixes like `remote:`, `tag:`, `stash:`, or `state:stale` when repositories get large and you want a faster path than scrolling the tree
 - Keep `gitBranchesPanel.search.autoLoadAllSections` enabled if you want search and filtering to include collapsed sections, or turn it off if you prefer faster commands over broader result coverage
 - Turn on `gitBranchesPanel.search.includeHooks` if you want hook scripts to show up in **Find Ref...** results alongside regular Git refs
 - Set `gitBranchesPanel.remoteHosting.preferredRemote` if your branches commonly live on a fork or non-`origin` remote and you want hosted URLs to default there instead of prompting
 - Leave `gitBranchesPanel.remoteHosting.compareBase = defaultBranch` for PR-style compare pages, or switch to `currentBranch` / `upstream` if your workflow prefers browser comparisons against a checked-out or tracked branch
 - Use `gitBranchesPanel.remoteHosting.customProviders` to support self-hosted forge URLs with templates like `${hostRoot}/${namespace}/${repo}/compare/${base}...${branch}`
+- Use the **Remotes** section to keep fetch/push URLs visible and copyable without opening `.git/config` or dropping to a terminal
 - Use **Compare with Upstream** when you want to review a tracked branch's divergence at the file level instead of only relying on ahead/behind badges
 - Lower `gitBranchesPanel.history.maxCommits` if you want faster commit pickers in very large repositories, or keep it higher if you often browse longer-lived release branches
 - Turn off `gitBranchesPanel.history.includeMerges` if you prefer commit pickers that focus on linear feature work instead of merge commits

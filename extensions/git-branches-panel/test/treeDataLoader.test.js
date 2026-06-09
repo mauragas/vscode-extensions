@@ -12,6 +12,7 @@ function createDependencies(overrides = {}) {
     fetchRemoteState: 0,
     getBranches: 0,
     getRemoteBranches: 0,
+    getRemoteDetails: 0,
     getStashes: 0,
     getWorktrees: 0,
     getHooks: 0,
@@ -34,6 +35,7 @@ function createDependencies(overrides = {}) {
         sortOrder: 'alphabetical',
         tagSortOrder: 'versionDescending',
         multiRepositoryMode: 'auto',
+        showRemotesSection: true,
       }),
       getBranches: async () => {
         calls.getBranches += 1;
@@ -51,6 +53,18 @@ function createDependencies(overrides = {}) {
             scope: 'remote',
             remoteName: 'origin',
             lastCommitTimestamp: 20,
+          },
+        ];
+      },
+      getRemoteDetails: async () => {
+        calls.getRemoteDetails += 1;
+        return [
+          {
+            name: 'origin',
+            fetchUrl: 'https://github.com/octo/repo.git',
+            pushUrl: 'https://github.com/octo/repo.git',
+            isDefault: true,
+            hostProvider: 'GitHub',
           },
         ];
       },
@@ -99,6 +113,7 @@ test('BranchDataLoader lazily loads sections and throttles explicit remote fetch
   assert.equal(calls.fetchRemoteState, 0);
   assert.equal(calls.getBranches, 1);
   assert.equal(calls.getRemoteBranches, 0);
+  assert.equal(calls.getRemoteDetails, 0);
   assert.equal(calls.getStashes, 0);
   assert.equal(calls.getWorktrees, 0);
   assert.equal(calls.getHooks, 1);
@@ -111,16 +126,22 @@ test('BranchDataLoader lazily loads sections and throttles explicit remote fetch
   assert.deepEqual(loader.getTreeData().map((node) => node.label), [
     'Local',
     'Remote',
+    'Remotes',
     'Stash',
     'Worktree',
     'Tags',
   ]);
   assert.ok(loader.getTreeData()[0].children.length > 0);
   assert.equal(loader.getTreeData()[1].children.length, 0);
+  assert.equal(loader.getTreeData()[2].children.length, 0);
 
   await loader.refresh({ sections: ['remote'] });
   assert.equal(calls.getRemoteBranches, 1);
   assert.equal(loader.isSectionLoaded('remote'), true);
+
+  await loader.refresh({ sections: ['remotes'] });
+  assert.equal(calls.getRemoteDetails, 1);
+  assert.equal(loader.isSectionLoaded('remotes'), true);
 
   await loader.refresh({ fetchRemoteState: true });
   assert.equal(calls.fetchRemoteState, 1);
@@ -154,6 +175,13 @@ test('BranchDataLoader groups repositories when multiple repositories are availa
         lastCommitTimestamp: repoRoot === '/repo-b' ? 20 : 10,
       },
     ],
+    getRemoteDetails: async (repoRoot) => [
+      {
+        name: repoRoot === '/repo-b' ? 'upstream' : 'origin',
+        fetchUrl: `https://example.com/${repoRoot === '/repo-b' ? 'repo-b' : 'repo-a'}.git`,
+        pushUrl: `https://example.com/${repoRoot === '/repo-b' ? 'repo-b' : 'repo-a'}.git`,
+      },
+    ],
   });
   const loader = new BranchDataLoader(dependencies, () => 1_000);
 
@@ -176,6 +204,7 @@ test('BranchDataLoader groups repositories when multiple repositories are availa
   assert.deepEqual(groupedTree[0].children.map((child) => child.label), [
     'Local',
     'Remote',
+    'Remotes',
     'Stash',
     'Worktree',
     'Tags',
@@ -189,6 +218,7 @@ test('BranchDataLoader groups repositories when multiple repositories are availa
   assert.deepEqual(singleRepositoryTree.map((node) => node.label), [
     'Local',
     'Remote',
+    'Remotes',
     'Stash',
     'Worktree',
     'Tags',
@@ -210,7 +240,7 @@ test('BranchDataLoader warns on refresh failures and still loads branch data', a
   assert.equal(loader.getCurrentBranch().name, 'main');
   assert.equal(loader.isSectionLoaded('local'), true);
   assert.equal(loader.isSectionLoaded('remote'), false);
-  assert.equal(loader.getTreeData().length, 5);
+  assert.equal(loader.getTreeData().length, 6);
   assert.match(warnings[0], /network is grumpy/);
 });
 
@@ -235,21 +265,30 @@ test('BranchDataLoader only refreshes explicitly requested lazy sections', async
       },
     ],
     getTags: async () => [{ name: 'v1.0.0', isCurrent: false, scope: 'tag' }],
+    getRemoteDetails: async () => [
+      {
+        name: 'origin',
+        fetchUrl: 'https://github.com/octo/repo.git',
+        pushUrl: 'https://github.com/octo/repo.git',
+      },
+    ],
   });
   const loader = new BranchDataLoader(dependencies, () => 1_000);
 
   await loader.refresh({ sections: ['remote'], onlyIfLoaded: true });
   assert.equal(calls.getRemoteBranches, 0);
 
-  await loader.refresh({ sections: ['stash', 'worktree', 'tags'], fetchRemoteState: false });
+  await loader.refresh({ sections: ['stash', 'worktree', 'tags', 'remotes'], fetchRemoteState: false });
 
   assert.equal(loader.isSectionLoaded('stash'), true);
   assert.equal(loader.isSectionLoaded('worktree'), true);
   assert.equal(loader.isSectionLoaded('tags'), true);
+  assert.equal(loader.isSectionLoaded('remotes'), true);
   assert.equal(loader.isSectionLoaded('local'), false);
   assert.equal(calls.getHooks, 0);
 
   const sections = loader.getTreeData();
+  assert.equal(sections.find((node) => node.path === 'section:remotes').children.length, 1);
   assert.equal(sections.find((node) => node.path === 'section:stash').children.length, 1);
   assert.equal(sections.find((node) => node.path === 'section:worktree').children.length, 1);
   assert.equal(sections.find((node) => node.path === 'section:tags').children.length, 1);
@@ -292,6 +331,8 @@ test('BranchDataLoader applies tagSortOrder independently from branch sortOrder'
       groupByFolder: false,
       sortOrder: 'alphabetical',
       tagSortOrder: 'versionDescending',
+      multiRepositoryMode: 'auto',
+      showRemotesSection: true,
     }),
     getTags: async () => [
       { name: 'v1.2.0', isCurrent: false, scope: 'tag' },
@@ -401,6 +442,37 @@ test('BranchDataLoader ignores stale section results after the repo root changes
   const remoteSection = loader.getTreeData().find((node) => node.path === 'section:remote');
   assert.ok(remoteSection);
   assert.equal(remoteSection.children.length, 0);
+});
+
+test('BranchDataLoader loads remote configuration items into the Remotes section', async () => {
+  const { dependencies } = createDependencies({
+    getRemoteDetails: async () => [
+      {
+        name: 'origin',
+        fetchUrl: 'https://github.com/octo/repo.git',
+        pushUrl: 'git@github.com:octo/repo.git',
+        isDefault: true,
+        hostProvider: 'GitHub',
+      },
+      {
+        name: 'upstream',
+        fetchUrl: 'https://gitlab.com/org/repo.git',
+        pushUrl: 'https://gitlab.com/org/repo.git',
+        hostProvider: 'GitLab',
+      },
+    ],
+  });
+  const loader = new BranchDataLoader(dependencies, () => 1_000);
+
+  await loader.refresh({ sections: ['remotes'], fetchRemoteState: false });
+
+  const remotesSection = loader.getTreeData().find((node) => node.path === 'section:remotes');
+  assert.ok(remotesSection);
+  assert.equal(remotesSection.children.length, 2);
+  assert.equal(remotesSection.children[0].kind, 'remote');
+  assert.equal(remotesSection.children[0].info.name, 'origin');
+  assert.equal(remotesSection.children[0].info.isDefault, true);
+  assert.equal(remotesSection.children[1].info.hostProvider, 'GitLab');
 });
 
 test('BranchDataLoader clears data when no workspace folders are available', async () => {

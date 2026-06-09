@@ -4,6 +4,7 @@ export type NodeType =
   | 'repository'
   | 'section'
   | 'folder'
+  | 'remoteConfig'
   | 'branch'
   | 'currentBranch'
   | 'missingUpstreamBranch'

@@ -188,6 +188,13 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
     scope: 'tag',
     children: [],
   });
+  const remotesSectionPresentation = buildTreeItemPresentation({
+    kind: 'section',
+    label: 'Remotes',
+    path: 'section:remotes',
+    scope: 'remoteConfig',
+    children: [],
+  });
   const folderPresentation = buildTreeItemPresentation({
     kind: 'folder',
     label: 'feature',
@@ -351,6 +358,20 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
       worktreeRef: 'main',
     },
   });
+  const remoteConfigPresentation = buildTreeItemPresentation({
+    kind: 'remote',
+    fullName: 'origin',
+    label: 'origin',
+    path: 'origin',
+    repoRoot: '/repo',
+    info: {
+      name: 'origin',
+      fetchUrl: 'https://github.com/octo/repo.git',
+      pushUrl: 'git@github.com:octo/repo.git',
+      isDefault: true,
+      hostProvider: 'GitHub',
+    },
+  });
 
   assert.equal(localSectionPresentation.nodeType, 'section');
   assert.equal(localSectionPresentation.collapsibleState, 'expanded');
@@ -377,6 +398,10 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
 
   assert.equal(tagsSectionPresentation.nodeType, 'section');
   assert.equal(tagsSectionPresentation.contextValue, 'tagsSection');
+
+  assert.equal(remotesSectionPresentation.nodeType, 'section');
+  assert.equal(remotesSectionPresentation.icon.id, 'repo');
+  assert.equal(remotesSectionPresentation.contextValue, 'remotesSection');
 
   assert.equal(folderPresentation.nodeType, 'folder');
   assert.equal(folderPresentation.id, 'folder:local:feature');
@@ -448,6 +473,16 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(currentWorktreePresentation.nodeType, 'worktree');
   assert.equal(currentWorktreePresentation.label, '● git-branches-panel-main-worktree');
   assert.equal(currentWorktreePresentation.contextValue, 'currentWorktree');
+
+  assert.equal(remoteConfigPresentation.nodeType, 'remoteConfig');
+  assert.equal(remoteConfigPresentation.id, 'repo:/repo:remote:origin');
+  assert.equal(remoteConfigPresentation.contextValue, 'remoteConfig');
+  assert.equal(remoteConfigPresentation.icon.id, 'repo');
+  assert.equal(remoteConfigPresentation.description, 'GitHub • github.com/octo/repo');
+  assert.match(remoteConfigPresentation.tooltip, /Fetch: https:\/\/github.com\/octo\/repo.git/);
+  assert.match(remoteConfigPresentation.tooltip, /Push: git@github.com:octo\/repo.git/);
+  assert.match(remoteConfigPresentation.tooltip, /Provider: GitHub/);
+  assert.match(remoteConfigPresentation.tooltip, /Default remote/);
 });
 
 test('buildTreeItemPresentation adjusts Hooks section context for bulk enable and disable actions', () => {

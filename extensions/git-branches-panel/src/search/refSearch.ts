@@ -222,6 +222,10 @@ function collectSearchCandidates(
       continue;
     }
 
+    if (node.kind === 'remote') {
+      continue;
+    }
+
     candidates.push(...collectSearchCandidates(node.children, filterState, options, repositoryContext));
   }
 
@@ -234,6 +238,10 @@ function filterNode(
 ): BranchTreeNode | undefined {
   if (node.kind === 'branch') {
     return doesBranchMatchFilter(node, filterState) ? node : undefined;
+  }
+
+  if (node.kind === 'remote') {
+    return undefined;
   }
 
   const filteredChildren = node.children

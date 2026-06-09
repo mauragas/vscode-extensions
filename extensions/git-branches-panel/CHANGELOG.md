@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.4.0] - 2026-06-09
+
+- Added a dedicated **Remotes** section that lists configured remotes separately from remote-tracking branches so fetch/push URLs are manageable directly from the tree
+- Added remote management commands to add, fetch, fetch with prune, rename, update fetch/push URLs, open a remote homepage, copy fetch/push URLs, and remove remotes without leaving VS Code
+- Added `gitBranchesPanel.showRemotesSection` so the Remotes section can be hidden when you prefer a leaner tree
+- Added per-remote inline and context actions, plus a repository-level **Add remote…** advanced action for discoverability even when the section is hidden or empty
+- Added richer remote metadata loading from `git remote -v`, including default-remote detection and provider labeling when hosted URLs are recognized
+- Expanded automated coverage with command, tree presentation, manifest, and Git-backed remote mutation tests for the new remote management workflows
+
 ## [2.0.0] - 2026-06-09
 
 - Added **Compare with Upstream** for tracked local branches so you can open a file-level comparison against the branch's configured upstream without leaving the tree

@@ -18,6 +18,7 @@ import {
   fetchRemoteState,
   getBranches,
   getHooks,
+  getRemoteDetails,
   getRemoteBranches,
   getStashes,
   getTags,
@@ -439,10 +440,12 @@ function createBranchDataLoaderDependencies(
           'multiRepository.mode',
           'auto'
         ),
+        showRemotesSection: configuration.get<boolean>('showRemotesSection', true),
       };
     },
     getBranches,
     getRemoteBranches,
+    getRemoteDetails,
     getStashes,
     getWorktrees,
     getHooks,
