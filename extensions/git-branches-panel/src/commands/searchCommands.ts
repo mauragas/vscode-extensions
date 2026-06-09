@@ -292,8 +292,34 @@ function buildSearchActionItems(
       }),
       createSearchActionItem('$(empty-window) Open Worktree in New Window', async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.openWorktreeInNewWindow', item);
+      }),
+      createSearchActionItem('$(terminal) Open Worktree in Terminal', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.openWorktreeInTerminal', item);
+      }),
+      createSearchActionItem('$(copy) Copy Worktree Ref', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.copyWorktreeRef', item);
       })
     );
+
+    if (item.branchInfo?.worktreePrunableReason) {
+      actionItems.push(
+        createSearchActionItem('$(clear-all) Prune Worktree Metadata', async () => {
+          await vscode.commands.executeCommand('gitBranchesPanel.pruneWorktrees', item);
+        })
+      );
+    } else if (item.branchInfo?.worktreeLockedReason) {
+      actionItems.push(
+        createSearchActionItem('$(unlock) Unlock Worktree', async () => {
+          await vscode.commands.executeCommand('gitBranchesPanel.unlockWorktree', item);
+        })
+      );
+    } else if (!item.branchInfo?.isCurrent) {
+      actionItems.push(
+        createSearchActionItem('$(lock) Lock Worktree', async () => {
+          await vscode.commands.executeCommand('gitBranchesPanel.lockWorktree', item);
+        })
+      );
+    }
   }
 
   if (item.nodeType === 'hook') {

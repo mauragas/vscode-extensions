@@ -1,7 +1,7 @@
 {
   "name": "git-branches-panel",
   "displayName": "Git Branches Panel",
-  "description": "Tree view for branches, tags, stashes, worktrees, hooks, and remotes across one or multiple Git repositories with grouping, search, filtering, compare/history workflows, remote-host integration, sync state, and quick actions.",
+  "description": "Tree view for branches, tags, stashes, worktrees, hooks, and remotes across one or multiple Git repositories with grouping, search, filtering, compare/history workflows, remote-host integration, worktree maintenance, sync state, and quick actions.",
   "version": "2.0.0",
   "publisher": "karolis-mauragas",
   "license": "MIT",
@@ -475,6 +475,31 @@
         "icon": "$(trash)"
       },
       {
+        "command": "gitBranchesPanel.pruneWorktrees",
+        "title": "Prune Worktrees...",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "gitBranchesPanel.lockWorktree",
+        "title": "Lock Worktree...",
+        "icon": "$(lock)"
+      },
+      {
+        "command": "gitBranchesPanel.unlockWorktree",
+        "title": "Unlock Worktree",
+        "icon": "$(unlock)"
+      },
+      {
+        "command": "gitBranchesPanel.copyWorktreeRef",
+        "title": "Copy Worktree Ref",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "gitBranchesPanel.openWorktreeInTerminal",
+        "title": "Open Worktree in Terminal",
+        "icon": "$(terminal)"
+      },
+      {
         "command": "gitBranchesPanel.syncAllBranches",
         "title": "Sync All Branches",
         "icon": "$(sync)"
@@ -616,12 +641,12 @@
         },
         {
           "command": "gitBranchesPanel.pinItem",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && viewItem =~ /^(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|remoteBranch|staleRemoteBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch|stash|worktree|currentWorktree)$/",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && viewItem =~ /^(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|remoteBranch|staleRemoteBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch|stash|(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*)$/",
           "group": "inline@4"
         },
         {
           "command": "gitBranchesPanel.unpinItem",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && viewItem =~ /^pinned:(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|remoteBranch|staleRemoteBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch|stash|worktree|currentWorktree)$/",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && viewItem =~ /^pinned:(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|remoteBranch|staleRemoteBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch|stash|(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*)$/",
           "group": "inline@4"
         },
         {
@@ -670,6 +695,11 @@
           "group": "inline@1"
         },
         {
+          "command": "gitBranchesPanel.pruneWorktrees",
+          "when": "viewItem == worktreeSection",
+          "group": "inline@2"
+        },
+        {
           "command": "gitBranchesPanel.addRemote",
           "when": "viewItem == remotesSection",
           "group": "inline@1"
@@ -706,17 +736,17 @@
         },
         {
           "command": "gitBranchesPanel.openWorktree",
-          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*$/",
           "group": "inline@1"
         },
         {
           "command": "gitBranchesPanel.openWorktreeInNewWindow",
-          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*$/",
           "group": "inline@2"
         },
         {
           "command": "gitBranchesPanel.removeWorktree",
-          "when": "viewItem =~ /^(?:pinned:)?(?:worktree)$/",
+          "when": "viewItem =~ /^(?:pinned:)?worktree(?::detached)?$/",
           "group": "inline@3"
         },
         {
@@ -1721,32 +1751,57 @@
         },
         {
           "command": "gitBranchesPanel.openWorktree",
-          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*$/",
           "group": "1_worktree@1"
         },
         {
           "command": "gitBranchesPanel.openWorktreeInNewWindow",
-          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*$/",
           "group": "1_worktree@2"
         },
         {
           "command": "gitBranchesPanel.revealWorktree",
-          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*$/",
           "group": "1_worktree@3"
         },
         {
+          "command": "gitBranchesPanel.openWorktreeInTerminal",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*$/",
+          "group": "1_worktree@3.5"
+        },
+        {
           "command": "gitBranchesPanel.copyWorktreePath",
-          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*$/",
           "group": "1_worktree@4"
         },
         {
+          "command": "gitBranchesPanel.copyWorktreeRef",
+          "when": "viewItem =~ /^(?:pinned:)?(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*$/",
+          "group": "1_worktree@4.5"
+        },
+        {
           "command": "gitBranchesPanel.renameWorktree",
-          "when": "viewItem =~ /^(?:pinned:)?(?:worktree)$/",
+          "when": "viewItem =~ /^(?:pinned:)?worktree(?::detached)?$/",
           "group": "1_worktree@5"
         },
         {
+          "command": "gitBranchesPanel.lockWorktree",
+          "when": "viewItem =~ /^(?:pinned:)?worktree(?::detached)?$/",
+          "group": "1_worktree@5.5"
+        },
+        {
+          "command": "gitBranchesPanel.unlockWorktree",
+          "when": "viewItem =~ /^(?:pinned:)?worktree(?::detached)?(?::locked)(?::prunable)?$/",
+          "group": "1_worktree@5.6"
+        },
+        {
+          "command": "gitBranchesPanel.pruneWorktrees",
+          "when": "viewItem =~ /^(?:pinned:)?worktree(?::detached)?(?::locked)?(?::prunable)$/",
+          "group": "1_worktree@5.7"
+        },
+        {
           "command": "gitBranchesPanel.removeWorktree",
-          "when": "viewItem =~ /^(?:pinned:)?(?:worktree)$/",
+          "when": "viewItem =~ /^(?:pinned:)?worktree(?::detached)?$/",
           "group": "2_worktree@1"
         },
         {
@@ -1823,6 +1878,11 @@
           "command": "gitBranchesPanel.createWorktreeFromCurrentBranch",
           "when": "viewItem == worktreeSection",
           "group": "1_worktree@0.5"
+        },
+        {
+          "command": "gitBranchesPanel.pruneWorktrees",
+          "when": "viewItem == worktreeSection",
+          "group": "1_worktree@0.75"
         },
         {
           "command": "gitBranchesPanel.createTag",

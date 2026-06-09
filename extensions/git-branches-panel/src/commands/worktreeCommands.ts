@@ -2,11 +2,12 @@ import * as vscode from 'vscode';
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 
 import { getErrorMessage } from '../errorUtils';
-import { createWorktree, removeWorktree, renameWorktree } from '../git';
+import { createWorktree, getWorktrees, lockWorktree, pruneWorktrees, removeWorktree, renameWorktree, unlockWorktree } from '../git';
 import { BranchTreeItem } from '../treeProvider';
 import { NO_CURRENT_BRANCH_MESSAGE, type CommandContext } from './shared';
 
 const WORKTREE_PATH_PLACEHOLDER = '/path/to/your-worktree';
+const PRUNE_WORKTREES_ACTION = 'Prune';
 
 export function registerWorktreeCommands(
   context: vscode.ExtensionContext,
@@ -48,6 +49,21 @@ export function registerWorktreeCommands(
     }),
     vscode.commands.registerCommand('gitBranchesPanel.removeWorktree', async (item: BranchTreeItem) => {
       await handleRemoveWorktree(item, commandContext);
+    }),
+    vscode.commands.registerCommand('gitBranchesPanel.pruneWorktrees', async (item?: BranchTreeItem) => {
+      await handlePruneWorktrees(item, commandContext);
+    }),
+    vscode.commands.registerCommand('gitBranchesPanel.lockWorktree', async (item: BranchTreeItem) => {
+      await handleLockWorktree(item, commandContext);
+    }),
+    vscode.commands.registerCommand('gitBranchesPanel.unlockWorktree', async (item: BranchTreeItem) => {
+      await handleUnlockWorktree(item, commandContext);
+    }),
+    vscode.commands.registerCommand('gitBranchesPanel.copyWorktreeRef', async (item: BranchTreeItem) => {
+      await handleCopyWorktreeRef(item);
+    }),
+    vscode.commands.registerCommand('gitBranchesPanel.openWorktreeInTerminal', async (item: BranchTreeItem) => {
+      await handleOpenWorktreeInTerminal(item);
     })
   );
 }
@@ -169,6 +185,34 @@ async function handleCopyWorktreePath(item: BranchTreeItem): Promise<void> {
   vscode.window.showInformationMessage(`Copied worktree path '${item.branchName}' to the clipboard.`);
 }
 
+async function handleCopyWorktreeRef(item: BranchTreeItem): Promise<void> {
+  if (!item.branchName || item.nodeType !== 'worktree') {
+    return;
+  }
+
+  const worktreeRef = item.branchInfo?.worktreeRef;
+  if (!worktreeRef) {
+    vscode.window.showInformationMessage(`No worktree reference is available for '${item.branchName}'.`);
+    return;
+  }
+
+  await vscode.env.clipboard.writeText(worktreeRef);
+  vscode.window.showInformationMessage(`Copied worktree reference '${worktreeRef}' to the clipboard.`);
+}
+
+async function handleOpenWorktreeInTerminal(item: BranchTreeItem): Promise<void> {
+  if (!item.branchName || item.nodeType !== 'worktree') {
+    return;
+  }
+
+  const worktreeLabel = basename(item.branchName) || item.branchName;
+  const terminal = vscode.window.createTerminal({
+    name: `Worktree: ${worktreeLabel}`,
+    cwd: item.branchName,
+  });
+  terminal.show();
+}
+
 async function handleRenameWorktree(
   item: BranchTreeItem,
   commandContext: CommandContext
@@ -182,6 +226,16 @@ async function handleRenameWorktree(
 
   if (item.branchInfo?.isCurrent) {
     vscode.window.showInformationMessage('Cannot rename the current worktree.');
+    return;
+  }
+
+  if (item.branchInfo?.worktreePrunableReason) {
+    vscode.window.showInformationMessage('Cannot rename a prunable worktree. Prune stale worktree metadata first.');
+    return;
+  }
+
+  if (item.branchInfo?.worktreeLockedReason) {
+    vscode.window.showInformationMessage('Cannot rename a locked worktree. Unlock it first.');
     return;
   }
 
@@ -219,6 +273,16 @@ async function handleRemoveWorktree(
 
   if (item.branchInfo?.isCurrent) {
     vscode.window.showInformationMessage('Cannot remove the current worktree.');
+    return;
+  }
+
+  if (item.branchInfo?.worktreeLockedReason) {
+    vscode.window.showInformationMessage('Cannot remove a locked worktree. Unlock it first.');
+    return;
+  }
+
+  if (item.branchInfo?.worktreePrunableReason) {
+    vscode.window.showInformationMessage('Cannot remove a prunable worktree. Prune stale worktree metadata instead.');
     return;
   }
 
@@ -267,8 +331,153 @@ async function handleRemoveWorktree(
   }
 }
 
+async function handlePruneWorktrees(
+  item: BranchTreeItem | undefined,
+  commandContext: CommandContext
+): Promise<void> {
+  if (item && !isWorktreeMaintenanceItem(item)) {
+    return;
+  }
+
+  const repoRoot = item?.repoRoot ?? (await commandContext.requireRepoRoot());
+  if (!repoRoot) {
+    return;
+  }
+
+  const prunableWorktrees = (await getWorktrees(repoRoot)).filter(
+    (worktree) => worktree.worktreePrunableReason
+  );
+  const prunableWorktreeLabels = prunableWorktrees.map(
+    (worktree) => basename(worktree.name) || worktree.name
+  );
+
+  if (prunableWorktreeLabels.length === 0) {
+    vscode.window.showInformationMessage(
+      item?.nodeType === 'worktree'
+        ? 'No prunable worktree metadata was found for that item.'
+        : 'No prunable worktree metadata was found for this repository.'
+    );
+    return;
+  }
+
+  const confirmation = await vscode.window.showWarningMessage(
+    prunableWorktreeLabels.length > 0
+      ? `Prune stale worktree metadata for ${prunableWorktreeLabels.join(', ')}? This only removes broken worktree admin entries, not any existing directories.`
+      : 'Prune stale worktree metadata for this repository? This only removes broken worktree admin entries, not any existing directories.',
+    { modal: true },
+    PRUNE_WORKTREES_ACTION
+  );
+  if (confirmation !== PRUNE_WORKTREES_ACTION) {
+    return;
+  }
+
+  try {
+    await pruneWorktrees(repoRoot);
+    await commandContext.showSuccessAndRefresh('Pruned stale worktree metadata.', {
+      sections: ['worktree'],
+      repoRoots: [repoRoot],
+      fetchRemoteState: false,
+    });
+  } catch (error) {
+    commandContext.showCommandError('Failed to prune stale worktree metadata', error);
+  }
+}
+
+async function handleLockWorktree(
+  item: BranchTreeItem,
+  commandContext: CommandContext
+): Promise<void> {
+  if (!isWorktreeItem(item)) {
+    return;
+  }
+
+  if (item.branchInfo?.isCurrent) {
+    vscode.window.showInformationMessage('Cannot lock the current worktree.');
+    return;
+  }
+
+  if (item.branchInfo?.worktreePrunableReason) {
+    vscode.window.showInformationMessage('Cannot lock a prunable worktree. Prune stale metadata instead.');
+    return;
+  }
+
+  if (item.branchInfo?.worktreeLockedReason) {
+    vscode.window.showInformationMessage('This worktree is already locked.');
+    return;
+  }
+
+  const worktreeLabel = basename(item.branchName) || item.branchName;
+  const reasonInput = await vscode.window.showInputBox({
+    prompt: `Enter an optional lock reason for worktree '${worktreeLabel}'`,
+    placeHolder: 'Optional lock reason',
+    value: '',
+  });
+  if (reasonInput === undefined) {
+    return;
+  }
+
+  try {
+    await lockWorktree(item.repoRoot, item.branchName, reasonInput);
+    await commandContext.showSuccessAndRefresh(
+      reasonInput.trim()
+        ? `Locked worktree '${worktreeLabel}' (${reasonInput.trim()}).`
+        : `Locked worktree '${worktreeLabel}'.`,
+      {
+        sections: ['worktree'],
+        repoRoots: [item.repoRoot],
+        fetchRemoteState: false,
+      }
+    );
+  } catch (error) {
+    commandContext.showCommandError(`Failed to lock worktree '${worktreeLabel}'`, error);
+  }
+}
+
+async function handleUnlockWorktree(
+  item: BranchTreeItem,
+  commandContext: CommandContext
+): Promise<void> {
+  if (!isWorktreeItem(item)) {
+    return;
+  }
+
+  if (!item.branchInfo?.worktreeLockedReason) {
+    vscode.window.showInformationMessage('This worktree is not locked.');
+    return;
+  }
+
+  const worktreeLabel = basename(item.branchName) || item.branchName;
+
+  try {
+    await unlockWorktree(item.repoRoot, item.branchName);
+    await commandContext.showSuccessAndRefresh(`Unlocked worktree '${worktreeLabel}'.`, {
+      sections: ['worktree'],
+      repoRoots: [item.repoRoot],
+      fetchRemoteState: false,
+    });
+  } catch (error) {
+    commandContext.showCommandError(`Failed to unlock worktree '${worktreeLabel}'`, error);
+  }
+}
+
 function looksLikeDirtyWorktreeError(message: string): boolean {
   return /(not clean|contains modified or untracked files|use --force)/i.test(message);
+}
+
+function isWorktreeItem(
+  item: BranchTreeItem
+): item is BranchTreeItem & { branchName: string; repoRoot: string } {
+  return Boolean(item.branchName && item.repoRoot && item.nodeType === 'worktree');
+}
+
+function isWorktreeMaintenanceItem(
+  item: BranchTreeItem
+): item is BranchTreeItem & { repoRoot: string } {
+  return Boolean(
+    item.repoRoot &&
+      ((item.nodeType === 'section' && item.containerPath === 'section:worktree') ||
+        (item.nodeType === 'worktree' && item.branchInfo?.worktreePrunableReason))
+  );
 }
 
 function isWorktreeSourceItem(item: BranchTreeItem): boolean {

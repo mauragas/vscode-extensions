@@ -29,7 +29,7 @@ section opens first, while Remote, Stash, Worktree, Hooks, and Tags stay collaps
 - 🧭 **Local and remote sections** — local branches are shown first, with remote branches listed in a separate group below them
 - 🔗 **Remotes section** — configured remotes appear in their own section with fetch, rename, URL, homepage, and remove actions that focus on remote configuration rather than remote-tracking branches
 - 🧺 **Stash section** — stashes are shown between remote branches and tags so parked work stays close at hand
-- 🪵 **Worktree section** — worktrees are shown under stashes so additional checkouts are easy to find and manage
+- 🪵 **Worktree section** — worktrees are shown under stashes so additional checkouts are easy to find and maintain, including prune, lock, unlock, ref-copy, and terminal actions
 - 🪝 **Hooks section** — appears only when the repository has configured Git hooks, showing local `.git/hooks` scripts and any shared hooks from `core.hooksPath` with active/disabled state
 - 🏷️ **Tags section** — tags are shown in their own section below remote branches, with version-like tags newest-first by default
 - 📁 **Folders first** — folders are listed before branch leaves inside each section
@@ -139,10 +139,15 @@ section opens first, while Remote, Stash, Worktree, Hooks, and Tags stay collaps
 | Disable All Hooks | Disable every enabled hook shown in the Hooks section |
 | Open Worktree | Open the selected worktree in the current window |
 | Create New Worktree... | Create a new worktree from the currently checked out branch directly from the Worktree section |
+| Prune Worktrees... | Remove stale worktree metadata for missing or broken linked worktrees |
 | Open Worktree in New Window | Open the selected worktree in a new window |
+| Open Worktree in Terminal | Open a terminal rooted at the selected worktree path |
 | Rename Worktree... | Rename a selected linked worktree by moving it to a new path |
 | Reveal Worktree in File Explorer | Reveal the selected worktree in the OS file browser |
 | Copy Worktree Path | Copy the selected worktree path to the clipboard |
+| Copy Worktree Ref | Copy the selected worktree's branch or detached reference |
+| Lock Worktree... | Lock a linked worktree to protect it from prune/remove flows, optionally with a reason |
+| Unlock Worktree | Unlock a previously locked linked worktree |
 | Pin / Unpin Item | Toggle pinning for branches, stashes, and worktrees so pinned items stay at the top |
 | Remove Worktree | Remove the selected linked worktree |
 | Push All Tags | Push all local tags to a selected remote from the Tags section context menu |
@@ -167,7 +172,7 @@ section opens first, while Remote, Stash, Worktree, Hooks, and Tags stay collaps
 - **Local** — **New Branch**, **Sync All Branches**, **Pull All Branch Changes**
 - **Remote** — **Fetch All**, **Fetch All (Prune)**
 - **Stash** — **Pop Latest Stash**, **Apply Latest Stash**
-- **Worktree** — **Create New Worktree...** (from the current branch)
+- **Worktree** — **Create New Worktree...** (from the current branch), **Prune Worktrees...**
 - **Hooks** — **Enable All Hooks** appears when at least one hook is disabled, and **Disable All Hooks** appears when at least one hook is enabled
 - **Tags** — **Create Tag...** (on the current branch), **Push All Tags**
 
@@ -175,8 +180,9 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 
 ### Worktree item hover actions
 
-- Hover a specific worktree item to reveal **Open Worktree** and **Open Worktree in New Window** inline buttons.
-- Right-click a linked worktree item to **Rename Worktree...**, which moves that worktree to a new path without removing it first.
+- Hover a specific worktree item to reveal **Open Worktree**, **Open Worktree in New Window**, and—when the worktree is in a removable state—**Remove Worktree**.
+- Right-click a linked worktree item to **Rename Worktree...**, **Open Worktree in Terminal**, **Copy Worktree Ref**, **Lock Worktree...**, **Unlock Worktree**, or **Prune Worktrees...** depending on whether that worktree is detached, locked, or prunable.
+- Locked and prunable worktrees hide destructive rename/remove actions until you unlock them or prune stale metadata first.
 
 ### Tag and stash item hover actions
 

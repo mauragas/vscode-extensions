@@ -40,6 +40,11 @@ All notable changes to this project will be documented in this file.
 - Added per-remote inline and context actions, plus a repository-level **Add remote…** advanced action for discoverability even when the section is hidden or empty
 - Added richer remote metadata loading from `git remote -v`, including default-remote detection and provider labeling when hosted URLs are recognized
 - Expanded automated coverage with command, tree presentation, manifest, and Git-backed remote mutation tests for the new remote management workflows
+- Added worktree maintenance commands to prune stale worktree metadata, lock and unlock linked worktrees, copy worktree refs, and open worktrees directly in a terminal
+- Added worktree state-aware menu visibility so locked and prunable worktrees expose the right maintenance actions while rename/remove stay hidden until the worktree is in a safe state
+- Added worktree icon and context updates for locked and prunable worktrees, while preserving detached and current-worktree cues already shown in descriptions and tooltips
+- Added repository-level and Worktree-section prune entry points so stale worktree metadata can be cleaned up even when you are not interacting with a specific worktree row
+- Expanded automated coverage with command, manifest, tree-presentation, and Git-backed worktree maintenance tests for prune/lock/unlock/ref-copy/terminal workflows
 
 ## [1.7.0] - 2026-06-08
 

@@ -44,8 +44,10 @@ const {
   getStashes,
   getTags,
   getWorktrees,
+  lockWorktree,
   parseRemoteBranchReference,
   popStash,
+  pruneWorktrees,
   pushBranch,
   pushAllTags,
   fetchRemote,
@@ -55,6 +57,7 @@ const {
   setHookEnabled,
   setRemoteFetchUrl,
   setRemotePushUrl,
+  unlockWorktree,
   removeWorktree,
   renameWorktree,
   stashAllChanges,
@@ -678,6 +681,51 @@ test('getWorktrees lists the current and linked worktrees', async (t) => {
   assert.equal(linkedWorktree.scope, 'worktree');
   assert.equal(linkedWorktree.isCurrent, false);
   assert.equal(linkedWorktree.worktreeRef, 'feature/worktree');
+});
+
+test('getWorktrees marks missing linked worktrees as prunable', async (t) => {
+  const { repoRoot, worktreeRoot } = createRepositoryWithLinkedWorktree(t);
+
+  rmSync(worktreeRoot, { recursive: true, force: true });
+
+  const worktrees = await getWorktrees(repoRoot);
+  const prunableWorktree = worktrees.find((worktree) => worktree.worktreePath === worktreeRoot);
+
+  assert.ok(prunableWorktree);
+  assert.match(prunableWorktree.worktreePrunableReason, /prunable|non-existent|missing/i);
+});
+
+test('lockWorktree and unlockWorktree toggle the worktree lock state', async (t) => {
+  const { repoRoot, worktreeRoot } = createRepositoryWithLinkedWorktree(t);
+
+  await lockWorktree(repoRoot, worktreeRoot, 'In use elsewhere');
+  const lockedWorktree = (await getWorktrees(repoRoot)).find(
+    (worktree) => worktree.worktreePath === worktreeRoot
+  );
+
+  assert.ok(lockedWorktree);
+  assert.equal(lockedWorktree.worktreeLockedReason, 'In use elsewhere');
+
+  await unlockWorktree(repoRoot, worktreeRoot);
+  const unlockedWorktree = (await getWorktrees(repoRoot)).find(
+    (worktree) => worktree.worktreePath === worktreeRoot
+  );
+
+  assert.ok(unlockedWorktree);
+  assert.equal(unlockedWorktree.worktreeLockedReason, undefined);
+});
+
+test('pruneWorktrees removes stale worktree admin entries for prunable worktrees', async (t) => {
+  const { repoRoot, worktreeRoot } = createRepositoryWithLinkedWorktree(t);
+
+  rmSync(worktreeRoot, { recursive: true, force: true });
+
+  await pruneWorktrees(repoRoot);
+
+  assert.equal(
+    (await getWorktrees(repoRoot)).some((worktree) => worktree.worktreePath === worktreeRoot),
+    false
+  );
 });
 
 test('cherryPickRef applies the selected branch commit onto the current branch', async (t) => {

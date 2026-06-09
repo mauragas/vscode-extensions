@@ -402,7 +402,7 @@ function resolveBaseContextValue(nodeType: NodeType, branch: BranchInfo): string
   }
 
   if (nodeType === 'worktree') {
-    return branch.isCurrent ? 'currentWorktree' : 'worktree';
+    return buildWorktreeContextValue(branch);
   }
 
   if (nodeType === 'missingUpstreamBranch') {
@@ -493,6 +493,20 @@ function getItemIcon(nodeType: NodeType, branch?: BranchInfo): TreeItemIconDescr
         colorId: 'disabledForeground',
       };
     case 'worktree':
+      if (branch?.worktreePrunableReason) {
+        return {
+          id: 'folder',
+          colorId: 'list.warningForeground',
+        };
+      }
+
+      if (branch?.worktreeLockedReason) {
+        return {
+          id: 'lock',
+          colorId: 'list.warningForeground',
+        };
+      }
+
       return { id: 'folder' };
     default:
       return { id: 'git-branch' };
@@ -597,4 +611,25 @@ function summarizeRemoteUrl(remoteUrl: string): string {
   } catch {
     return normalizedRemoteUrl;
   }
+}
+
+function buildWorktreeContextValue(branch: BranchInfo): string {
+  const baseContextValue = branch.isCurrent ? 'currentWorktree' : 'worktree';
+  const stateSuffixes = [];
+
+  if (branch.worktreeRef?.startsWith('detached at ')) {
+    stateSuffixes.push('detached');
+  }
+
+  if (branch.worktreeLockedReason) {
+    stateSuffixes.push('locked');
+  }
+
+  if (branch.worktreePrunableReason) {
+    stateSuffixes.push('prunable');
+  }
+
+  return stateSuffixes.length > 0
+    ? `${baseContextValue}:${stateSuffixes.join(':')}`
+    : baseContextValue;
 }

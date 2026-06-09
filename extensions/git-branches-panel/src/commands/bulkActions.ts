@@ -537,6 +537,14 @@ function buildRepositoryActionItems(commandContext: CommandContext): AdvancedAct
       },
     },
     {
+      actionId: 'pruneWorktrees',
+      label: 'Prune worktrees…',
+      description: 'Remove stale worktree metadata for missing or broken linked worktrees',
+      run: async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.pruneWorktrees');
+      },
+    },
+    {
       actionId: 'pruneMissingUpstream',
       label: 'Prune local branches with missing upstream',
       description: 'Delete non-current local branches whose tracked upstream no longer exists',

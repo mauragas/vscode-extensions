@@ -34,6 +34,30 @@ export async function removeWorktree(
   await runGit(repoRoot, ['worktree', 'remove', ...(force ? ['--force'] : []), worktreePath]);
 }
 
+export async function pruneWorktrees(repoRoot: string): Promise<void> {
+  await runGit(repoRoot, ['worktree', 'prune']);
+}
+
+export async function lockWorktree(
+  repoRoot: string,
+  worktreePath: string,
+  reason?: string
+): Promise<void> {
+  await runGit(repoRoot, [
+    'worktree',
+    'lock',
+    ...(reason?.trim() ? ['--reason', reason.trim()] : []),
+    worktreePath,
+  ]);
+}
+
+export async function unlockWorktree(
+  repoRoot: string,
+  worktreePath: string
+): Promise<void> {
+  await runGit(repoRoot, ['worktree', 'unlock', worktreePath]);
+}
+
 export async function renameWorktree(
   repoRoot: string,
   worktreePath: string,

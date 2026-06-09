@@ -1,5 +1,6 @@
 root = true
 
+# All files
 [*]
 charset = utf-8
 end_of_line = lf
@@ -8,5 +9,36 @@ indent_size = 2
 insert_final_newline = true
 trim_trailing_whitespace = true
 
-[*.md]
-trim_trailing_whitespace = false
+# TypeScript and JavaScript files
+[*.{ts,tsx,js,jsx}]
+indent_size = 2
+quote_type = single
+
+# TypeScript source files (stricter)
+[{src,extensions}/**/*.ts]
+indent_size = 2
+max_line_length = 120
+
+# Test files
+[*.test.{ts,js}]
+indent_size = 2
+
+# JSON files
+[*.json]
+indent_size = 2
+insert_final_newline = true
+
+# Configuration files
+[{tsconfig*.json,package*.json,.eslintrc*}]
+indent_size = 2
+
+# YAML files (if any)
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+# Shell scripts
+[*.{sh,bash}]
+indent_style = space
+indent_size = 2
+end_of_line = lf

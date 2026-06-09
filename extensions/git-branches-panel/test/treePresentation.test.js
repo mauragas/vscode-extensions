@@ -358,6 +358,34 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
       worktreeRef: 'main',
     },
   });
+  const lockedWorktreePresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: '/tmp/git-branches-panel-locked-worktree',
+    label: 'git-branches-panel-locked-worktree',
+    path: '/tmp/git-branches-panel-locked-worktree',
+    info: {
+      name: '/tmp/git-branches-panel-locked-worktree',
+      isCurrent: false,
+      scope: 'worktree',
+      worktreePath: '/tmp/git-branches-panel-locked-worktree',
+      worktreeRef: 'feature/locked',
+      worktreeLockedReason: 'in use elsewhere',
+    },
+  });
+  const detachedPrunableWorktreePresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: '/tmp/git-branches-panel-prunable-worktree',
+    label: 'git-branches-panel-prunable-worktree',
+    path: '/tmp/git-branches-panel-prunable-worktree',
+    info: {
+      name: '/tmp/git-branches-panel-prunable-worktree',
+      isCurrent: false,
+      scope: 'worktree',
+      worktreePath: '/tmp/git-branches-panel-prunable-worktree',
+      worktreeRef: 'detached at abc1234',
+      worktreePrunableReason: 'gitdir file points to non-existent location',
+    },
+  });
   const remoteConfigPresentation = buildTreeItemPresentation({
     kind: 'remote',
     fullName: 'origin',
@@ -473,6 +501,18 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(currentWorktreePresentation.nodeType, 'worktree');
   assert.equal(currentWorktreePresentation.label, '● git-branches-panel-main-worktree');
   assert.equal(currentWorktreePresentation.contextValue, 'currentWorktree');
+
+  assert.equal(lockedWorktreePresentation.nodeType, 'worktree');
+  assert.equal(lockedWorktreePresentation.contextValue, 'worktree:locked');
+  assert.equal(lockedWorktreePresentation.icon.id, 'lock');
+  assert.equal(lockedWorktreePresentation.icon.colorId, 'list.warningForeground');
+  assert.equal(lockedWorktreePresentation.description, 'feature/locked • locked');
+
+  assert.equal(detachedPrunableWorktreePresentation.nodeType, 'worktree');
+  assert.equal(detachedPrunableWorktreePresentation.contextValue, 'worktree:detached:prunable');
+  assert.equal(detachedPrunableWorktreePresentation.icon.id, 'folder');
+  assert.equal(detachedPrunableWorktreePresentation.icon.colorId, 'list.warningForeground');
+  assert.equal(detachedPrunableWorktreePresentation.description, 'detached at abc1234 • prunable');
 
   assert.equal(remoteConfigPresentation.nodeType, 'remoteConfig');
   assert.equal(remoteConfigPresentation.id, 'repo:/repo:remote:origin');
