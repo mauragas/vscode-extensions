@@ -11,6 +11,7 @@ import {
   type TreeSection,
 } from './branchModel';
 import { formatErrorMessage } from './errorUtils';
+import type { SectionVisibilityConfiguration } from './sectionVisibility';
 
 export type BranchSectionKey = 'local' | 'remote' | 'remotes' | 'stash' | 'worktree' | 'hooks' | 'tags';
 export type MultiRepositoryMode = 'auto' | 'alwaysGroupByRepository' | 'singleActiveRepository';
@@ -41,7 +42,7 @@ export interface BranchDataLoaderDependencies {
     sortOrder: BranchSortOrder;
     tagSortOrder: TagSortOrder;
     multiRepositoryMode: MultiRepositoryMode;
-    showRemotesSection: boolean;
+    sectionVisibility: SectionVisibilityConfiguration;
   };
   getBranches(repoRoot: string): Promise<BranchInfo[]>;
   getRemoteBranches(repoRoot: string): Promise<BranchInfo[]>;
@@ -98,7 +99,7 @@ interface LoaderConfiguration {
   sortOrder: BranchSortOrder;
   tagSortOrder: TagSortOrder;
   multiRepositoryMode: MultiRepositoryMode;
-  showRemotesSection: boolean;
+  sectionVisibility: SectionVisibilityConfiguration;
 }
 
 interface RepositoryState {
@@ -346,26 +347,21 @@ export class BranchDataLoader {
 
     const configuration = this.dependencies.getConfiguration();
 
-    return BRANCH_SECTION_ORDER.map((section) => ({
-      kind: 'section',
-      label: BRANCH_SECTION_LABELS[section],
-      path: BRANCH_SECTION_PATHS[section],
-      scope: toTreeContainerScope(section),
-      repoRoot,
-      children: repositoryState.sectionStates[section].children,
-    }) satisfies TreeSection).filter(
-      (section) => {
-        if (section.scope === 'hook') {
-          return section.children.length > 0;
-        }
-
-        if (section.scope === 'remoteConfig') {
-          return configuration.showRemotesSection ?? true;
-        }
-
-        return true;
-      }
-    );
+    return BRANCH_SECTION_ORDER.filter(
+      (section) => configuration.sectionVisibility[section]
+    )
+      .map(
+        (section) =>
+          ({
+            kind: 'section',
+            label: BRANCH_SECTION_LABELS[section],
+            path: BRANCH_SECTION_PATHS[section],
+            scope: toTreeContainerScope(section),
+            repoRoot,
+            children: repositoryState.sectionStates[section].children,
+          }) satisfies TreeSection
+      )
+      .filter((section) => section.scope !== 'hook' || section.children.length > 0);
   }
 
   private async loadSection(

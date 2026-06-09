@@ -35,7 +35,15 @@ function createDependencies(overrides = {}) {
         sortOrder: 'alphabetical',
         tagSortOrder: 'versionDescending',
         multiRepositoryMode: 'auto',
-        showRemotesSection: true,
+        sectionVisibility: {
+          local: true,
+          remote: true,
+          remotes: true,
+          stash: true,
+          worktree: true,
+          hooks: true,
+          tags: true,
+        },
       }),
       getBranches: async () => {
         calls.getBranches += 1;
@@ -332,7 +340,15 @@ test('BranchDataLoader applies tagSortOrder independently from branch sortOrder'
       sortOrder: 'alphabetical',
       tagSortOrder: 'versionDescending',
       multiRepositoryMode: 'auto',
-      showRemotesSection: true,
+      sectionVisibility: {
+        local: true,
+        remote: true,
+        remotes: true,
+        stash: true,
+        worktree: true,
+        hooks: true,
+        tags: true,
+      },
     }),
     getTags: async () => [
       { name: 'v1.2.0', isCurrent: false, scope: 'tag' },
@@ -486,4 +502,38 @@ test('BranchDataLoader clears data when no workspace folders are available', asy
   assert.equal(loader.getRepoRoot(), null);
   assert.deepEqual(loader.getTreeData(), []);
   assert.equal(loader.getCurrentBranch(), undefined);
+});
+
+test('BranchDataLoader omits sections hidden by settings even when they are loaded', async () => {
+  const { dependencies } = createDependencies({
+    getConfiguration: () => ({
+      groupByFolder: false,
+      sortOrder: 'alphabetical',
+      tagSortOrder: 'versionDescending',
+      multiRepositoryMode: 'auto',
+      sectionVisibility: {
+        local: true,
+        remote: false,
+        remotes: false,
+        stash: false,
+        worktree: false,
+        hooks: false,
+        tags: true,
+      },
+    }),
+    getTags: async () => [{ name: 'v2.0.0', isCurrent: false, scope: 'tag' }],
+    getRemoteDetails: async () => [
+      {
+        name: 'origin',
+        fetchUrl: 'https://github.com/octo/repo.git',
+        pushUrl: 'https://github.com/octo/repo.git',
+      },
+    ],
+  });
+  const loader = new BranchDataLoader(dependencies, () => 1_000);
+
+  await loader.refresh({ sections: ['local', 'tags', 'remotes'], fetchRemoteState: false });
+
+  assert.equal(loader.isSectionLoaded('remotes'), true);
+  assert.deepEqual(loader.getTreeData().map((node) => node.label), ['Local', 'Tags']);
 });

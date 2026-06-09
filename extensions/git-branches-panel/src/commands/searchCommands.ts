@@ -6,6 +6,7 @@ import {
   type SearchCandidate,
 } from '../search/refSearch';
 import type { BranchSectionKey } from '../treeDataLoader';
+import { getVisibleSectionKeys } from '../sectionVisibility';
 import type { CommandContext } from './shared';
 
 const SEARCHABLE_SECTIONS: readonly BranchSectionKey[] = [
@@ -58,10 +59,11 @@ export function registerSearchCommands(
 
 async function handleFindRef(commandContext: CommandContext): Promise<void> {
   const searchConfiguration = getSearchConfiguration();
+  const searchableSections = getSearchableSections(searchConfiguration.includeHooks);
 
   if (searchConfiguration.autoLoadAllSections) {
     await commandContext.refresh({
-      sections: SEARCHABLE_SECTIONS,
+      sections: searchableSections,
       repoRoots: commandContext.provider.getRepositoryDescriptors().map((repository) => repository.repoRoot),
       fetchRemoteState: false,
     });
@@ -124,10 +126,11 @@ async function handleFindRef(commandContext: CommandContext): Promise<void> {
 
 async function handleSetFilter(commandContext: CommandContext): Promise<void> {
   const searchConfiguration = getSearchConfiguration();
+  const searchableSections = getSearchableSections(true);
 
   if (searchConfiguration.autoLoadAllSections) {
     await commandContext.refresh({
-      sections: SEARCHABLE_SECTIONS,
+      sections: searchableSections,
       repoRoots: commandContext.provider.getVisibleRepoRoots(),
       fetchRemoteState: false,
     });
@@ -154,10 +157,11 @@ async function handleToggleShowOnlyPinned(commandContext: CommandContext): Promi
 
 async function handleShowNeedsAttention(commandContext: CommandContext): Promise<void> {
   const searchConfiguration = getSearchConfiguration();
+  const searchableSections = getSearchableSections(true);
 
   if (searchConfiguration.autoLoadAllSections) {
     await commandContext.refresh({
-      sections: SEARCHABLE_SECTIONS,
+      sections: searchableSections,
       repoRoots: commandContext.provider.getVisibleRepoRoots(),
       fetchRemoteState: false,
     });
@@ -197,6 +201,9 @@ function buildSearchActionItems(
       }),
       createSearchActionItem('$(diff-multiple) Open Changed Files for Ref', async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.openChangedFilesForRef', item);
+      }),
+      createSearchActionItem('$(tools) Advanced Branch Operations...', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.showAdvancedBranchOperations', item);
       })
     );
 
@@ -233,6 +240,9 @@ function buildSearchActionItems(
       }),
       createSearchActionItem('$(diff-multiple) Open Changed Files for Ref', async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.openChangedFilesForRef', item);
+      }),
+      createSearchActionItem('$(tools) Advanced Branch Operations...', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.showAdvancedBranchOperations', item);
       })
     );
   }
@@ -248,6 +258,9 @@ function buildSearchActionItems(
       createSearchActionItem('$(history) Show Branch Commits', async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.showBranchCommits', item);
       }),
+      createSearchActionItem('$(tools) Advanced Branch Operations...', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.showAdvancedBranchOperations', item);
+      }),
       createSearchActionItem('$(trash) Remove Stale Tracking Ref', async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.removeStaleRemoteTrackingRef', item);
       })
@@ -259,14 +272,26 @@ function buildSearchActionItems(
       createSearchActionItem('$(arrow-right) Checkout Tag', async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.checkoutTag', item);
       }),
+      createSearchActionItem('$(cloud-upload) Push Tag', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.pushTag', item);
+      }),
       createSearchActionItem('$(new-folder) Create Worktree...', async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.createWorktreeFromRef', item);
+      }),
+      createSearchActionItem('$(diff-multiple) Compare Tag with Current Branch', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.compareTagWithCurrent', item);
       }),
       createSearchActionItem('$(history) Show Ref History', async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.showRefHistory', item);
       }),
       createSearchActionItem('$(diff-multiple) Open Changed Files for Ref', async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.openChangedFilesForRef', item);
+      }),
+      createSearchActionItem('$(note) Show Tag Details', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.showTagDetails', item);
+      }),
+      createSearchActionItem('$(copy) Copy Tag Target SHA', async () => {
+        await vscode.commands.executeCommand('gitBranchesPanel.copyTagTargetSha', item);
       })
     );
   }
@@ -406,4 +431,20 @@ function getSearchConfiguration(): SearchConfiguration {
     maxResults: configuration.get<number>('search.maxResults', 200),
     autoLoadAllSections: configuration.get<boolean>('search.autoLoadAllSections', true),
   };
+}
+
+function getSearchableSections(includeHooks: boolean): BranchSectionKey[] {
+  const visibleSections = new Set(getVisibleSectionKeys());
+
+  return SEARCHABLE_SECTIONS.filter((section) => {
+    if (!visibleSections.has(section)) {
+      return false;
+    }
+
+    if (section === 'hooks') {
+      return includeHooks;
+    }
+
+    return true;
+  });
 }

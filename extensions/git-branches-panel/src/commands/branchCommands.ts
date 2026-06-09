@@ -1062,6 +1062,13 @@ function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
       }),
       createBranchActionItem('openChangedFilesForRef', '$(diff-multiple) Open Changed Files for Ref', async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.openChangedFilesForRef', item);
+      }),
+      createBranchActionItem(
+        'showAdvancedBranchOperations',
+        '$(tools) Advanced Branch Operations...',
+        async () => {
+          await vscode.commands.executeCommand('gitBranchesPanel.showAdvancedBranchOperations', item);
+        }
       })
     );
   }

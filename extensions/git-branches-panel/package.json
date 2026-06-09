@@ -281,6 +281,31 @@
         "icon": "$(tag)"
       },
       {
+        "command": "gitBranchesPanel.pushTag",
+        "title": "Push Tag",
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "gitBranchesPanel.deleteRemoteTag",
+        "title": "Delete Remote Tag",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "gitBranchesPanel.compareTagWithCurrent",
+        "title": "Compare Tag with Current Branch",
+        "icon": "$(diff-multiple)"
+      },
+      {
+        "command": "gitBranchesPanel.showTagDetails",
+        "title": "Show Tag Details",
+        "icon": "$(note)"
+      },
+      {
+        "command": "gitBranchesPanel.copyTagTargetSha",
+        "title": "Copy Tag Target SHA",
+        "icon": "$(copy)"
+      },
+      {
         "command": "gitBranchesPanel.copyBranchName",
         "title": "Copy Branch Name",
         "icon": "$(copy)"
@@ -354,6 +379,36 @@
         "command": "gitBranchesPanel.compareBranchWithCurrent",
         "title": "Compare with Current Branch",
         "icon": "$(diff-multiple)"
+      },
+      {
+        "command": "gitBranchesPanel.showAdvancedBranchOperations",
+        "title": "Advanced Branch Operations...",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "gitBranchesPanel.rebaseCurrentOntoSelected",
+        "title": "Rebase Current onto Selected",
+        "icon": "$(git-merge)"
+      },
+      {
+        "command": "gitBranchesPanel.rebaseSelectedOntoCurrent",
+        "title": "Rebase Selected onto Current",
+        "icon": "$(git-merge)"
+      },
+      {
+        "command": "gitBranchesPanel.squashMergeIntoCurrent",
+        "title": "Squash Merge into Current",
+        "icon": "$(git-merge)"
+      },
+      {
+        "command": "gitBranchesPanel.resetCurrentToSelected",
+        "title": "Reset Current to Selected...",
+        "icon": "$(discard)"
+      },
+      {
+        "command": "gitBranchesPanel.forcePushWithLease",
+        "title": "Force Push with Lease",
+        "icon": "$(cloud-upload)"
       },
       {
         "command": "gitBranchesPanel.deleteTag",
@@ -755,9 +810,14 @@
           "group": "inline@1"
         },
         {
-          "command": "gitBranchesPanel.deleteTag",
+          "command": "gitBranchesPanel.pushTag",
           "when": "viewItem == tag",
           "group": "inline@2"
+        },
+        {
+          "command": "gitBranchesPanel.deleteTag",
+          "when": "viewItem == tag",
+          "group": "inline@3"
         },
         {
           "command": "gitBranchesPanel.popStash",
@@ -1680,6 +1740,11 @@
           "group": "2_more@1"
         },
         {
+          "command": "gitBranchesPanel.showAdvancedBranchOperations",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
+          "group": "2_more@0.5"
+        },
+        {
           "command": "gitBranchesPanel.checkoutTag",
           "when": "viewItem == tag",
           "group": "1_tag@1"
@@ -1688,6 +1753,11 @@
           "command": "gitBranchesPanel.createWorktreeFromRef",
           "when": "viewItem == tag",
           "group": "1_tag@1.5"
+        },
+        {
+          "command": "gitBranchesPanel.pushTag",
+          "when": "viewItem == tag",
+          "group": "1_tag@1.6"
         },
         {
           "command": "gitBranchesPanel.copyTagName",
@@ -1705,9 +1775,29 @@
           "group": "1_tag@2.6"
         },
         {
+          "command": "gitBranchesPanel.compareTagWithCurrent",
+          "when": "viewItem == tag",
+          "group": "1_tag@2.7"
+        },
+        {
+          "command": "gitBranchesPanel.showTagDetails",
+          "when": "viewItem == tag",
+          "group": "1_tag@2.8"
+        },
+        {
+          "command": "gitBranchesPanel.copyTagTargetSha",
+          "when": "viewItem == tag",
+          "group": "1_tag@2.9"
+        },
+        {
           "command": "gitBranchesPanel.deleteTag",
           "when": "viewItem == tag",
           "group": "2_tag@1"
+        },
+        {
+          "command": "gitBranchesPanel.deleteRemoteTag",
+          "when": "viewItem == tag",
+          "group": "2_tag@1.5"
         },
         {
           "command": "gitBranchesPanel.applyStash",
@@ -2075,10 +2165,66 @@
           "default": false,
           "description": "When enabled, keep the active repository aligned with the Git repository that owns the active editor whenever multi-repository support is in use."
         },
-        "gitBranchesPanel.showRemotesSection": {
+        "gitBranchesPanel.sections.local.visible": {
           "type": "boolean",
           "default": true,
-          "description": "Show the dedicated Remotes section with per-remote fetch, URL, rename, and remove actions."
+          "description": "Show the Local section in the tree. Commands can still resolve the current branch even when this section is hidden."
+        },
+        "gitBranchesPanel.sections.remote.visible": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the Remote section with remote-tracking branches."
+        },
+        "gitBranchesPanel.sections.remotes.visible": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show the dedicated Remotes section with fetch, URL, rename, and remove actions for configured remotes."
+        },
+        "gitBranchesPanel.sections.stash.visible": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the Stash section in the tree."
+        },
+        "gitBranchesPanel.sections.worktree.visible": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the Worktree section in the tree."
+        },
+        "gitBranchesPanel.sections.hooks.visible": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the Hooks section when the repository has configured hooks."
+        },
+        "gitBranchesPanel.sections.tags.visible": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the Tags section in the tree."
+        },
+        "gitBranchesPanel.showRemotesSection": {
+          "type": "boolean",
+          "default": false,
+          "description": "Deprecated. Use gitBranchesPanel.sections.remotes.visible instead.",
+          "deprecationMessage": "Deprecated: use gitBranchesPanel.sections.remotes.visible instead."
+        },
+        "gitBranchesPanel.tags.defaultType": {
+          "type": "string",
+          "enum": [
+            "lightweight",
+            "annotated",
+            "signedAnnotated"
+          ],
+          "default": "annotated",
+          "description": "Default tag type to preselect in the Create Tag workflow."
+        },
+        "gitBranchesPanel.tags.pushAfterCreate": {
+          "type": "boolean",
+          "default": false,
+          "description": "After creating a tag, immediately prompt for a remote and push that specific tag."
+        },
+        "gitBranchesPanel.tags.requireMessageForAnnotated": {
+          "type": "boolean",
+          "default": true,
+          "description": "Require a non-empty annotation message for annotated and signed annotated tags. When disabled, leaving the message blank reuses the tag name as the annotation subject."
         },
         "gitBranchesPanel.search.includeHooks": {
           "type": "boolean",
@@ -2146,6 +2292,31 @@
           "type": "boolean",
           "default": true,
           "description": "Include merge commits in branch and ref history quick picks."
+        },
+        "gitBranchesPanel.advanced.enableForcePushWithLease": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Force Push with Lease in advanced branch operation pickers and command menus."
+        },
+        "gitBranchesPanel.advanced.defaultResetMode": {
+          "type": "string",
+          "enum": [
+            "soft",
+            "mixed",
+            "hard"
+          ],
+          "default": "mixed",
+          "description": "Default reset mode to preselect when resetting the current branch to another ref."
+        },
+        "gitBranchesPanel.advanced.allowNonCurrentBranchRebase": {
+          "type": "boolean",
+          "default": true,
+          "description": "Allow rebasing a selected non-current local branch onto the current branch through a temporary worktree."
+        },
+        "gitBranchesPanel.advanced.rebaseAutostash": {
+          "type": "boolean",
+          "default": true,
+          "description": "Prefer Git's --autostash behavior when rebasing the current branch and the working tree is dirty."
         },
         "gitBranchesPanel.showCurrentBranchInfo": {
           "type": "boolean",

@@ -84,11 +84,12 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
 
   const nodeType = resolveNodeType(node.info);
   const syncStatus = shouldShowSyncStatus(nodeType) ? formatSyncStatus(node.info) : '';
+  const syncLabel = shouldShowSyncStatus(nodeType) ? buildInlineSyncStatus(node.info) : '';
   const description = buildTreeItemDescription(node.info, syncStatus);
   const prioritizedLabel = buildTreeItemLabel(
     node.label,
     nodeType,
-    syncStatus,
+    syncLabel,
     node.info.isCurrent,
     node.info.isPinned
   );
@@ -359,7 +360,7 @@ function shouldShowSyncStatus(nodeType: NodeType): boolean {
 function buildTreeItemLabel(
   label: string,
   nodeType: NodeType,
-  syncStatus: string,
+  syncLabel: string,
   isCurrent: boolean,
   isPinned: boolean | undefined
 ): string {
@@ -373,7 +374,25 @@ function buildTreeItemLabel(
 
   const prefix = prefixParts.length > 0 ? `${prefixParts.join(' ')} ` : '';
 
-  return syncStatus ? `${prefix}${syncStatus} ${label}` : `${prefix}${label}`;
+  return syncLabel ? `${prefix}${syncLabel} ${label}` : `${prefix}${label}`;
+}
+
+function buildInlineSyncStatus(
+  syncState: Pick<BranchInfo, 'aheadCount' | 'behindCount'>
+): string {
+  const behindCount = syncState.behindCount ?? 0;
+  const aheadCount = syncState.aheadCount ?? 0;
+  const statusParts: string[] = [];
+
+  if (behindCount > 0) {
+    statusParts.push(`🔵${behindCount}↓`);
+  }
+
+  if (aheadCount > 0) {
+    statusParts.push(`🟢${aheadCount}↑`);
+  }
+
+  return statusParts.join(' ');
 }
 
 function getItemContextValue(nodeType: NodeType, branch: BranchInfo): string {

@@ -322,7 +322,7 @@ test('findRef loads searchable sections, lets the user choose a result, and rout
 
   assert.deepEqual(commandState.refreshCalls, [
     {
-      sections: ['local', 'remote', 'stash', 'worktree', 'hooks', 'tags'],
+      sections: ['local', 'remote', 'stash', 'worktree', 'tags'],
       repoRoots: ['/repo-a', '/repo-b'],
       fetchRemoteState: false,
     },

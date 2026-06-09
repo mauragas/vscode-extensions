@@ -47,6 +47,7 @@ import {
   hasActiveFilter,
   type RefFilterState,
 } from './search/refSearch';
+import { getSectionVisibilityConfiguration } from './sectionVisibility';
 
 export { BranchTreeItem, type NodeType } from './treeItem';
 export type { BranchLoadOptions } from './treeDataLoader';
@@ -89,7 +90,7 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
   async getChildren(element?: BranchTreeItem): Promise<BranchTreeItem[]> {
     if (!element) {
       if (this.getBaseVisibleTreeData().length === 0) {
-        await this.refresh({ sections: ['local', 'hooks'], fetchRemoteState: false });
+        await this.refresh({ fetchRemoteState: false });
       }
 
       return this.nodesToItems(this.getVisibleTreeData());
@@ -440,7 +441,7 @@ function createBranchDataLoaderDependencies(
           'multiRepository.mode',
           'auto'
         ),
-        showRemotesSection: configuration.get<boolean>('showRemotesSection', true),
+        sectionVisibility: getSectionVisibilityConfiguration(configuration),
       };
     },
     getBranches,

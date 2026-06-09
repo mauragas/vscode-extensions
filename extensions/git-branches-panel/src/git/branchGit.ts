@@ -29,6 +29,12 @@ export interface CreateBranchFromRefOptions {
   checkout?: boolean;
 }
 
+export type ResetMode = 'soft' | 'mixed' | 'hard';
+
+export interface RebaseBranchOptions {
+  autostash?: boolean;
+}
+
 export interface RefComparisonChange {
   status: 'A' | 'D' | 'M' | 'R';
   path: string;
@@ -255,6 +261,69 @@ export async function cherryPickRef(
   await runGit(repoRoot, ['cherry-pick', refName]);
 }
 
+export async function rebaseBranchOnto(
+  repoRoot: string,
+  branchName: string,
+  ontoRef: string,
+  options: RebaseBranchOptions = {}
+): Promise<void> {
+  const branches = await getBranches(repoRoot);
+  const branch = branches.find((candidate) => candidate.name === branchName);
+  if (!branch) {
+    throw new Error(`Branch '${branchName}' was not found.`);
+  }
+
+  if (branch.isCurrent) {
+    await rebaseWorkingTree(repoRoot, ontoRef, options);
+    return;
+  }
+
+  await withTemporaryBranchWorktree(repoRoot, branchName, async (worktreePath) => {
+    await rebaseWorkingTree(worktreePath, ontoRef, options);
+  });
+}
+
+export async function squashMergeIntoCurrent(
+  repoRoot: string,
+  refName: string
+): Promise<void> {
+  await runGit(repoRoot, ['merge', '--squash', refName]);
+}
+
+export async function resetCurrentBranchToRef(
+  repoRoot: string,
+  refName: string,
+  mode: ResetMode
+): Promise<void> {
+  await runGit(repoRoot, ['reset', `--${mode}`, refName]);
+}
+
+export async function forcePushBranch(
+  repoRoot: string,
+  branchName: string
+): Promise<SyncBranchResult> {
+  const { branch, syncTarget, remoteBranchExists } = await resolveBranchRemoteState(
+    repoRoot,
+    branchName
+  );
+
+  if (!branch.upstreamName || !syncTarget.hasConfiguredUpstream || branch.upstreamMissing || !remoteBranchExists) {
+    throw new Error(
+      `Branch '${branch.name}' is not tracking a live remote branch yet. Publish it before force-pushing with lease.`
+    );
+  }
+
+  await forcePushBranchToRemote(repoRoot, branch.name, syncTarget);
+
+  return {
+    branchName: branch.name,
+    upstreamName: syncTarget.upstreamName,
+    didPull: false,
+    didPush: true,
+    publishedUpstream: false,
+  };
+}
+
 export async function getDiffFilesBetweenRefs(
   repoRoot: string,
   leftRef: string,
@@ -284,11 +353,7 @@ async function syncNonCurrentBranch(
     shouldSetUpstream: boolean;
   }
 ): Promise<void> {
-  const worktreePath = await mkdtemp(join(tmpdir(), 'git-branches-panel-'));
-
-  try {
-    await addTemporarySyncWorktree(repoRoot, worktreePath, branchName);
-
+  await withTemporaryBranchWorktree(repoRoot, branchName, async (worktreePath) => {
     if (syncPlan.shouldPull) {
       await pullBranch(worktreePath, syncTarget, syncPlan.hasOutgoingCommits, false);
     }
@@ -296,6 +361,19 @@ async function syncNonCurrentBranch(
     if (syncPlan.shouldPush) {
       await pushBranchToRemote(worktreePath, branchName, syncTarget, syncPlan.shouldSetUpstream);
     }
+  });
+}
+
+async function withTemporaryBranchWorktree<T>(
+  repoRoot: string,
+  branchName: string,
+  operation: (worktreePath: string) => Promise<T>
+): Promise<T> {
+  const worktreePath = await mkdtemp(join(tmpdir(), 'git-branches-panel-'));
+
+  try {
+    await addTemporaryBranchWorktree(repoRoot, worktreePath, branchName);
+    return await operation(worktreePath);
   } finally {
     try {
       await runGit(repoRoot, ['worktree', 'remove', '--force', worktreePath]);
@@ -305,7 +383,7 @@ async function syncNonCurrentBranch(
   }
 }
 
-async function addTemporarySyncWorktree(
+async function addTemporaryBranchWorktree(
   repoRoot: string,
   worktreePath: string,
   branchName: string
@@ -320,6 +398,22 @@ async function addTemporarySyncWorktree(
 
     await runGit(repoRoot, ['worktree', 'add', '--force', worktreePath, branchName]);
   }
+}
+
+async function rebaseWorkingTree(
+  workingDirectory: string,
+  ontoRef: string,
+  options: RebaseBranchOptions
+): Promise<void> {
+  const args = ['rebase'];
+
+  if (options.autostash ?? false) {
+    args.push('--autostash');
+  }
+
+  args.push(ontoRef);
+
+  await runGit(workingDirectory, args);
 }
 
 async function pullBranch(
@@ -362,6 +456,19 @@ async function pushBranchToRemote(
   );
 
   await runGit(workingDirectory, args);
+}
+
+async function forcePushBranchToRemote(
+  workingDirectory: string,
+  branchName: string,
+  syncTarget: BranchSyncTarget
+): Promise<void> {
+  await runGit(workingDirectory, [
+    'push',
+    '--force-with-lease',
+    syncTarget.remoteName,
+    `${branchName}:refs/heads/${syncTarget.remoteBranchName}`,
+  ]);
 }
 
 async function resolveBranchRemoteState(
