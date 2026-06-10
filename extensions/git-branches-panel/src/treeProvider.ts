@@ -61,6 +61,7 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
   private readonly dataLoader: BranchDataLoader;
   private readonly pinnedItems: PinnedItemsStore;
   private readonly busyBranchKeys = new Set<string>();
+  private busyOperationCount = 0;
   private activeRepoRoot?: string;
   private filterState: RefFilterState = clearRefFilterState();
   private treeViews: readonly vscode.TreeView<BranchTreeItem>[] = [];
@@ -80,6 +81,7 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     this.updateRepositoryContexts();
     this.updateFilterContexts();
     this.updateCurrentBranchContext(this.getCurrentBranch());
+    this.updateOperationContext();
     this.onDidChangeTreeDataEmitter.fire();
   }
 
@@ -245,6 +247,31 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     }
   }
 
+  async withLoadingIndicator<T>(
+    title: string,
+    operation: () => Promise<T>
+  ): Promise<T> {
+    this.busyOperationCount += 1;
+    this.updateOperationContext();
+
+    try {
+      if (typeof vscode.window.withProgress === 'function') {
+        return await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Window,
+            title,
+          },
+          async () => operation()
+        );
+      }
+
+      return await operation();
+    } finally {
+      this.busyOperationCount = Math.max(0, this.busyOperationCount - 1);
+      this.updateOperationContext();
+    }
+  }
+
   async togglePinnedItem(item: BranchTreeItem): Promise<boolean> {
     if (!item.repoRoot || !item.branchInfo) {
       return false;
@@ -308,8 +335,8 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
   }
 
   async revealItem(item: BranchTreeItem, options: { clearFilter?: boolean } = {}): Promise<boolean> {
-    const primaryTreeView = this.treeViews[0];
-    if (!primaryTreeView) {
+    const revealTreeView = this.getRevealTreeView();
+    if (!revealTreeView) {
       return false;
     }
 
@@ -320,12 +347,50 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     await this.setActiveRepositoryFromItem(item);
     const revealTarget = findMatchingTreeItem(this.getVisibleTreeData(), item) ?? item;
 
-    await primaryTreeView.reveal(revealTarget, {
+    await revealTreeView.reveal(revealTarget, {
       expand: 3,
       focus: true,
       select: true,
     });
     return true;
+  }
+
+  async revealBranch(
+    repoRoot: string,
+    branchName: string,
+    options: { clearFilter?: boolean } = {}
+  ): Promise<boolean> {
+    const revealTreeView = this.getRevealTreeView();
+    if (!revealTreeView) {
+      return false;
+    }
+
+    const activated = await this.setActiveRepository(repoRoot);
+    if (!activated) {
+      return false;
+    }
+
+    let revealTarget = findLocalBranchTreeItem(this.getVisibleTreeData(), repoRoot, branchName);
+
+    if (!revealTarget && options.clearFilter === true && this.hasActiveFilter()) {
+      await this.clearFilter();
+      revealTarget = findLocalBranchTreeItem(this.getVisibleTreeData(), repoRoot, branchName);
+    }
+
+    if (!revealTarget) {
+      return false;
+    }
+
+    await revealTreeView.reveal(revealTarget, {
+      expand: 3,
+      focus: true,
+      select: true,
+    });
+    return true;
+  }
+
+  private getRevealTreeView(): vscode.TreeView<BranchTreeItem> | undefined {
+    return this.treeViews.find((treeView) => treeView.visible) ?? this.treeViews[0];
   }
 
   private getBaseVisibleTreeData(): readonly BranchTreeNode[] {
@@ -416,6 +481,14 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     );
   }
 
+  private updateOperationContext(): void {
+    void vscode.commands.executeCommand(
+      'setContext',
+      'gitBranchesPanel.operationInProgress',
+      this.busyOperationCount > 0
+    );
+  }
+
   private decorateBranchInfo(repoRoot: string, branch: BranchInfo): BranchInfo {
     return {
       ...branch,
@@ -433,12 +506,22 @@ function createBranchDataLoader(
 }
 
 type TreeContainerNode = Extract<BranchTreeNode, { kind: 'repository' | 'section' | 'folder' }>;
+type TreeBranchNode = Extract<BranchTreeNode, { kind: 'branch' }>;
 
 function findMatchingTreeItem(
   nodes: readonly BranchTreeNode[],
   item: BranchTreeItem
 ): BranchTreeItem | undefined {
   const node = findMatchingTreeNode(nodes, item);
+  return node ? new BranchTreeItem(node) : undefined;
+}
+
+function findLocalBranchTreeItem(
+  nodes: readonly BranchTreeNode[],
+  repoRoot: string,
+  branchName: string
+): BranchTreeItem | undefined {
+  const node = findLocalBranchTreeNode(nodes, repoRoot, branchName);
   return node ? new BranchTreeItem(node) : undefined;
 }
 
@@ -456,6 +539,37 @@ function findMatchingTreeNode(
     }
 
     const nestedMatch = findMatchingTreeNode(node.children, item);
+    if (nestedMatch) {
+      return nestedMatch;
+    }
+  }
+
+  return undefined;
+}
+
+function findLocalBranchTreeNode(
+  nodes: readonly BranchTreeNode[],
+  repoRoot: string,
+  branchName: string
+): TreeBranchNode | undefined {
+  for (const node of nodes) {
+    if (node.kind === 'branch') {
+      if (
+        node.repoRoot === repoRoot &&
+        node.fullName === branchName &&
+        (node.info.scope ?? 'local') === 'local'
+      ) {
+        return node;
+      }
+
+      continue;
+    }
+
+    if (!isTreeContainerNode(node)) {
+      continue;
+    }
+
+    const nestedMatch = findLocalBranchTreeNode(node.children, repoRoot, branchName);
     if (nestedMatch) {
       return nestedMatch;
     }

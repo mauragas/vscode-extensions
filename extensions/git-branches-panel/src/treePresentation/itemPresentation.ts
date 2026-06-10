@@ -89,12 +89,10 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
 
   const nodeType = resolveNodeType(node.info);
   const syncStatus = shouldShowSyncStatus(nodeType) ? formatSyncStatus(node.info) : '';
-  const syncLabel = shouldShowSyncStatus(nodeType) ? buildInlineSyncStatus(node.info) : '';
   const description = buildTreeItemDescription(node.info, syncStatus);
   const prioritizedLabel = buildTreeItemLabel(
     node.label,
     nodeType,
-    syncLabel,
     node.info.isCurrent,
     node.info.isPinned
   );
@@ -303,11 +301,36 @@ function buildTreeItemDescription(branch: BranchInfo, syncStatus: string): strin
     return ['stale remote', branch.lastCommitDate ?? ''].filter(Boolean).join(' • ');
   }
 
+  const trackedLocalSyncDescription = buildTrackedLocalSyncDescription(branch);
+  if (trackedLocalSyncDescription) {
+    return trackedLocalSyncDescription;
+  }
+
   if (branch.scope === 'stash' || branch.scope === 'worktree' || branch.scope === 'hook' || !syncStatus) {
     return buildBranchDescription(branch) || undefined;
   }
 
   return branch.lastCommitDate || undefined;
+}
+
+function buildTrackedLocalSyncDescription(branch: BranchInfo): string | undefined {
+  if ((branch.scope ?? 'local') !== 'local' || !branch.upstreamName || branch.upstreamMissing) {
+    return undefined;
+  }
+
+  const behindCount = branch.behindCount ?? 0;
+  const aheadCount = branch.aheadCount ?? 0;
+  const parts: string[] = [];
+
+  if (behindCount > 0) {
+    parts.push(`↓${behindCount}`);
+  }
+
+  if (aheadCount > 0) {
+    parts.push(`↑${aheadCount}`);
+  }
+
+  return parts.length > 0 ? parts.join(' ') : undefined;
 }
 
 function getSectionContextValue(node: Extract<BranchTreeNode, { kind: 'section' }>): string {
@@ -385,7 +408,6 @@ function shouldShowSyncStatus(nodeType: NodeType): boolean {
 function buildTreeItemLabel(
   label: string,
   nodeType: NodeType,
-  syncLabel: string,
   isCurrent: boolean,
   isPinned: boolean | undefined
 ): string {
@@ -399,25 +421,7 @@ function buildTreeItemLabel(
 
   const prefix = prefixParts.length > 0 ? `${prefixParts.join(' ')} ` : '';
 
-  return syncLabel ? `${prefix}${syncLabel} ${label}` : `${prefix}${label}`;
-}
-
-function buildInlineSyncStatus(
-  syncState: Pick<BranchInfo, 'aheadCount' | 'behindCount'>
-): string {
-  const behindCount = syncState.behindCount ?? 0;
-  const aheadCount = syncState.aheadCount ?? 0;
-  const statusParts: string[] = [];
-
-  if (behindCount > 0) {
-    statusParts.push(`🔵${behindCount}↓`);
-  }
-
-  if (aheadCount > 0) {
-    statusParts.push(`🟢${aheadCount}↑`);
-  }
-
-  return statusParts.join(' ');
+  return `${prefix}${label}`;
 }
 
 function getItemContextValue(nodeType: NodeType, branch: BranchInfo): string {
@@ -495,6 +499,11 @@ function resolveProtectedContextValue(contextValue: string): string {
 }
 
 function getItemIcon(nodeType: NodeType, branch?: BranchInfo): TreeItemIconDescriptor {
+  const localSyncIcon = getLocalSyncIcon(branch);
+  if (localSyncIcon) {
+    return localSyncIcon;
+  }
+
   switch (nodeType) {
     case 'currentBranch':
       return {
@@ -555,6 +564,29 @@ function getItemIcon(nodeType: NodeType, branch?: BranchInfo): TreeItemIconDescr
     default:
       return { id: 'git-branch' };
   }
+}
+
+function getLocalSyncIcon(branch?: BranchInfo): TreeItemIconDescriptor | undefined {
+  if (!branch || (branch.scope ?? 'local') !== 'local' || branch.upstreamMissing) {
+    return undefined;
+  }
+
+  const aheadCount = branch.aheadCount ?? 0;
+  const behindCount = branch.behindCount ?? 0;
+
+  if (aheadCount > 0 && behindCount > 0) {
+    return { resourcePath: 'branch-diverged.svg' };
+  }
+
+  if (behindCount > 0) {
+    return { resourcePath: 'branch-incoming.svg' };
+  }
+
+  if (aheadCount > 0) {
+    return { resourcePath: 'branch-outgoing.svg' };
+  }
+
+  return undefined;
 }
 
 function resolveActivationCommand(

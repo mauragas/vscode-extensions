@@ -247,6 +247,19 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
       aheadCount: 1,
     },
   });
+  const incomingBranchPresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'feature/incoming',
+    label: 'incoming',
+    path: 'feature/incoming',
+    info: {
+      name: 'feature/incoming',
+      isCurrent: false,
+      lastCommitDate: '3 hours ago',
+      upstreamName: 'origin/feature/incoming',
+      behindCount: 2,
+    },
+  });
   const publishableBranchPresentation = buildTreeItemPresentation({
     kind: 'branch',
     fullName: 'feature/offline',
@@ -489,23 +502,31 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
 
   assert.equal(localBranchPresentation.nodeType, 'branch');
   assert.equal(localBranchPresentation.id, 'local:branch:feature/demo');
-  assert.equal(localBranchPresentation.label, '🟢1↑ demo');
+  assert.equal(localBranchPresentation.label, 'demo');
   assert.equal(localBranchPresentation.contextValue, 'branch');
-  assert.equal(localBranchPresentation.description, '1 hour ago');
+  assert.equal(localBranchPresentation.icon.resourcePath, 'branch-outgoing.svg');
+  assert.equal(localBranchPresentation.description, '↑1');
   assert.equal(localBranchPresentation.command.command, 'gitBranchesPanel.activateBranchItem');
+
+  assert.equal(incomingBranchPresentation.nodeType, 'branch');
+  assert.equal(incomingBranchPresentation.label, 'incoming');
+  assert.equal(incomingBranchPresentation.icon.resourcePath, 'branch-incoming.svg');
+  assert.equal(incomingBranchPresentation.description, '↓2');
 
   assert.equal(publishableBranchPresentation.nodeType, 'branch');
   assert.equal(publishableBranchPresentation.contextValue, 'publishableBranch');
 
   assert.equal(currentBranchWithSyncPresentation.nodeType, 'currentBranch');
-  assert.equal(currentBranchWithSyncPresentation.label, '● 🔵2↓ 🟢1↑ main');
+  assert.equal(currentBranchWithSyncPresentation.label, '● main');
   assert.equal(currentBranchWithSyncPresentation.contextValue, 'currentBranch');
-  assert.equal(currentBranchWithSyncPresentation.description, '2 hours ago');
+  assert.equal(currentBranchWithSyncPresentation.icon.resourcePath, 'branch-diverged.svg');
+  assert.equal(currentBranchWithSyncPresentation.description, '↓2 ↑1');
 
   assert.equal(currentBranchPresentation.nodeType, 'currentBranch');
   assert.equal(currentBranchPresentation.label, '● main');
   assert.equal(currentBranchPresentation.contextValue, 'publishableCurrentBranch');
   assert.equal(currentBranchPresentation.command, undefined);
+  assert.equal(currentBranchPresentation.icon.id, 'git-branch');
   assert.equal(currentBranchPresentation.icon.colorId, 'gitDecoration.addedResourceForeground');
 
   assert.equal(remoteBranchPresentation.nodeType, 'remoteBranch');
@@ -733,9 +754,10 @@ test('buildTreeItemPresentation adds pinned prefixes and busy context values whe
     },
   });
 
-  assert.equal(pinnedBusyBranchPresentation.label, '★ 🟢1↑ demo');
+  assert.equal(pinnedBusyBranchPresentation.label, '★ demo');
   assert.equal(pinnedBusyBranchPresentation.contextValue, 'pinned:busyBranch');
-  assert.equal(pinnedBusyBranchPresentation.icon.id, 'git-branch');
+  assert.equal(pinnedBusyBranchPresentation.icon.resourcePath, 'branch-outgoing.svg');
+  assert.equal(pinnedBusyBranchPresentation.description, '↑1');
   assert.match(pinnedBusyBranchPresentation.tooltip, /_Pinned item_/);
 
   assert.equal(pinnedCurrentWorktreePresentation.label, '★ ● git-branches-panel-main-pinned-worktree');

@@ -23,6 +23,27 @@ function hasViewTitleMenu(commandId, predicate = () => true) {
   );
 }
 
+function getToolbarViewTitleMenus(commandId, scope, actionId, predicate = () => true) {
+  return packageJson.contributes.menus['view/title'].filter(
+    (item) =>
+      item.command === commandId &&
+      item.when.includes(`gitBranchesPanel.toolbar.${scope}.slot`) &&
+      item.when.includes(`== '${actionId}'`) &&
+      predicate(item)
+  );
+}
+
+function hasToolbarViewTitleMenu(commandId, scope, actionId, predicate = () => true) {
+  return getToolbarViewTitleMenus(commandId, scope, actionId, predicate).length > 0;
+}
+
+function getToolbarSlot(item, scope) {
+  const slotMatch = item.when.match(
+    new RegExp(`gitBranchesPanel\\.toolbar\\.${scope}\\.slot(\\d+) ==`)
+  );
+  return slotMatch ? Number(slotMatch[1]) : undefined;
+}
+
 function getInlineViewItemContextCommands() {
   return [...new Set(
     packageJson.contributes.menus['view/item/context']
@@ -31,8 +52,8 @@ function getInlineViewItemContextCommands() {
   )];
 }
 
-test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, history, remote-management, worktree, tag, and advanced-branch contributions', () => {
-  assert.equal(packageJson.version, '2.0.0');
+test('package manifest exposes the 2.1.0 multi-repo, search, remote-host, history, remote-management, worktree, tag, and advanced-branch contributions', () => {
+  assert.equal(packageJson.version, '2.1.0');
 
   const expectedCommands = [
     ['gitBranchesPanel.selectRepository', 'Select Active Repository'],
@@ -156,56 +177,258 @@ test('package manifest exposes the 2.0.0 multi-repo, search, remote-host, histor
   ]);
   assert.equal(settings['gitBranchesPanel.advanced.allowNonCurrentBranchRebase'].default, true);
   assert.equal(settings['gitBranchesPanel.advanced.rebaseAutostash'].default, true);
+  assert.deepEqual(
+    settings['gitBranchesPanel.toolbar.singleRepository.quickActions'].items.enum,
+    [
+      'newBranch',
+      'stashSilently',
+      'findRef',
+      'currentBranchAction',
+      'pullAllLocalBranches',
+      'pullAllRepositoriesChanges',
+      'fetchAll',
+      'fetchAllPrune',
+      'refresh',
+      'selectRepository',
+      'clearFilter',
+      'advancedActions',
+      'settings',
+    ]
+  );
+  assert.deepEqual(settings['gitBranchesPanel.toolbar.singleRepository.quickActions'].default, [
+    'findRef',
+    'pullAllLocalBranches',
+    'fetchAllPrune',
+    'refresh',
+    'advancedActions',
+    'settings',
+  ]);
+  assert.deepEqual(settings['gitBranchesPanel.toolbar.multiRepository.quickActions'].default, [
+    'findRef',
+    'currentBranchAction',
+    'pullAllRepositoriesChanges',
+    'fetchAllPrune',
+    'refresh',
+    'advancedActions',
+    'settings',
+  ]);
 
   assert.ok(
-    hasViewTitleMenu(
-      'gitBranchesPanel.selectRepository',
-      (item) =>
-        item.when.includes('gitBranchesPanel.multipleRepositories') &&
-        item.when.includes('!gitBranchesPanel.groupedRepositories')
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.newBranch',
+      'singleRepository',
+      'newBranch'
     )
   );
   assert.ok(
-    hasViewTitleMenu(
-      'gitBranchesPanel.syncAllRepositoriesBranches',
-      (item) => item.when.includes('gitBranchesPanel.groupedRepositories')
-    )
-  );
-  assert.ok(
-    hasViewTitleMenu(
-      'gitBranchesPanel.pullAllRepositoriesChanges',
-      (item) => item.when.includes('gitBranchesPanel.groupedRepositories')
-    )
-  );
-  assert.ok(
-    hasViewTitleMenu(
-      'gitBranchesPanel.fetchAllRepositories',
-      (item) => item.when.includes('gitBranchesPanel.groupedRepositories')
-    )
-  );
-  assert.ok(
-    hasViewTitleMenu(
-      'gitBranchesPanel.fetchAllRepositoriesPrune',
-      (item) => item.when.includes('gitBranchesPanel.groupedRepositories')
-    )
-  );
-  assert.ok(hasViewTitleMenu('gitBranchesPanel.findRef'));
-  assert.ok(
-    hasViewTitleMenu(
-      'gitBranchesPanel.showAdvancedActions',
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.newBranch',
+      'multiRepository',
+      'newBranch',
       (item) => item.when.includes('!gitBranchesPanel.groupedRepositories')
     )
   );
   assert.ok(
-    hasViewTitleMenu(
-      'gitBranchesPanel.showAllRepositoriesActions',
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.selectRepository',
+      'multiRepository',
+      'selectRepository',
+      (item) => item.when.includes('!gitBranchesPanel.groupedRepositories')
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.branchActionInProgress',
+      'singleRepository',
+      'currentBranchAction',
+      (item) => item.when.includes('gitBranchesPanel.operationInProgress')
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.branchActionInProgress',
+      'multiRepository',
+      'currentBranchAction',
+      (item) => item.when.includes('gitBranchesPanel.operationInProgress')
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.syncAllRepositoriesBranches',
+      'multiRepository',
+      'currentBranchAction',
+      (item) =>
+        item.when.includes('gitBranchesPanel.groupedRepositories') &&
+        item.when.includes('!gitBranchesPanel.operationInProgress')
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.syncCurrentBranch',
+      'singleRepository',
+      'currentBranchAction',
+      (item) => item.when.includes('!gitBranchesPanel.operationInProgress')
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.syncCurrentBranch',
+      'multiRepository',
+      'currentBranchAction',
+      (item) => item.when.includes('!gitBranchesPanel.groupedRepositories')
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.publishCurrentBranch',
+      'singleRepository',
+      'currentBranchAction',
+      (item) => item.when.includes('!gitBranchesPanel.operationInProgress')
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.pullAllLocalBranches',
+      'singleRepository',
+      'pullAllLocalBranches'
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.pullAllLocalBranches',
+      'multiRepository',
+      'pullAllLocalBranches',
+      (item) => item.when.includes('!gitBranchesPanel.groupedRepositories')
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.pullAllLocalBranches',
+      'multiRepository',
+      'pullAllRepositoriesChanges',
+      (item) => item.when.includes('!gitBranchesPanel.groupedRepositories')
+    )
+  );
+  const adaptivePullToolbarEntries = getToolbarViewTitleMenus(
+    'gitBranchesPanel.pullAllLocalBranches',
+    'multiRepository',
+    'pullAllRepositoriesChanges',
+    (item) => item.when.includes('!gitBranchesPanel.groupedRepositories')
+  );
+  assert.deepEqual(
+    adaptivePullToolbarEntries
+      .map((item) => getToolbarSlot(item, 'multiRepository'))
+      .sort((left, right) => left - right),
+    Array.from({ length: 13 }, (_, index) => index + 1)
+  );
+  for (const item of adaptivePullToolbarEntries) {
+    const slot = getToolbarSlot(item, 'multiRepository');
+    assert.notEqual(slot, undefined);
+    assert.equal(item.group, `navigation@${slot}`);
+  }
+  assert.ok(
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.pullAllRepositoriesChanges',
+      'multiRepository',
+      'pullAllRepositoriesChanges',
       (item) => item.when.includes('gitBranchesPanel.groupedRepositories')
     )
   );
   assert.ok(
-    hasViewTitleMenu(
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.fetchAll',
+      'singleRepository',
+      'fetchAll'
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.fetchAllRepositories',
+      'multiRepository',
+      'fetchAll',
+      (item) => item.when.includes('gitBranchesPanel.groupedRepositories')
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.fetchAllPrune',
+      'singleRepository',
+      'fetchAllPrune'
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.fetchAllRepositoriesPrune',
+      'multiRepository',
+      'fetchAllPrune',
+      (item) => item.when.includes('gitBranchesPanel.groupedRepositories')
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.findRef',
+      'singleRepository',
+      'findRef'
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.findRef',
+      'multiRepository',
+      'findRef'
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.showAdvancedActions',
+      'singleRepository',
+      'advancedActions'
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.showAdvancedActions',
+      'multiRepository',
+      'advancedActions',
+      (item) => item.when.includes('!gitBranchesPanel.groupedRepositories')
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.showAllRepositoriesActions',
+      'multiRepository',
+      'advancedActions',
+      (item) => item.when.includes('gitBranchesPanel.groupedRepositories')
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
       'gitBranchesPanel.clearFilter',
+      'singleRepository',
+      'clearFilter',
       (item) => item.when.includes('gitBranchesPanel.filterActive')
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.clearFilter',
+      'multiRepository',
+      'clearFilter',
+      (item) => item.when.includes('gitBranchesPanel.filterActive')
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.openSettings',
+      'singleRepository',
+      'settings'
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.openSettings',
+      'multiRepository',
+      'settings'
     )
   );
 

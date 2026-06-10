@@ -210,20 +210,25 @@ async function handleSyncFolderBranches(
   }
 
   try {
-    await fetchRemoteState(repoRoot);
+    await commandContext.runWithLoadingIndicator(
+      `Syncing branches under '${folderLabel}'…`,
+      async () => {
+        await fetchRemoteState(repoRoot);
 
-    const result = await syncFolderBranches(repoRoot, branches);
-    if (result.processed.length > 0) {
-      const shouldRefreshRemoteState = result.processed.some((branch) => branch.didPush);
-      await commandContext.refresh({
-        fetchRemoteState: shouldRefreshRemoteState,
-        forceFetchRemoteState: shouldRefreshRemoteState,
-      });
-    }
+        const result = await syncFolderBranches(repoRoot, branches);
+        if (result.processed.length > 0) {
+          const shouldRefreshRemoteState = result.processed.some((branch) => branch.didPush);
+          await commandContext.refresh({
+            fetchRemoteState: shouldRefreshRemoteState,
+            forceFetchRemoteState: shouldRefreshRemoteState,
+          });
+        }
 
-    showNotification(
-      result.failed.length > 0 || result.skippedNeedsPublish.length > 0 ? 'warning' : 'info',
-      buildFolderSyncResultMessage(folderLabel, result)
+        showNotification(
+          result.failed.length > 0 || result.skippedNeedsPublish.length > 0 ? 'warning' : 'info',
+          buildFolderSyncResultMessage(folderLabel, result)
+        );
+      }
     );
   } catch (error) {
     commandContext.showCommandError(`Failed to sync tracked local branches under '${folderLabel}'`, error);
@@ -246,26 +251,31 @@ async function handleSyncAllBranches(
   const folderLabel = item ? getContainerLabel(item) : 'Local';
 
   try {
-    await fetchRemoteState(repoRoot);
+    await commandContext.runWithLoadingIndicator(
+      `Syncing branches under '${folderLabel}'…`,
+      async () => {
+        await fetchRemoteState(repoRoot);
 
-    const branches = getAllLocalBranches(await getBranches(repoRoot));
-    if (branches.length === 0) {
-      vscode.window.showInformationMessage('No local branches were found in this repository.');
-      return;
-    }
+        const branches = getAllLocalBranches(await getBranches(repoRoot));
+        if (branches.length === 0) {
+          vscode.window.showInformationMessage('No local branches were found in this repository.');
+          return;
+        }
 
-    const result = await syncAllLocalBranches(repoRoot, branches);
-    if (result.processed.length > 0) {
-      const shouldRefreshRemoteState = result.processed.some((branch) => branch.didPush);
-      await commandContext.refresh({
-        fetchRemoteState: shouldRefreshRemoteState,
-        forceFetchRemoteState: shouldRefreshRemoteState,
-      });
-    }
+        const result = await syncAllLocalBranches(repoRoot, branches);
+        if (result.processed.length > 0) {
+          const shouldRefreshRemoteState = result.processed.some((branch) => branch.didPush);
+          await commandContext.refresh({
+            fetchRemoteState: shouldRefreshRemoteState,
+            forceFetchRemoteState: shouldRefreshRemoteState,
+          });
+        }
 
-    showNotification(
-      result.failed.length > 0 || result.skippedNeedsPublish.length > 0 ? 'warning' : 'info',
-      buildFolderSyncResultMessage(folderLabel, result)
+        showNotification(
+          result.failed.length > 0 || result.skippedNeedsPublish.length > 0 ? 'warning' : 'info',
+          buildFolderSyncResultMessage(folderLabel, result)
+        );
+      }
     );
   } catch (error) {
     commandContext.showCommandError('Failed to sync all local branches', error);
@@ -288,22 +298,27 @@ async function handlePullAllLocalBranches(
   const folderLabel = item ? getContainerLabel(item) : 'Local';
 
   try {
-    await fetchRemoteState(repoRoot);
+    await commandContext.runWithLoadingIndicator(
+      `Pulling branches under '${folderLabel}'…`,
+      async () => {
+        await fetchRemoteState(repoRoot);
 
-    const branches = getAllLocalBranches(await getBranches(repoRoot));
-    if (branches.length === 0) {
-      vscode.window.showInformationMessage('No local branches were found in this repository.');
-      return;
-    }
+        const branches = getAllLocalBranches(await getBranches(repoRoot));
+        if (branches.length === 0) {
+          vscode.window.showInformationMessage('No local branches were found in this repository.');
+          return;
+        }
 
-    const result = await pullAllLocalBranches(repoRoot, branches);
-    if (result.processed.length > 0) {
-      await commandContext.refresh({ fetchRemoteState: false });
-    }
+        const result = await pullAllLocalBranches(repoRoot, branches);
+        if (result.processed.length > 0) {
+          await commandContext.refresh({ fetchRemoteState: false });
+        }
 
-    showNotification(
-      result.failed.length > 0 || result.skippedNeedsPublish.length > 0 ? 'warning' : 'info',
-      buildFolderPullResultMessage(folderLabel, result)
+        showNotification(
+          result.failed.length > 0 || result.skippedNeedsPublish.length > 0 ? 'warning' : 'info',
+          buildFolderPullResultMessage(folderLabel, result)
+        );
+      }
     );
   } catch (error) {
     commandContext.showCommandError('Failed to pull changes for all local branches', error);
@@ -348,19 +363,24 @@ async function handlePushFolderBranches(
   }
 
   try {
-    await fetchRemoteState(repoRoot);
+    await commandContext.runWithLoadingIndicator(
+      `Pushing branches under '${folderLabel}'…`,
+      async () => {
+        await fetchRemoteState(repoRoot);
 
-    const result = await pushFolderBranches(repoRoot, branches);
-    if (result.processed.some((branch) => branch.didPush)) {
-      await commandContext.refresh({
-        fetchRemoteState: true,
-        forceFetchRemoteState: true,
-      });
-    }
+        const result = await pushFolderBranches(repoRoot, branches);
+        if (result.processed.some((branch) => branch.didPush)) {
+          await commandContext.refresh({
+            fetchRemoteState: true,
+            forceFetchRemoteState: true,
+          });
+        }
 
-    showNotification(
-      result.failed.length > 0 ? 'warning' : 'info',
-      buildFolderPushResultMessage(folderLabel, result)
+        showNotification(
+          result.failed.length > 0 ? 'warning' : 'info',
+          buildFolderPushResultMessage(folderLabel, result)
+        );
+      }
     );
   } catch (error) {
     commandContext.showCommandError(`Failed to push local branches under '${folderLabel}'`, error);
@@ -545,24 +565,29 @@ async function handlePruneMissingUpstreamBranches(
   }
 
   try {
-    await fetchRemoteState(repoRoot);
-    const branches = getPrunableLocalBranches(await getBranches(repoRoot));
+    await commandContext.runWithLoadingIndicator(
+      'Pruning local branches with missing upstreams…',
+      async () => {
+        await fetchRemoteState(repoRoot);
+        const branches = getPrunableLocalBranches(await getBranches(repoRoot));
 
-    await handleBulkLocalDelete({
-      repoRoot,
-      folderLabel: 'missing upstreams',
-      targets: branches.map((branch) => ({
-        name: branch.name,
-        isCurrent: branch.isCurrent,
-      })),
-      confirmationLabel: 'Prune',
-      confirmationPrompt:
-        'Prune local branches whose tracked upstream no longer exists?',
-      emptyMessage: 'No local branches with missing upstreams were found.',
-      forceDelete: true,
-      commandContext,
-      successMessageBuilder: buildPruneResultMessage,
-    });
+        await handleBulkLocalDelete({
+          repoRoot,
+          folderLabel: 'missing upstreams',
+          targets: branches.map((branch) => ({
+            name: branch.name,
+            isCurrent: branch.isCurrent,
+          })),
+          confirmationLabel: 'Prune',
+          confirmationPrompt:
+            'Prune local branches whose tracked upstream no longer exists?',
+          emptyMessage: 'No local branches with missing upstreams were found.',
+          forceDelete: true,
+          commandContext,
+          successMessageBuilder: buildPruneResultMessage,
+        });
+      }
+    );
   } catch (error) {
     commandContext.showCommandError('Failed to prune local branches with missing upstreams', error);
   }
@@ -575,54 +600,56 @@ async function handleSyncAllRepositoriesBranches(commandContext: CommandContext)
     return;
   }
 
-  const summaries: string[] = [];
-  const failures: string[] = [];
-  let shouldRefreshRemoteState = false;
+  await commandContext.runWithLoadingIndicator('Syncing all repositories…', async () => {
+    const summaries: string[] = [];
+    const failures: string[] = [];
+    let shouldRefreshRemoteState = false;
 
-  for (const repository of repositories) {
-    try {
-      await fetchRemoteState(repository.repoRoot);
-      const branches = getAllLocalBranches(await getBranches(repository.repoRoot));
-      if (branches.length === 0) {
-        summaries.push(`${repository.label}: no local branches`);
-        continue;
+    for (const repository of repositories) {
+      try {
+        await fetchRemoteState(repository.repoRoot);
+        const branches = getAllLocalBranches(await getBranches(repository.repoRoot));
+        if (branches.length === 0) {
+          summaries.push(`${repository.label}: no local branches`);
+          continue;
+        }
+
+        const result = await syncAllLocalBranches(repository.repoRoot, branches);
+        shouldRefreshRemoteState ||= result.processed.some((branch) => branch.didPush);
+        summaries.push(
+          buildRepositoryWideSummary(repository.label, result.processed.length + result.failed.length, {
+            changedCount: result.processed.filter((branch) => branch.didPull || branch.didPush).length,
+            unchangedCount: countUpToDateSyncs(result.processed),
+            skippedCount: result.skippedNeedsPublish.length,
+            failedCount: result.failed.length,
+            skippedLabel: 'need publishing',
+          })
+        );
+
+        if (result.failed.length > 0) {
+          failures.push(`${repository.label}: ${formatFailureList(result.failed)}`);
+        }
+      } catch (error) {
+        failures.push(`${repository.label}: ${getErrorMessage(error)}`);
       }
-
-      const result = await syncAllLocalBranches(repository.repoRoot, branches);
-      shouldRefreshRemoteState ||= result.processed.some((branch) => branch.didPush);
-      summaries.push(
-        buildRepositoryWideSummary(repository.label, result.processed.length + result.failed.length, {
-          changedCount: result.processed.filter((branch) => branch.didPull || branch.didPush).length,
-          unchangedCount: countUpToDateSyncs(result.processed),
-          skippedCount: result.skippedNeedsPublish.length,
-          failedCount: result.failed.length,
-          skippedLabel: 'need publishing',
-        })
-      );
-
-      if (result.failed.length > 0) {
-        failures.push(`${repository.label}: ${formatFailureList(result.failed)}`);
-      }
-    } catch (error) {
-      failures.push(`${repository.label}: ${getErrorMessage(error)}`);
     }
-  }
 
-  await commandContext.refresh({
-    fetchRemoteState: shouldRefreshRemoteState,
-    forceFetchRemoteState: shouldRefreshRemoteState,
+    await commandContext.refresh({
+      fetchRemoteState: shouldRefreshRemoteState,
+      forceFetchRemoteState: shouldRefreshRemoteState,
+    });
+
+    const message = [`Synced tracked branches across ${repositories.length} repositories.`, ...summaries]
+      .filter(Boolean)
+      .join(' ');
+
+    if (failures.length > 0) {
+      vscode.window.showWarningMessage(`${message} Failures: ${failures.join('; ')}.`);
+      return;
+    }
+
+    vscode.window.showInformationMessage(message);
   });
-
-  const message = [`Synced tracked branches across ${repositories.length} repositories.`, ...summaries]
-    .filter(Boolean)
-    .join(' ');
-
-  if (failures.length > 0) {
-    vscode.window.showWarningMessage(`${message} Failures: ${failures.join('; ')}.`);
-    return;
-  }
-
-  vscode.window.showInformationMessage(message);
 }
 
 async function handlePullAllRepositoriesChanges(commandContext: CommandContext): Promise<void> {
@@ -632,49 +659,51 @@ async function handlePullAllRepositoriesChanges(commandContext: CommandContext):
     return;
   }
 
-  const summaries: string[] = [];
-  const failures: string[] = [];
+  await commandContext.runWithLoadingIndicator('Pulling all repositories…', async () => {
+    const summaries: string[] = [];
+    const failures: string[] = [];
 
-  for (const repository of repositories) {
-    try {
-      await fetchRemoteState(repository.repoRoot);
-      const branches = getAllLocalBranches(await getBranches(repository.repoRoot));
-      if (branches.length === 0) {
-        summaries.push(`${repository.label}: no local branches`);
-        continue;
+    for (const repository of repositories) {
+      try {
+        await fetchRemoteState(repository.repoRoot);
+        const branches = getAllLocalBranches(await getBranches(repository.repoRoot));
+        if (branches.length === 0) {
+          summaries.push(`${repository.label}: no local branches`);
+          continue;
+        }
+
+        const result = await pullAllLocalBranches(repository.repoRoot, branches);
+        summaries.push(
+          buildRepositoryWideSummary(repository.label, result.processed.length + result.failed.length, {
+            changedCount: result.processed.filter((branch) => branch.didPull).length,
+            unchangedCount: countUpToDateSyncs(result.processed),
+            skippedCount: result.skippedNeedsPublish.length,
+            failedCount: result.failed.length,
+            skippedLabel: 'need publishing',
+          })
+        );
+
+        if (result.failed.length > 0) {
+          failures.push(`${repository.label}: ${formatFailureList(result.failed)}`);
+        }
+      } catch (error) {
+        failures.push(`${repository.label}: ${getErrorMessage(error)}`);
       }
-
-      const result = await pullAllLocalBranches(repository.repoRoot, branches);
-      summaries.push(
-        buildRepositoryWideSummary(repository.label, result.processed.length + result.failed.length, {
-          changedCount: result.processed.filter((branch) => branch.didPull).length,
-          unchangedCount: countUpToDateSyncs(result.processed),
-          skippedCount: result.skippedNeedsPublish.length,
-          failedCount: result.failed.length,
-          skippedLabel: 'need publishing',
-        })
-      );
-
-      if (result.failed.length > 0) {
-        failures.push(`${repository.label}: ${formatFailureList(result.failed)}`);
-      }
-    } catch (error) {
-      failures.push(`${repository.label}: ${getErrorMessage(error)}`);
     }
-  }
 
-  await commandContext.refresh({ fetchRemoteState: false });
+    await commandContext.refresh({ fetchRemoteState: false });
 
-  const message = [`Pulled tracked branches across ${repositories.length} repositories.`, ...summaries]
-    .filter(Boolean)
-    .join(' ');
+    const message = [`Pulled tracked branches across ${repositories.length} repositories.`, ...summaries]
+      .filter(Boolean)
+      .join(' ');
 
-  if (failures.length > 0) {
-    vscode.window.showWarningMessage(`${message} Failures: ${failures.join('; ')}.`);
-    return;
-  }
+    if (failures.length > 0) {
+      vscode.window.showWarningMessage(`${message} Failures: ${failures.join('; ')}.`);
+      return;
+    }
 
-  vscode.window.showInformationMessage(message);
+    vscode.window.showInformationMessage(message);
+  });
 }
 
 function buildRepositoryActionItems(

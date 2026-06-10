@@ -75,6 +75,7 @@ function createVscodeMock(state) {
 
 function createCommandContext() {
   const state = {
+    loadingTitles: [],
     refreshCalls: [],
     repoRoot: '/repo',
     repositoryDescriptors: [
@@ -106,6 +107,10 @@ function createCommandContext() {
         },
       },
       activationTracker: {},
+      async runWithLoadingIndicator(title, operation) {
+        state.loadingTitles.push(title);
+        return operation();
+      },
       async refresh(options = {}) {
         state.refreshCalls.push(options);
       },
@@ -482,6 +487,7 @@ test('syncAllRepositoriesBranches processes every repository and refreshes once'
     { repoRoot: '/repo-a', branchName: 'feature/one', options: { refreshRemoteState: false } },
     { repoRoot: '/repo-b', branchName: 'feature/two', options: { refreshRemoteState: false } },
   ]);
+  assert.deepEqual(commandContext.state.loadingTitles, ['Syncing all repositories…']);
   assert.deepEqual(commandContext.state.refreshCalls, [
     { fetchRemoteState: true, forceFetchRemoteState: true },
   ]);

@@ -28,6 +28,7 @@ export interface CommandContext {
   readonly provider: BranchTreeProvider;
   readonly activationTracker: BranchItemActivationTracker;
   refresh(options?: BranchLoadOptions): Promise<void>;
+  runWithLoadingIndicator<T>(title: string, operation: () => Promise<T>): Promise<T>;
   requireRepoRoot(preferredRepoRoot?: string): Promise<string | undefined>;
   requireCurrentBranch(
     missingBranchMessage: string,
@@ -47,6 +48,8 @@ export function createCommandContext(
     refresh: async (options: BranchLoadOptions = {}): Promise<void> => {
       await resetTrackerAndRefresh(provider, activationTracker, options);
     },
+    runWithLoadingIndicator: async <T>(title: string, operation: () => Promise<T>): Promise<T> =>
+      provider.withLoadingIndicator(title, operation),
     requireRepoRoot: async (preferredRepoRoot?: string) => {
       const repoRoot = await resolveRepoRoot(provider, preferredRepoRoot);
       if (repoRoot) {

@@ -40,13 +40,22 @@ function createEventEmitter() {
   };
 }
 
-function createVscodeMock(commandCalls) {
+function createVscodeMock(commandCalls, progressCalls = []) {
   return {
     EventEmitter: createEventEmitter(),
+    ProgressLocation: {
+      Window: 'window',
+    },
     commands: {
       async executeCommand(command, ...args) {
         commandCalls.push({ command, args });
         return undefined;
+      },
+    },
+    window: {
+      async withProgress(options, task) {
+        progressCalls.push(options);
+        return task();
       },
     },
     workspace: {
@@ -183,6 +192,7 @@ test('activate orchestrates provider, views, commands, and auto-refresh wiring',
   const calls = {
     trackers: 0,
     branchContextMenus: [],
+    toolbarQuickActions: [],
     providerContexts: [],
     views: [],
     commands: [],
@@ -219,6 +229,11 @@ test('activate orchestrates provider, views, commands, and auto-refresh wiring',
         calls.branchContextMenus.push(args);
       },
     },
+    './toolbarQuickActions': {
+      registerToolbarQuickActionContextKeys: (...args) => {
+        calls.toolbarQuickActions.push(args);
+      },
+    },
     './extensionCommands': {
       registerBranchCommands: (...args) => {
         calls.commands.push(args);
@@ -245,12 +260,14 @@ test('activate orchestrates provider, views, commands, and auto-refresh wiring',
 
   assert.equal(calls.trackers, 1);
   assert.equal(calls.branchContextMenus.length, 1);
+  assert.equal(calls.toolbarQuickActions.length, 1);
   assert.equal(calls.providerContexts.length, 1);
   assert.equal(calls.views.length, 1);
   assert.equal(calls.commands.length, 1);
   assert.equal(calls.autoRefresh.length, 1);
   assert.deepEqual(calls.refreshes, []);
   assert.equal(calls.branchContextMenus[0][0], context);
+  assert.equal(calls.toolbarQuickActions[0][0], context);
   assert.equal(calls.views[0][0], context);
   assert.equal(calls.commands[0][0], context);
   assert.equal(calls.autoRefresh[0][0], context);
@@ -506,6 +523,63 @@ test('BranchTreeProvider marks busy current branches in context', async () => {
   );
 });
 
+test('BranchTreeProvider tracks a global operation-in-progress context while showing window progress', async () => {
+  const commandCalls = [];
+  const progressCalls = [];
+  const dataLoader = createDataLoader({
+    treeData: [],
+  });
+  const { BranchTreeProvider } = loadFresh('../out/treeProvider.js', {
+    vscode: createVscodeMock(commandCalls, progressCalls),
+    './git': {
+      fetchRemoteState() {},
+      getBranches() {},
+      getHooks() {},
+      getRemoteBranches() {},
+      getRepoRoot() {},
+      getStashes() {},
+      getWorktrees() {},
+      getTags() {},
+    },
+    './gitApi': {
+      getWorkspaceRepositories: async () => [],
+      resolveRepoRootForUri: async () => undefined,
+    },
+    './treeDataLoader': {
+      BranchDataLoader: class BranchDataLoader {},
+      getBranchSectionKey: () => undefined,
+    },
+    './treeItem': createTreeItemMock(),
+    './treePresentation': {
+      findContainerNode,
+      findDescendantBranches,
+    },
+  });
+
+  const provider = new BranchTreeProvider({ subscriptions: [] }, dataLoader);
+  const result = await provider.withLoadingIndicator('Syncing all repositories…', async () => 'done');
+
+  assert.equal(result, 'done');
+  assert.deepEqual(progressCalls, [
+    {
+      location: 'window',
+      title: 'Syncing all repositories…',
+    },
+  ]);
+  assert.ok(
+    commandCalls.some(
+      (call) =>
+        call.command === 'setContext' &&
+        call.args[0] === 'gitBranchesPanel.operationInProgress' &&
+        call.args[1] === true
+    )
+  );
+  assert.deepEqual(commandCalls.at(-1), {
+    command: 'setContext',
+    args: ['gitBranchesPanel.operationInProgress', false],
+  });
+});
+
 test('BranchTreeProvider loads nested container children and clears branch context when no branch is active', async () => {
   const commandCalls = [];
   const state = {
@@ -638,13 +712,25 @@ test('BranchTreeProvider loads nested container children and clears branch conte
 
   await provider.refresh();
 
-  assert.deepEqual(commandCalls.at(-2), {
-    command: 'setContext',
-    args: ['gitBranchesPanel.currentBranchNeedsPublish', false],
-  });
+  assert.ok(
+    commandCalls.some(
+      (call) =>
+        call.command === 'setContext' &&
+        call.args[0] === 'gitBranchesPanel.currentBranchNeedsPublish' &&
+        call.args[1] === false
+    )
+  );
+  assert.ok(
+    commandCalls.some(
+      (call) =>
+        call.command === 'setContext' &&
+        call.args[0] === 'gitBranchesPanel.currentBranchBusy' &&
+        call.args[1] === false
+    )
+  );
   assert.deepEqual(commandCalls.at(-1), {
     command: 'setContext',
-    args: ['gitBranchesPanel.currentBranchBusy', false],
+    args: ['gitBranchesPanel.operationInProgress', false],
   });
 });
 
@@ -833,6 +919,106 @@ test('BranchTreeProvider revealItem clears active filters before resolving the v
   assert.notEqual(revealCalls[0].item, staleItem);
   assert.equal(revealCalls[0].item.branchName, 'feature/demo');
   assert.deepEqual(revealCalls[0].options, {
+    expand: 3,
+    focus: true,
+    select: true,
+  });
+});
+
+test('BranchTreeProvider revealBranch prefers the visible tree view and focuses a freshly created local branch', async () => {
+  const commandCalls = [];
+  const state = {
+    treeData: [
+      {
+        kind: 'section',
+        label: 'Local',
+        path: 'section:local',
+        scope: 'local',
+        repoRoot: '/repo',
+        children: [
+          {
+            kind: 'folder',
+            label: 'feature',
+            path: 'feature',
+            scope: 'local',
+            repoRoot: '/repo',
+            children: [
+              {
+                kind: 'branch',
+                fullName: 'feature/demo',
+                label: 'demo',
+                path: 'feature/demo',
+                repoRoot: '/repo',
+                info: {
+                  name: 'feature/demo',
+                  isCurrent: true,
+                },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    repoRoot: '/repo',
+    loadedSections: new Set(['local']),
+  };
+  const dataLoader = createDataLoader(state);
+  const { BranchTreeProvider } = loadFresh('../out/treeProvider.js', {
+    vscode: createVscodeMock(commandCalls),
+    './git': {
+      fetchRemoteState() {},
+      getBranches() {},
+      getHooks() {},
+      getRemoteBranches() {},
+      getRepoRoot() {},
+      getStashes() {},
+      getWorktrees() {},
+      getTags() {},
+    },
+    './gitApi': {
+      getWorkspaceRepositories: async () => [],
+      resolveRepoRootForUri: async () => undefined,
+    },
+    './treeDataLoader': {
+      BranchDataLoader: class BranchDataLoader {},
+      getBranchSectionKey: (sectionPath) =>
+        sectionPath === 'section:local' ? 'local' : undefined,
+    },
+    './treeItem': createTreeItemMock(),
+    './treePresentation': {
+      findContainerNode,
+      findDescendantBranches,
+    },
+  });
+
+  const provider = new BranchTreeProvider({ subscriptions: [] }, dataLoader);
+  const activityBarRevealCalls = [];
+  const scmRevealCalls = [];
+
+  provider.registerTreeViews([
+    {
+      visible: false,
+      async reveal(item, options) {
+        activityBarRevealCalls.push({ item, options });
+      },
+    },
+    {
+      visible: true,
+      async reveal(item, options) {
+        scmRevealCalls.push({ item, options });
+      },
+    },
+  ]);
+
+  await provider.setFilterQuery('missing');
+
+  const revealed = await provider.revealBranch('/repo', 'feature/demo', { clearFilter: true });
+
+  assert.equal(revealed, true);
+  assert.equal(activityBarRevealCalls.length, 0);
+  assert.equal(scmRevealCalls.length, 1);
+  assert.equal(scmRevealCalls[0].item.branchName, 'feature/demo');
+  assert.deepEqual(scmRevealCalls[0].options, {
     expand: 3,
     focus: true,
     select: true,

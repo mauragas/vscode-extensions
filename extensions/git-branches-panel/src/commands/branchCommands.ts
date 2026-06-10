@@ -468,6 +468,7 @@ async function handleNewBranch(
   try {
     await createBranch(repoRoot, branchName);
     await commandContext.showSuccessAndRefresh(`Created and switched to '${branchName}'.`);
+    await revealCreatedBranch(commandContext, repoRoot, branchName);
   } catch (error) {
     commandContext.showCommandError(`Failed to create '${branchName}'`, error);
   }
@@ -518,6 +519,7 @@ async function handleCreateBranchFromSelected(
         : `Created branch '${branchName}' from '${sourceBranchDisplayName}'.`,
       { fetchRemoteState: false }
     );
+    await revealCreatedBranch(commandContext, item.repoRoot, branchName);
   } catch (error) {
     commandContext.showCommandError(
       `Failed to create '${branchName}' from '${sourceBranchDisplayName}'`,
@@ -850,8 +852,11 @@ async function syncBranchByName(
   commandContext: CommandContext
 ): Promise<void> {
   try {
-    const syncResult = await commandContext.provider.withBusyBranch(repoRoot, branchName, () =>
-      syncBranch(repoRoot, branchName)
+    const syncResult = await commandContext.runWithLoadingIndicator(
+      `Syncing '${branchName}'…`,
+      () => commandContext.provider.withBusyBranch(repoRoot, branchName, () =>
+        syncBranch(repoRoot, branchName)
+      )
     );
     await commandContext.showSuccessAndRefresh(buildSyncResultMessage(syncResult), {
       fetchRemoteState: true,
@@ -868,8 +873,11 @@ async function pushBranchByName(
   commandContext: CommandContext
 ): Promise<void> {
   try {
-    const pushResult = await commandContext.provider.withBusyBranch(repoRoot, branchName, () =>
-      pushBranchToRemote(repoRoot, branchName)
+    const pushResult = await commandContext.runWithLoadingIndicator(
+      `Publishing '${branchName}'…`,
+      () => commandContext.provider.withBusyBranch(repoRoot, branchName, () =>
+        pushBranchToRemote(repoRoot, branchName)
+      )
     );
     await commandContext.showSuccessAndRefresh(buildSyncResultMessage(pushResult), {
       fetchRemoteState: true,
@@ -954,6 +962,18 @@ async function promptForNewBranchName(
 
 function resolveNewBranchName(name: string, normalize: boolean): string {
   return normalize ? normalizeBranchName(name) : sanitizeNewBranchName(name);
+}
+
+async function revealCreatedBranch(
+  commandContext: CommandContext,
+  repoRoot: string,
+  branchName: string
+): Promise<void> {
+  try {
+    await commandContext.provider.revealBranch(repoRoot, branchName, { clearFilter: true });
+  } catch {
+    // Revealing the new branch is a nice UX bonus; branch creation itself already succeeded.
+  }
 }
 
 function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
