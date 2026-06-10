@@ -42,7 +42,7 @@ section opens first, while Remote, Stash, Worktree, Hooks, and Tags stay collaps
 - ✅ **Current branch first** — highlighted with a `●` prefix and a green icon
 - 🪄 **Optional current branch banner** — keep or hide the top `Current branch: ...` summary from settings, now off by default for a quieter tree
 - 🧭 **Customizable branch right-click menu** — reorder or hide the primary branch actions from settings while **More Branch Actions...** always stays available as the full fallback picker and now includes the advanced rebase/reset/squash/force-push flows directly
-- 🎛️ **Configurable toolbar quick actions** — show or hide each extension-view toolbar button independently from settings
+- 🎛️ **Configurable toolbar quick actions** — reorder or hide per-mode toolbar buttons with `toolbar.singleRepository.quickActions` and `toolbar.multiRepository.quickActions`, while the older `toolbar.show*` booleans remain as compatibility fallbacks
 - 🧺 **Changes-view stash buttons** — surface stash shortcuts in the built-in **Changes** view title bar, with **Stash all changes silently** enabled there by default
 - 🖱️ **Section hover quick actions** — hover Local, Remote, Stash, Worktree, and Tags groups to reveal section-specific inline buttons for high-frequency actions
 - 🧹 **Quiet branch-name sanitization** — new branch names are cleaned up automatically to stay Git-valid, with optional lowercase kebab-case normalization that also strips extra special characters while preserving `-` and `/`
@@ -265,20 +265,22 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 | `gitBranchesPanel.advanced.allowNonCurrentBranchRebase` | `true` | Allow rebasing a selected non-current local branch onto the current branch through a temporary worktree |
 | `gitBranchesPanel.advanced.rebaseAutostash` | `true` | Prefer `--autostash` when rebasing the current branch and the working tree is dirty |
 | `gitBranchesPanel.showCurrentBranchInfo` | `false` | Show the current branch summary above the tree views |
+| `gitBranchesPanel.toolbar.singleRepository.quickActions` | `["findRef", "pullAllLocalBranches", "fetchAllPrune", "refresh", "advancedActions", "settings"]` | Ordered list of view-toolbar quick actions when only one repository is open; remove ids to hide buttons and reorder the array to change their position |
+| `gitBranchesPanel.toolbar.multiRepository.quickActions` | `["findRef", "currentBranchAction", "pullAllRepositoriesChanges", "fetchAllPrune", "refresh", "advancedActions", "settings"]` | Ordered list of view-toolbar quick actions when multiple repositories are open; adaptive ids such as `currentBranchAction`, `pullAllRepositoriesChanges`, `fetchAll`, `fetchAllPrune`, and `advancedActions` automatically switch between active-repository and grouped all-repositories behavior |
 | `gitBranchesPanel.showStatusBarBranchAction` | `true` | Deprecated. This setting no longer has any effect because the extension no longer contributes a status bar branch action |
-| `gitBranchesPanel.toolbar.showNewBranch` | `true` | Show the **New Branch** toolbar quick action |
-| `gitBranchesPanel.toolbar.showStashSilently` | `false` | Show the **Stash all changes silently** quick action in the extension Branches view toolbar |
+| `gitBranchesPanel.toolbar.showNewBranch` | `true` | Compatibility fallback for the **New Branch** toolbar slot when the new ordered quick-action arrays are not explicitly configured |
+| `gitBranchesPanel.toolbar.showStashSilently` | `false` | Compatibility fallback for the **Stash all changes silently** toolbar slot when the new ordered quick-action arrays are not explicitly configured |
 | `gitBranchesPanel.changesView.showStashAllChangesSilently` | `true` | Show **Stash all changes silently** in the built-in Changes view title bar |
 | `gitBranchesPanel.changesView.showStashStagedChangesSilently` | `false` | Show **Stash staged changes silently** in the built-in Changes view title bar |
 | `gitBranchesPanel.changesView.showStashAllChanges` | `false` | Show **Stash all changes** in the built-in Changes view title bar |
 | `gitBranchesPanel.changesView.showStashStagedChanges` | `false` | Show **Stash staged changes** in the built-in Changes view title bar |
-| `gitBranchesPanel.toolbar.showCurrentBranchAction` | `true` | Show the **Sync Current Branch** or **Publish Current Branch** toolbar quick action |
-| `gitBranchesPanel.toolbar.showFetchAll` | `true` | Show the **Fetch All** toolbar quick action |
-| `gitBranchesPanel.toolbar.showFetchAllPrune` | `true` | Show the **Fetch All (Prune)** toolbar quick action |
-| `gitBranchesPanel.toolbar.showPullAllRepositoriesChanges` | `true` | Show the **Pull All Repositories Changes** toolbar quick action while grouped multi-repository mode is active |
-| `gitBranchesPanel.toolbar.showRefresh` | `true` | Show the **Refresh** toolbar quick action |
-| `gitBranchesPanel.toolbar.showAdvancedActions` | `true` | Show the **More Actions** toolbar quick action |
-| `gitBranchesPanel.toolbar.showSettings` | `true` | Show the **Open Extension Settings** toolbar quick action |
+| `gitBranchesPanel.toolbar.showCurrentBranchAction` | `true` | Compatibility fallback for the adaptive **Sync / Publish Current Branch** toolbar slot; in grouped multi-repository mode it becomes **Sync All Repositories Branches** |
+| `gitBranchesPanel.toolbar.showFetchAll` | `true` | Compatibility fallback for the adaptive **Fetch All** toolbar slot; in grouped multi-repository mode it becomes **Fetch All Repositories** |
+| `gitBranchesPanel.toolbar.showFetchAllPrune` | `true` | Compatibility fallback for the adaptive **Fetch All (Prune)** toolbar slot; in grouped multi-repository mode it becomes **Fetch All Repositories (Prune)** |
+| `gitBranchesPanel.toolbar.showPullAllRepositoriesChanges` | `true` | Compatibility fallback for the adaptive pull toolbar slot; in active-repository multi-repo mode it behaves like **Pull All Branch Changes**, and in grouped mode it becomes **Pull All Repositories Changes** |
+| `gitBranchesPanel.toolbar.showRefresh` | `true` | Compatibility fallback for the **Refresh** toolbar slot when the new ordered quick-action arrays are not explicitly configured |
+| `gitBranchesPanel.toolbar.showAdvancedActions` | `true` | Compatibility fallback for the adaptive **More Actions** toolbar slot; in grouped multi-repository mode it opens the all-repositories picker |
+| `gitBranchesPanel.toolbar.showSettings` | `true` | Compatibility fallback for the **Open Extension Settings** toolbar slot when the new ordered quick-action arrays are not explicitly configured |
 
 ### Useful configuration ideas already supported
 
@@ -288,6 +290,8 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 - Keep `gitBranchesPanel.newBranchPrefixes` set to `feature`, `bugfix`, and `hotfix` for a lightweight branch-folder picker, or clear it entirely if you prefer typing everything yourself
 - Extend `gitBranchesPanel.protectedBranchNames` with long-lived release or environment branches to add an extra UI safety net before delete commands run
 - Leave `gitBranchesPanel.showCurrentBranchInfo` disabled if you prefer a leaner tree, or turn it back on if you want the current branch banner above the sections again
+- Use `gitBranchesPanel.toolbar.singleRepository.quickActions` and `gitBranchesPanel.toolbar.multiRepository.quickActions` to reorder the title-bar buttons per mode instead of only hiding them one by one
+- In multi-repository mode, ids such as `currentBranchAction`, `pullAllRepositoriesChanges`, `fetchAll`, `fetchAllPrune`, and `advancedActions` adapt automatically between active-repository and grouped all-repositories behavior, so one array can still cover both layouts cleanly
 - Trim `gitBranchesPanel.branchContextMenu.primaryActions` down to a smaller ordered list if you want a shorter right-click menu, knowing **More Branch Actions...** still keeps every supported branch action one click away
 - Turn on any of the `gitBranchesPanel.branchContextMenu.show*` advanced-action toggles if you want rebase, squash-merge, reset, or force-push-with-lease entries visible directly in the first-level branch context menu again
 - Keep `gitBranchesPanel.tagSortOrder` on `versionDescending` for release-style tags, or switch to `recent` or `alphabetical` if your repository uses non-version tag names more heavily
@@ -314,6 +318,7 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 - Lower `gitBranchesPanel.history.maxCommits` if you want faster commit pickers in very large repositories, or keep it higher if you often browse longer-lived release branches
 - Turn off `gitBranchesPanel.history.includeMerges` if you prefer commit pickers that focus on linear feature work instead of merge commits
 - Leave `gitBranchesPanel.toolbar.showStashSilently` off and use the built-in Changes view button by default, or turn the Branches-view stash button back on if you prefer the old placement
+- Keep the legacy `gitBranchesPanel.toolbar.show*` booleans only as simple compatibility toggles if you have not explicitly set the new ordered toolbar arrays yet
 - Enable any of the additional `gitBranchesPanel.changesView.showStash*` settings if you want staged-only stash buttons or stash commands that prompt for an optional message
 - Hide any toolbar quick action you never use to keep the title bar compact
 - Combine `sortOrder = recent` with folder grouping for large feature-branch heavy repositories

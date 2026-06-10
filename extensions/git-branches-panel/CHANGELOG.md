@@ -4,8 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [2.1.0] - 2026-06-10
 
+- Added ordered `toolbar.singleRepository.quickActions` and `toolbar.multiRepository.quickActions` settings so the Branches/SCM title-bar buttons can be reordered or hidden per mode while the older `toolbar.show*` booleans remain as compatibility fallbacks
+- Fixed the adaptive multi-repository pull toolbar slot so the default `pullAllRepositoriesChanges` action now becomes the active repository's **Pull All Branch Changes** command outside grouped mode instead of disappearing
+- New-branch creation and “create branch from selected ref” flows now reveal the freshly created branch in the visible tree view, clearing active filters when needed so the result is immediately visible
 - Replaced the old inline sync badges with custom blue/green tree-row sync icons for tracked local branches, including a combined diverged icon when a branch is both ahead and behind
 - Added right-side sync counts such as `↓2`, `↑1`, and `↓2 ↑1` for tracked local branches so incoming/outgoing changes stay visible without crowding the branch label
+- Added window-progress coverage for refresh/fetch/clean and multi-repository bulk actions so longer toolbar operations now surface a consistent in-editor progress indicator while they run
 - Expanded presentation coverage for the new sync icon and description layout while keeping the existing tooltip sync wording and branch action behavior intact
 
 ## [2.0.0] - 2026-06-09

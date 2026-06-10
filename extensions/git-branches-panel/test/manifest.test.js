@@ -292,6 +292,14 @@ test('package manifest exposes the 2.1.0 multi-repo, search, remote-host, histor
   );
   assert.ok(
     hasToolbarViewTitleMenu(
+      'gitBranchesPanel.pullAllLocalBranches',
+      'multiRepository',
+      'pullAllRepositoriesChanges',
+      (item) => item.when.includes('!gitBranchesPanel.groupedRepositories')
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
       'gitBranchesPanel.pullAllRepositoriesChanges',
       'multiRepository',
       'pullAllRepositoriesChanges',
