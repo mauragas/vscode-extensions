@@ -1,3 +1,4 @@
+import * as path from 'node:path';
 import * as vscode from 'vscode';
 
 import { type BranchInfo, type BranchTreeNode, type RemoteConfigInfo, type TreeContainerScope } from './branchModel';
@@ -37,7 +38,7 @@ export class BranchTreeItem extends vscode.TreeItem {
     this.contextValue = presentation.contextValue;
     this.description = presentation.description;
     this.tooltip = presentation.tooltip ? new vscode.MarkdownString(presentation.tooltip) : undefined;
-    this.iconPath = toThemeIcon(presentation.icon);
+    this.iconPath = toIconPath(presentation.icon);
 
     if (presentation.command) {
       this.command = {
@@ -61,7 +62,15 @@ function toTreeItemCollapsibleState(
   }
 }
 
-function toThemeIcon(icon: TreeItemIconDescriptor): vscode.ThemeIcon {
+function toIconPath(icon: TreeItemIconDescriptor): vscode.ThemeIcon | vscode.Uri {
+  if (icon.resourcePath) {
+    return vscode.Uri.file(path.join(__dirname, '..', 'resources', icon.resourcePath));
+  }
+
+  if (!icon.id) {
+    throw new Error('Tree item icon descriptor must define an id or resourcePath.');
+  }
+
   return icon.colorId
     ? new vscode.ThemeIcon(icon.id, new vscode.ThemeColor(icon.colorId))
     : new vscode.ThemeIcon(icon.id);
