@@ -23,14 +23,25 @@ function hasViewTitleMenu(commandId, predicate = () => true) {
   );
 }
 
-function hasToolbarViewTitleMenu(commandId, scope, actionId, predicate = () => true) {
-  return hasViewTitleMenu(
-    commandId,
+function getToolbarViewTitleMenus(commandId, scope, actionId, predicate = () => true) {
+  return packageJson.contributes.menus['view/title'].filter(
     (item) =>
+      item.command === commandId &&
       item.when.includes(`gitBranchesPanel.toolbar.${scope}.slot`) &&
       item.when.includes(`== '${actionId}'`) &&
       predicate(item)
   );
+}
+
+function hasToolbarViewTitleMenu(commandId, scope, actionId, predicate = () => true) {
+  return getToolbarViewTitleMenus(commandId, scope, actionId, predicate).length > 0;
+}
+
+function getToolbarSlot(item, scope) {
+  const slotMatch = item.when.match(
+    new RegExp(`gitBranchesPanel\\.toolbar\\.${scope}\\.slot(\\d+) ==`)
+  );
+  return slotMatch ? Number(slotMatch[1]) : undefined;
 }
 
 function getInlineViewItemContextCommands() {
@@ -298,6 +309,23 @@ test('package manifest exposes the 2.1.0 multi-repo, search, remote-host, histor
       (item) => item.when.includes('!gitBranchesPanel.groupedRepositories')
     )
   );
+  const adaptivePullToolbarEntries = getToolbarViewTitleMenus(
+    'gitBranchesPanel.pullAllLocalBranches',
+    'multiRepository',
+    'pullAllRepositoriesChanges',
+    (item) => item.when.includes('!gitBranchesPanel.groupedRepositories')
+  );
+  assert.deepEqual(
+    adaptivePullToolbarEntries
+      .map((item) => getToolbarSlot(item, 'multiRepository'))
+      .sort((left, right) => left - right),
+    Array.from({ length: 13 }, (_, index) => index + 1)
+  );
+  for (const item of adaptivePullToolbarEntries) {
+    const slot = getToolbarSlot(item, 'multiRepository');
+    assert.notEqual(slot, undefined);
+    assert.equal(item.group, `navigation@${slot}`);
+  }
   assert.ok(
     hasToolbarViewTitleMenu(
       'gitBranchesPanel.pullAllRepositoriesChanges',

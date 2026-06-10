@@ -1620,7 +1620,7 @@
         {
           "command": "gitBranchesPanel.pullAllLocalBranches",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot2 == 'pullAllRepositoriesChanges'",
-          "group": "navigation@1"
+          "group": "navigation@2"
         },
         {
           "command": "gitBranchesPanel.pullAllRepositoriesChanges",
@@ -1720,7 +1720,7 @@
         {
           "command": "gitBranchesPanel.pullAllLocalBranches",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot3 == 'pullAllRepositoriesChanges'",
-          "group": "navigation@1"
+          "group": "navigation@3"
         },
         {
           "command": "gitBranchesPanel.pullAllRepositoriesChanges",
@@ -1820,7 +1820,7 @@
         {
           "command": "gitBranchesPanel.pullAllLocalBranches",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot4 == 'pullAllRepositoriesChanges'",
-          "group": "navigation@1"
+          "group": "navigation@4"
         },
         {
           "command": "gitBranchesPanel.pullAllRepositoriesChanges",
@@ -1920,7 +1920,7 @@
         {
           "command": "gitBranchesPanel.pullAllLocalBranches",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot5 == 'pullAllRepositoriesChanges'",
-          "group": "navigation@1"
+          "group": "navigation@5"
         },
         {
           "command": "gitBranchesPanel.pullAllRepositoriesChanges",
@@ -2020,7 +2020,7 @@
         {
           "command": "gitBranchesPanel.pullAllLocalBranches",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot6 == 'pullAllRepositoriesChanges'",
-          "group": "navigation@1"
+          "group": "navigation@6"
         },
         {
           "command": "gitBranchesPanel.pullAllRepositoriesChanges",
@@ -2120,7 +2120,7 @@
         {
           "command": "gitBranchesPanel.pullAllLocalBranches",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot7 == 'pullAllRepositoriesChanges'",
-          "group": "navigation@1"
+          "group": "navigation@7"
         },
         {
           "command": "gitBranchesPanel.pullAllRepositoriesChanges",
@@ -2220,7 +2220,7 @@
         {
           "command": "gitBranchesPanel.pullAllLocalBranches",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot8 == 'pullAllRepositoriesChanges'",
-          "group": "navigation@1"
+          "group": "navigation@8"
         },
         {
           "command": "gitBranchesPanel.pullAllRepositoriesChanges",
@@ -2320,7 +2320,7 @@
         {
           "command": "gitBranchesPanel.pullAllLocalBranches",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot9 == 'pullAllRepositoriesChanges'",
-          "group": "navigation@1"
+          "group": "navigation@9"
         },
         {
           "command": "gitBranchesPanel.pullAllRepositoriesChanges",
@@ -2420,7 +2420,7 @@
         {
           "command": "gitBranchesPanel.pullAllLocalBranches",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot10 == 'pullAllRepositoriesChanges'",
-          "group": "navigation@1"
+          "group": "navigation@10"
         },
         {
           "command": "gitBranchesPanel.pullAllRepositoriesChanges",
@@ -2520,7 +2520,7 @@
         {
           "command": "gitBranchesPanel.pullAllLocalBranches",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot11 == 'pullAllRepositoriesChanges'",
-          "group": "navigation@1"
+          "group": "navigation@11"
         },
         {
           "command": "gitBranchesPanel.pullAllRepositoriesChanges",
@@ -2620,7 +2620,7 @@
         {
           "command": "gitBranchesPanel.pullAllLocalBranches",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot12 == 'pullAllRepositoriesChanges'",
-          "group": "navigation@1"
+          "group": "navigation@12"
         },
         {
           "command": "gitBranchesPanel.pullAllRepositoriesChanges",
@@ -2720,7 +2720,7 @@
         {
           "command": "gitBranchesPanel.pullAllLocalBranches",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot13 == 'pullAllRepositoriesChanges'",
-          "group": "navigation@1"
+          "group": "navigation@13"
         },
         {
           "command": "gitBranchesPanel.pullAllRepositoriesChanges",
