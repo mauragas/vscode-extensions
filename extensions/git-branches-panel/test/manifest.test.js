@@ -173,6 +173,7 @@ test('package manifest exposes the 2.1.0 multi-repo, search, remote-host, histor
       'stashSilently',
       'findRef',
       'currentBranchAction',
+      'pullAllLocalBranches',
       'pullAllRepositoriesChanges',
       'fetchAll',
       'fetchAllPrune',
@@ -184,28 +185,19 @@ test('package manifest exposes the 2.1.0 multi-repo, search, remote-host, histor
     ]
   );
   assert.deepEqual(settings['gitBranchesPanel.toolbar.singleRepository.quickActions'].default, [
-    'newBranch',
-    'stashSilently',
     'findRef',
-    'currentBranchAction',
-    'fetchAll',
+    'pullAllLocalBranches',
     'fetchAllPrune',
     'refresh',
-    'clearFilter',
     'advancedActions',
     'settings',
   ]);
   assert.deepEqual(settings['gitBranchesPanel.toolbar.multiRepository.quickActions'].default, [
-    'newBranch',
-    'stashSilently',
     'findRef',
     'currentBranchAction',
     'pullAllRepositoriesChanges',
-    'fetchAll',
     'fetchAllPrune',
     'refresh',
-    'selectRepository',
-    'clearFilter',
     'advancedActions',
     'settings',
   ]);
@@ -281,6 +273,21 @@ test('package manifest exposes the 2.1.0 multi-repo, search, remote-host, histor
       'singleRepository',
       'currentBranchAction',
       (item) => item.when.includes('!gitBranchesPanel.operationInProgress')
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.pullAllLocalBranches',
+      'singleRepository',
+      'pullAllLocalBranches'
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.pullAllLocalBranches',
+      'multiRepository',
+      'pullAllLocalBranches',
+      (item) => item.when.includes('!gitBranchesPanel.groupedRepositories')
     )
   );
   assert.ok(

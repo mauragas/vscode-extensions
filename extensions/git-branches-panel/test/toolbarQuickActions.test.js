@@ -124,20 +124,15 @@ test('getConfiguredToolbarQuickActions keeps honoring legacy toolbar booleans un
 
   assert.deepEqual(toolbarQuickActions.getConfiguredSingleRepositoryToolbarQuickActions(), [
     'findRef',
-    'currentBranchAction',
-    'fetchAll',
+    'pullAllLocalBranches',
     'refresh',
-    'clearFilter',
     'advancedActions',
     'settings',
   ]);
   assert.deepEqual(toolbarQuickActions.getConfiguredMultiRepositoryToolbarQuickActions(), [
     'findRef',
     'currentBranchAction',
-    'fetchAll',
     'refresh',
-    'selectRepository',
-    'clearFilter',
     'advancedActions',
     'settings',
   ]);

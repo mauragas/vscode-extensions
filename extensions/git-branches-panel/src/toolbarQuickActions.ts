@@ -10,6 +10,7 @@ export const TOOLBAR_QUICK_ACTION_IDS = [
   'stashSilently',
   'findRef',
   'currentBranchAction',
+  'pullAllLocalBranches',
   'pullAllRepositoriesChanges',
   'fetchAll',
   'fetchAllPrune',
@@ -24,29 +25,20 @@ export type ToolbarQuickActionId = (typeof TOOLBAR_QUICK_ACTION_IDS)[number];
 export type ToolbarQuickActionScope = 'singleRepository' | 'multiRepository';
 
 export const DEFAULT_SINGLE_REPOSITORY_TOOLBAR_QUICK_ACTIONS = [
-  'newBranch',
-  'stashSilently',
   'findRef',
-  'currentBranchAction',
-  'fetchAll',
+  'pullAllLocalBranches',
   'fetchAllPrune',
   'refresh',
-  'clearFilter',
   'advancedActions',
   'settings',
 ] as const;
 
 export const DEFAULT_MULTI_REPOSITORY_TOOLBAR_QUICK_ACTIONS = [
-  'newBranch',
-  'stashSilently',
   'findRef',
   'currentBranchAction',
   'pullAllRepositoriesChanges',
-  'fetchAll',
   'fetchAllPrune',
   'refresh',
-  'selectRepository',
-  'clearFilter',
   'advancedActions',
   'settings',
 ] as const;
