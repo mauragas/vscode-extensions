@@ -46,8 +46,8 @@ section opens first, while Remote, Stash, Worktree, Hooks, and Tags stay collaps
 - 🧺 **Changes-view stash buttons** — surface stash shortcuts in the built-in **Changes** view title bar, with **Stash all changes silently** enabled there by default
 - 🖱️ **Section hover quick actions** — hover Local, Remote, Stash, Worktree, and Tags groups to reveal section-specific inline buttons for high-frequency actions
 - 🧹 **Quiet branch-name sanitization** — new branch names are cleaned up automatically to stay Git-valid, with optional lowercase kebab-case normalization that also strips extra special characters while preserving `-` and `/`
-- 🕐 **Last commit time** — shown as a relative description and in the tooltip
-- 🔄 **Color-coded sync state badges** — incoming markers use blue cues and outgoing markers use green cues so divergence stays readable even when branch names are long
+- 🕐 **Last commit time** — shown as a relative description when sync counts are not using that space, and always available in the tooltip
+- 🔄 **Color-coded sync icons and counts** — tracked local branches use blue/green sync icons plus right-side counts like `↓2`, `↑1`, or `↓2 ↑1` so divergence stays readable without crowding the branch label
 - ☁️ **Inline sync button** — every branch gets a small sync button, including branches that are not currently checked out
 - 🌀 **Inline sync animation** — branch sync and publish actions swap to a spinning inline indicator while Git is working
 - 🏷️ **Inline action buttons** — checkout, create new branch from selected and checkout, pin/unpin, and delete appear inline alongside sync/publish for quick access
@@ -310,7 +310,7 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 - Leave `gitBranchesPanel.remoteHosting.compareBase = defaultBranch` for PR-style compare pages, or switch to `currentBranch` / `upstream` if your workflow prefers browser comparisons against a checked-out or tracked branch
 - Use `gitBranchesPanel.remoteHosting.customProviders` to support self-hosted forge URLs with templates like `${hostRoot}/${namespace}/${repo}/compare/${base}...${branch}`
 - Use the **Remotes** section to keep fetch/push URLs visible and copyable without opening `.git/config` or dropping to a terminal
-- Use **Compare with Upstream** when you want to review a tracked branch's divergence at the file level instead of only relying on ahead/behind badges
+- Use **Compare with Upstream** when you want to review a tracked branch's divergence at the file level instead of only relying on the tree's sync icons and counts
 - Lower `gitBranchesPanel.history.maxCommits` if you want faster commit pickers in very large repositories, or keep it higher if you often browse longer-lived release branches
 - Turn off `gitBranchesPanel.history.includeMerges` if you prefer commit pickers that focus on linear feature work instead of merge commits
 - Leave `gitBranchesPanel.toolbar.showStashSilently` off and use the built-in Changes view button by default, or turn the Branches-view stash button back on if you prefer the old placement

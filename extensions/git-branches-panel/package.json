@@ -2,7 +2,7 @@
   "name": "git-branches-panel",
   "displayName": "Git Branches Panel",
   "description": "Tree view for branches, tags, stashes, worktrees, hooks, and remotes across one or multiple Git repositories with grouping, search, filtering, compare/history workflows, remote-host integration, worktree maintenance, sync state, and quick actions.",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "publisher": "karolis-mauragas",
   "license": "MIT",
   "repository": {

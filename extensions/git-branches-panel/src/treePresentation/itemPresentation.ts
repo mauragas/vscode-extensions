@@ -301,11 +301,36 @@ function buildTreeItemDescription(branch: BranchInfo, syncStatus: string): strin
     return ['stale remote', branch.lastCommitDate ?? ''].filter(Boolean).join(' • ');
   }
 
+  const trackedLocalSyncDescription = buildTrackedLocalSyncDescription(branch);
+  if (trackedLocalSyncDescription) {
+    return trackedLocalSyncDescription;
+  }
+
   if (branch.scope === 'stash' || branch.scope === 'worktree' || branch.scope === 'hook' || !syncStatus) {
     return buildBranchDescription(branch) || undefined;
   }
 
   return branch.lastCommitDate || undefined;
+}
+
+function buildTrackedLocalSyncDescription(branch: BranchInfo): string | undefined {
+  if ((branch.scope ?? 'local') !== 'local' || !branch.upstreamName || branch.upstreamMissing) {
+    return undefined;
+  }
+
+  const behindCount = branch.behindCount ?? 0;
+  const aheadCount = branch.aheadCount ?? 0;
+  const parts: string[] = [];
+
+  if (behindCount > 0) {
+    parts.push(`↓${behindCount}`);
+  }
+
+  if (aheadCount > 0) {
+    parts.push(`↑${aheadCount}`);
+  }
+
+  return parts.length > 0 ? parts.join(' ') : undefined;
 }
 
 function getSectionContextValue(node: Extract<BranchTreeNode, { kind: 'section' }>): string {

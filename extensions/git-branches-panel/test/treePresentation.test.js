@@ -505,13 +505,13 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(localBranchPresentation.label, 'demo');
   assert.equal(localBranchPresentation.contextValue, 'branch');
   assert.equal(localBranchPresentation.icon.resourcePath, 'branch-outgoing.svg');
-  assert.equal(localBranchPresentation.description, '1 hour ago');
+  assert.equal(localBranchPresentation.description, '↑1');
   assert.equal(localBranchPresentation.command.command, 'gitBranchesPanel.activateBranchItem');
 
   assert.equal(incomingBranchPresentation.nodeType, 'branch');
   assert.equal(incomingBranchPresentation.label, 'incoming');
   assert.equal(incomingBranchPresentation.icon.resourcePath, 'branch-incoming.svg');
-  assert.equal(incomingBranchPresentation.description, '3 hours ago');
+  assert.equal(incomingBranchPresentation.description, '↓2');
 
   assert.equal(publishableBranchPresentation.nodeType, 'branch');
   assert.equal(publishableBranchPresentation.contextValue, 'publishableBranch');
@@ -520,7 +520,7 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(currentBranchWithSyncPresentation.label, '● main');
   assert.equal(currentBranchWithSyncPresentation.contextValue, 'currentBranch');
   assert.equal(currentBranchWithSyncPresentation.icon.resourcePath, 'branch-diverged.svg');
-  assert.equal(currentBranchWithSyncPresentation.description, '2 hours ago');
+  assert.equal(currentBranchWithSyncPresentation.description, '↓2 ↑1');
 
   assert.equal(currentBranchPresentation.nodeType, 'currentBranch');
   assert.equal(currentBranchPresentation.label, '● main');
@@ -757,6 +757,7 @@ test('buildTreeItemPresentation adds pinned prefixes and busy context values whe
   assert.equal(pinnedBusyBranchPresentation.label, '★ demo');
   assert.equal(pinnedBusyBranchPresentation.contextValue, 'pinned:busyBranch');
   assert.equal(pinnedBusyBranchPresentation.icon.resourcePath, 'branch-outgoing.svg');
+  assert.equal(pinnedBusyBranchPresentation.description, '↑1');
   assert.match(pinnedBusyBranchPresentation.tooltip, /_Pinned item_/);
 
   assert.equal(pinnedCurrentWorktreePresentation.label, '★ ● git-branches-panel-main-pinned-worktree');

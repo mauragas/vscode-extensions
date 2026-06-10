@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.0] - 2026-06-10
+
+- Replaced the old inline sync badges with custom blue/green tree-row sync icons for tracked local branches, including a combined diverged icon when a branch is both ahead and behind
+- Added right-side sync counts such as `↓2`, `↑1`, and `↓2 ↑1` for tracked local branches so incoming/outgoing changes stay visible without crowding the branch label
+- Expanded presentation coverage for the new sync icon and description layout while keeping the existing tooltip sync wording and branch action behavior intact
+
 ## [2.0.0] - 2026-06-09
 
 - Added **Compare with Upstream** for tracked local branches so you can open a file-level comparison against the branch's configured upstream without leaving the tree
