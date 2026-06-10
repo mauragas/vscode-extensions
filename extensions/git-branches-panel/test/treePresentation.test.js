@@ -489,7 +489,7 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
 
   assert.equal(localBranchPresentation.nodeType, 'branch');
   assert.equal(localBranchPresentation.id, 'local:branch:feature/demo');
-  assert.equal(localBranchPresentation.label, '🟢1↑ demo');
+  assert.equal(localBranchPresentation.label, '⬆️1 demo');
   assert.equal(localBranchPresentation.contextValue, 'branch');
   assert.equal(localBranchPresentation.description, '1 hour ago');
   assert.equal(localBranchPresentation.command.command, 'gitBranchesPanel.activateBranchItem');
@@ -498,7 +498,7 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(publishableBranchPresentation.contextValue, 'publishableBranch');
 
   assert.equal(currentBranchWithSyncPresentation.nodeType, 'currentBranch');
-  assert.equal(currentBranchWithSyncPresentation.label, '● 🔵2↓ 🟢1↑ main');
+  assert.equal(currentBranchWithSyncPresentation.label, '● ⬇️2 ⬆️1 main');
   assert.equal(currentBranchWithSyncPresentation.contextValue, 'currentBranch');
   assert.equal(currentBranchWithSyncPresentation.description, '2 hours ago');
 
@@ -733,7 +733,7 @@ test('buildTreeItemPresentation adds pinned prefixes and busy context values whe
     },
   });
 
-  assert.equal(pinnedBusyBranchPresentation.label, '★ 🟢1↑ demo');
+  assert.equal(pinnedBusyBranchPresentation.label, '★ ⬆️1 demo');
   assert.equal(pinnedBusyBranchPresentation.contextValue, 'pinned:busyBranch');
   assert.equal(pinnedBusyBranchPresentation.icon.id, 'git-branch');
   assert.match(pinnedBusyBranchPresentation.tooltip, /_Pinned item_/);

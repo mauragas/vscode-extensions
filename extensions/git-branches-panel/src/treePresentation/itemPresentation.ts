@@ -410,11 +410,11 @@ function buildInlineSyncStatus(
   const statusParts: string[] = [];
 
   if (behindCount > 0) {
-    statusParts.push(`🔵${behindCount}↓`);
+    statusParts.push(`⬇️${behindCount}`);
   }
 
   if (aheadCount > 0) {
-    statusParts.push(`🟢${aheadCount}↑`);
+    statusParts.push(`⬆️${aheadCount}`);
   }
 
   return statusParts.join(' ');
