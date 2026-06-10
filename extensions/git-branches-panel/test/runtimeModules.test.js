@@ -838,3 +838,94 @@ test('BranchTreeProvider revealItem clears active filters before resolving the v
     select: true,
   });
 });
+
+test('BranchTreeProvider revealBranch clears filters and focuses a freshly created local branch', async () => {
+  const commandCalls = [];
+  const state = {
+    treeData: [
+      {
+        kind: 'section',
+        label: 'Local',
+        path: 'section:local',
+        scope: 'local',
+        repoRoot: '/repo',
+        children: [
+          {
+            kind: 'folder',
+            label: 'feature',
+            path: 'feature',
+            scope: 'local',
+            repoRoot: '/repo',
+            children: [
+              {
+                kind: 'branch',
+                fullName: 'feature/demo',
+                label: 'demo',
+                path: 'feature/demo',
+                repoRoot: '/repo',
+                info: {
+                  name: 'feature/demo',
+                  isCurrent: true,
+                },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    repoRoot: '/repo',
+    loadedSections: new Set(['local']),
+  };
+  const dataLoader = createDataLoader(state);
+  const { BranchTreeProvider } = loadFresh('../out/treeProvider.js', {
+    vscode: createVscodeMock(commandCalls),
+    './git': {
+      fetchRemoteState() {},
+      getBranches() {},
+      getHooks() {},
+      getRemoteBranches() {},
+      getRepoRoot() {},
+      getStashes() {},
+      getWorktrees() {},
+      getTags() {},
+    },
+    './gitApi': {
+      getWorkspaceRepositories: async () => [],
+      resolveRepoRootForUri: async () => undefined,
+    },
+    './treeDataLoader': {
+      BranchDataLoader: class BranchDataLoader {},
+      getBranchSectionKey: (sectionPath) =>
+        sectionPath === 'section:local' ? 'local' : undefined,
+    },
+    './treeItem': createTreeItemMock(),
+    './treePresentation': {
+      findContainerNode,
+      findDescendantBranches,
+    },
+  });
+
+  const provider = new BranchTreeProvider({ subscriptions: [] }, dataLoader);
+  const revealCalls = [];
+
+  provider.registerTreeViews([
+    {
+      async reveal(item, options) {
+        revealCalls.push({ item, options });
+      },
+    },
+  ]);
+
+  await provider.setFilterQuery('missing');
+
+  const revealed = await provider.revealBranch('/repo', 'feature/demo', { clearFilter: true });
+
+  assert.equal(revealed, true);
+  assert.equal(revealCalls.length, 1);
+  assert.equal(revealCalls[0].item.branchName, 'feature/demo');
+  assert.deepEqual(revealCalls[0].options, {
+    expand: 3,
+    focus: true,
+    select: true,
+  });
+});

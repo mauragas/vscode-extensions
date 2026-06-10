@@ -328,6 +328,40 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     return true;
   }
 
+  async revealBranch(
+    repoRoot: string,
+    branchName: string,
+    options: { clearFilter?: boolean } = {}
+  ): Promise<boolean> {
+    const primaryTreeView = this.treeViews[0];
+    if (!primaryTreeView) {
+      return false;
+    }
+
+    const activated = await this.setActiveRepository(repoRoot);
+    if (!activated) {
+      return false;
+    }
+
+    let revealTarget = findLocalBranchTreeItem(this.getVisibleTreeData(), repoRoot, branchName);
+
+    if (!revealTarget && options.clearFilter === true && this.hasActiveFilter()) {
+      await this.clearFilter();
+      revealTarget = findLocalBranchTreeItem(this.getVisibleTreeData(), repoRoot, branchName);
+    }
+
+    if (!revealTarget) {
+      return false;
+    }
+
+    await primaryTreeView.reveal(revealTarget, {
+      expand: 3,
+      focus: true,
+      select: true,
+    });
+    return true;
+  }
+
   private getBaseVisibleTreeData(): readonly BranchTreeNode[] {
     return this.dataLoader.getTreeData({
       activeRepoRoot: this.activeRepoRoot,
@@ -433,12 +467,22 @@ function createBranchDataLoader(
 }
 
 type TreeContainerNode = Extract<BranchTreeNode, { kind: 'repository' | 'section' | 'folder' }>;
+type TreeBranchNode = Extract<BranchTreeNode, { kind: 'branch' }>;
 
 function findMatchingTreeItem(
   nodes: readonly BranchTreeNode[],
   item: BranchTreeItem
 ): BranchTreeItem | undefined {
   const node = findMatchingTreeNode(nodes, item);
+  return node ? new BranchTreeItem(node) : undefined;
+}
+
+function findLocalBranchTreeItem(
+  nodes: readonly BranchTreeNode[],
+  repoRoot: string,
+  branchName: string
+): BranchTreeItem | undefined {
+  const node = findLocalBranchTreeNode(nodes, repoRoot, branchName);
   return node ? new BranchTreeItem(node) : undefined;
 }
 
@@ -456,6 +500,37 @@ function findMatchingTreeNode(
     }
 
     const nestedMatch = findMatchingTreeNode(node.children, item);
+    if (nestedMatch) {
+      return nestedMatch;
+    }
+  }
+
+  return undefined;
+}
+
+function findLocalBranchTreeNode(
+  nodes: readonly BranchTreeNode[],
+  repoRoot: string,
+  branchName: string
+): TreeBranchNode | undefined {
+  for (const node of nodes) {
+    if (node.kind === 'branch') {
+      if (
+        node.repoRoot === repoRoot &&
+        node.fullName === branchName &&
+        (node.info.scope ?? 'local') === 'local'
+      ) {
+        return node;
+      }
+
+      continue;
+    }
+
+    if (!isTreeContainerNode(node)) {
+      continue;
+    }
+
+    const nestedMatch = findLocalBranchTreeNode(node.children, repoRoot, branchName);
     if (nestedMatch) {
       return nestedMatch;
     }

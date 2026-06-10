@@ -133,6 +133,7 @@ function createCommandContext() {
     currentBranch: undefined,
     successRefreshes: [],
     commandErrors: [],
+    revealedBranches: [],
   };
 
   return {
@@ -141,6 +142,10 @@ function createCommandContext() {
       provider: {
         async withBusyBranch(_repoRoot, _branchName, operation) {
           return operation();
+        },
+        async revealBranch(repoRoot, branchName, options) {
+          state.revealedBranches.push({ repoRoot, branchName, options });
+          return true;
         },
       },
       activationTracker: {
@@ -301,6 +306,13 @@ test('newBranch sanitizes the entered branch name when normalization is disabled
     {
       message: "Created and switched to 'Feature/Hello---World'.",
       options: {},
+    },
+  ]);
+  assert.deepEqual(commandContext.state.revealedBranches, [
+    {
+      repoRoot: '/repo',
+      branchName: 'Feature/Hello---World',
+      options: { clearFilter: true },
     },
   ]);
 });
@@ -517,6 +529,13 @@ test('newBranchFromSelected creates a branch from a local branch without checkou
       options: { fetchRemoteState: false },
     },
   ]);
+  assert.deepEqual(commandContext.state.revealedBranches, [
+    {
+      repoRoot: '/repo',
+      branchName: 'feature/child-name',
+      options: { clearFilter: true },
+    },
+  ]);
 });
 
 test('newBranchFromSelectedAndCheckout creates and checks out a branch from a remote branch', async () => {
@@ -599,6 +618,13 @@ test('newBranchFromSelectedAndCheckout creates and checks out a branch from a re
     {
       message: "Created and switched to 'feature/hello-world' from 'origin/feature/source'.",
       options: { fetchRemoteState: false },
+    },
+  ]);
+  assert.deepEqual(commandContext.state.revealedBranches, [
+    {
+      repoRoot: '/repo',
+      branchName: 'feature/hello-world',
+      options: { clearFilter: true },
     },
   ]);
 });
