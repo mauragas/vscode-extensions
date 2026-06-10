@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [2.1.1] - 2026-06-10
 
-- Added an inline `Pull Branch Changes` button for tracked local branches so you can pull the selected branch directly next to the existing sync action without pushing outgoing commits.
+- Added inline `Pull Branch Changes` and `Push Branch Changes` buttons for tracked local branches: pull stays visible for tracked branches because it fetches remote state before pulling, while push only appears when the branch has outgoing commits.
 
 ## [2.1.0] - 2026-06-10
 

@@ -503,7 +503,7 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(localBranchPresentation.nodeType, 'branch');
   assert.equal(localBranchPresentation.id, 'local:branch:feature/demo');
   assert.equal(localBranchPresentation.label, 'demo');
-  assert.equal(localBranchPresentation.contextValue, 'branch');
+  assert.equal(localBranchPresentation.contextValue, 'branch:ahead');
   assert.equal(localBranchPresentation.icon.resourcePath, 'branch-outgoing.svg');
   assert.equal(localBranchPresentation.description, '↑1');
   assert.equal(localBranchPresentation.command.command, 'gitBranchesPanel.activateBranchItem');
@@ -518,7 +518,7 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
 
   assert.equal(currentBranchWithSyncPresentation.nodeType, 'currentBranch');
   assert.equal(currentBranchWithSyncPresentation.label, '● main');
-  assert.equal(currentBranchWithSyncPresentation.contextValue, 'currentBranch');
+  assert.equal(currentBranchWithSyncPresentation.contextValue, 'currentBranch:ahead');
   assert.equal(currentBranchWithSyncPresentation.icon.resourcePath, 'branch-diverged.svg');
   assert.equal(currentBranchWithSyncPresentation.description, '↓2 ↑1');
 
@@ -776,6 +776,7 @@ test('buildTreeItemPresentation exposes protected context values so delete actio
       isCurrent: false,
       isDeletionProtected: true,
       upstreamName: 'origin/main',
+      aheadCount: 1,
     },
   });
   const protectedPublishableBranchPresentation = buildTreeItemPresentation({
@@ -830,7 +831,7 @@ test('buildTreeItemPresentation exposes protected context values so delete actio
     },
   });
 
-  assert.equal(protectedBranchPresentation.contextValue, 'protectedBranch');
+  assert.equal(protectedBranchPresentation.contextValue, 'protectedBranch:ahead');
   assert.equal(protectedPublishableBranchPresentation.contextValue, 'protectedPublishableBranch');
   assert.equal(protectedMissingUpstreamPresentation.contextValue, 'protectedMissingUpstreamBranch');
   assert.equal(protectedRemotePresentation.contextValue, 'protectedRemoteBranch');

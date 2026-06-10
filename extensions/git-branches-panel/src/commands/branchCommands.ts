@@ -156,6 +156,12 @@ export function registerBranchDomainCommands(
         await handlePullBranchChanges(item, commandContext);
       }
     ),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.pushBranchChanges',
+      async (item: BranchTreeItem) => {
+        await handlePushBranchChanges(item, commandContext);
+      }
+    ),
     vscode.commands.registerCommand('gitBranchesPanel.publishBranch', async (item: BranchTreeItem) => {
       await handlePublishBranch(item, commandContext);
     }),
@@ -361,6 +367,17 @@ async function handlePullBranchChanges(
   }
 
   await pullBranchByName(item.repoRoot, item.branchName, commandContext);
+}
+
+async function handlePushBranchChanges(
+  item: BranchTreeItem,
+  commandContext: CommandContext
+): Promise<void> {
+  if (!item.branchName || !item.repoRoot) {
+    return;
+  }
+
+  await pushBranchChangesByName(item.repoRoot, item.branchName, commandContext);
 }
 
 async function handlePublishBranch(
@@ -926,6 +943,27 @@ async function pushBranchByName(
   }
 }
 
+async function pushBranchChangesByName(
+  repoRoot: string,
+  branchName: string,
+  commandContext: CommandContext
+): Promise<void> {
+  try {
+    const pushResult = await commandContext.runWithLoadingIndicator(
+      `Pushing '${branchName}'…`,
+      () => commandContext.provider.withBusyBranch(repoRoot, branchName, () =>
+        pushBranchToRemote(repoRoot, branchName)
+      )
+    );
+    await commandContext.showSuccessAndRefresh(buildSyncResultMessage(pushResult), {
+      fetchRemoteState: true,
+      forceFetchRemoteState: true,
+    });
+  } catch (error) {
+    commandContext.showCommandError(`Failed to push '${branchName}'`, error);
+  }
+}
+
 function shouldNormalizeNewBranchNames(): boolean {
   return vscode.workspace
     .getConfiguration('gitBranchesPanel')
@@ -1053,6 +1091,20 @@ function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
           }
         )
       );
+
+      if (hasOutgoingBranchChanges(item)) {
+        items.push(
+          createBranchActionItem(
+            'pushBranchChanges',
+            isCurrentBranch
+              ? '$(cloud-upload) Push Current Branch Changes'
+              : '$(cloud-upload) Push Branch Changes',
+            async () => {
+              await vscode.commands.executeCommand('gitBranchesPanel.pushBranchChanges', item);
+            }
+          )
+        );
+      }
     }
   }
 
@@ -1239,6 +1291,21 @@ function isPublishableBranchItem(item: BranchTreeItem): boolean {
     item.contextValue === 'busyPublishableCurrentBranch' ||
     item.contextValue === 'busyMissingUpstreamBranch'
   );
+}
+
+function hasOutgoingBranchChanges(
+  item: Pick<BranchTreeItem, 'branchInfo' | 'contextValue'>
+): boolean {
+  if (item.branchInfo) {
+    return (
+      (item.branchInfo.scope ?? 'local') === 'local' &&
+      Boolean(item.branchInfo.upstreamName) &&
+      !item.branchInfo.upstreamMissing &&
+      (item.branchInfo.aheadCount ?? 0) > 0
+    );
+  }
+
+  return /(^|:)ahead$/u.test(item.contextValue ?? '');
 }
 
 function canCreateWorktreeFromItem(item: BranchTreeItem): boolean {

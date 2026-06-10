@@ -828,6 +828,74 @@ test('pullBranchChanges pulls the selected branch and refreshes local state', as
   ]);
 });
 
+test('pushBranchChanges pushes the selected branch and refreshes remote state', async () => {
+  const vscodeState = createVscodeState();
+  const validateSpy = [];
+  const pushBranchCalls = [];
+
+  const { commandContext } = createBranchCommandsModule({
+    vscodeState,
+    validateSpy,
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pullBranchChanges() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async pushBranch(repoRoot, branchName) {
+        pushBranchCalls.push({ repoRoot, branchName });
+        return {
+          branchName,
+          upstreamName: `origin/${branchName}`,
+          didPull: false,
+          didPush: true,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.pushBranchChanges']({
+    nodeType: 'branch',
+    branchName: 'feature/ahead',
+    repoRoot: '/repo',
+  });
+
+  assert.deepEqual(validateSpy, []);
+  assert.deepEqual(pushBranchCalls, [{ repoRoot: '/repo', branchName: 'feature/ahead' }]);
+  assert.deepEqual(commandContext.state.loadingTitles, ["Pushing 'feature/ahead'…"]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: 'sync',
+      options: { fetchRemoteState: true, forceFetchRemoteState: true },
+    },
+  ]);
+});
+
 test('showBranchActions exposes single-branch pull for tracked local branches', async () => {
   const vscodeState = createVscodeState();
   vscodeState.quickPickSelector = (items) =>
@@ -894,9 +962,99 @@ test('showBranchActions exposes single-branch pull for tracked local branches', 
       (quickPickItem) => quickPickItem.label === '$(repo-pull) Pull Branch Changes'
     )
   );
+  assert.ok(
+    !vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(cloud-upload) Push Branch Changes'
+    )
+  );
   assert.deepEqual(vscodeState.executedCommands, [
     {
       command: 'gitBranchesPanel.pullBranchChanges',
+      args: [item],
+    },
+  ]);
+});
+
+test('showBranchActions exposes push changes for tracked branches with outgoing commits', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.quickPickSelector = (items) =>
+    items.find((item) => item.actionId === 'pushBranchChanges');
+
+  createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pullBranchChanges() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  const item = {
+    nodeType: 'branch',
+    contextValue: 'branch:ahead',
+    branchName: 'feature/demo',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'feature/demo',
+      isCurrent: false,
+      scope: 'local',
+      upstreamName: 'origin/feature/demo',
+      aheadCount: 2,
+      behindCount: 0,
+    },
+  };
+
+  await vscodeState.registeredCommands['gitBranchesPanel.showBranchActions'](item);
+
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(repo-pull) Pull Branch Changes'
+    )
+  );
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(cloud-upload) Push Branch Changes'
+    )
+  );
+  assert.deepEqual(vscodeState.executedCommands, [
+    {
+      command: 'gitBranchesPanel.pushBranchChanges',
       args: [item],
     },
   ]);

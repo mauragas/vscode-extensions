@@ -428,8 +428,12 @@ function getItemContextValue(nodeType: NodeType, branch: BranchInfo): string {
   let contextValue = resolveBaseContextValue(nodeType, branch);
   if (branch.isSyncing) {
     contextValue = resolveBusyContextValue(contextValue);
-  } else if (branch.isDeletionProtected) {
-    contextValue = resolveProtectedContextValue(contextValue);
+  } else {
+    if (branch.isDeletionProtected) {
+      contextValue = resolveProtectedContextValue(contextValue);
+    }
+
+    contextValue = resolveAheadContextValue(contextValue, branch);
   }
 
   return resolvePinnedContextValue(contextValue, branch.isPinned);
@@ -467,8 +471,10 @@ function resolveBaseContextValue(nodeType: NodeType, branch: BranchInfo): string
 function resolveBusyContextValue(contextValue: string): string {
   switch (contextValue) {
     case 'branch':
+    case 'branch:ahead':
       return 'busyBranch';
     case 'currentBranch':
+    case 'currentBranch:ahead':
       return 'busyCurrentBranch';
     case 'publishableBranch':
       return 'busyPublishableBranch';
@@ -476,6 +482,21 @@ function resolveBusyContextValue(contextValue: string): string {
       return 'busyPublishableCurrentBranch';
     case 'missingUpstreamBranch':
       return 'busyMissingUpstreamBranch';
+    default:
+      return contextValue;
+  }
+}
+
+function resolveAheadContextValue(contextValue: string, branch: BranchInfo): string {
+  if (!hasOutgoingLocalBranchChanges(branch)) {
+    return contextValue;
+  }
+
+  switch (contextValue) {
+    case 'branch':
+    case 'currentBranch':
+    case 'protectedBranch':
+      return `${contextValue}:ahead`;
     default:
       return contextValue;
   }
@@ -496,6 +517,15 @@ function resolveProtectedContextValue(contextValue: string): string {
     default:
       return contextValue;
   }
+}
+
+function hasOutgoingLocalBranchChanges(branch: BranchInfo): boolean {
+  return (
+    (branch.scope ?? 'local') === 'local' &&
+    Boolean(branch.upstreamName) &&
+    !branch.upstreamMissing &&
+    (branch.aheadCount ?? 0) > 0
+  );
 }
 
 function getItemIcon(nodeType: NodeType, branch?: BranchInfo): TreeItemIconDescriptor {
