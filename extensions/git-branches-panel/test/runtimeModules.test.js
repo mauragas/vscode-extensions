@@ -839,7 +839,7 @@ test('BranchTreeProvider revealItem clears active filters before resolving the v
   });
 });
 
-test('BranchTreeProvider revealBranch clears filters and focuses a freshly created local branch', async () => {
+test('BranchTreeProvider revealBranch prefers the visible tree view and focuses a freshly created local branch', async () => {
   const commandCalls = [];
   const state = {
     treeData: [
@@ -906,12 +906,20 @@ test('BranchTreeProvider revealBranch clears filters and focuses a freshly creat
   });
 
   const provider = new BranchTreeProvider({ subscriptions: [] }, dataLoader);
-  const revealCalls = [];
+  const activityBarRevealCalls = [];
+  const scmRevealCalls = [];
 
   provider.registerTreeViews([
     {
+      visible: false,
       async reveal(item, options) {
-        revealCalls.push({ item, options });
+        activityBarRevealCalls.push({ item, options });
+      },
+    },
+    {
+      visible: true,
+      async reveal(item, options) {
+        scmRevealCalls.push({ item, options });
       },
     },
   ]);
@@ -921,9 +929,10 @@ test('BranchTreeProvider revealBranch clears filters and focuses a freshly creat
   const revealed = await provider.revealBranch('/repo', 'feature/demo', { clearFilter: true });
 
   assert.equal(revealed, true);
-  assert.equal(revealCalls.length, 1);
-  assert.equal(revealCalls[0].item.branchName, 'feature/demo');
-  assert.deepEqual(revealCalls[0].options, {
+  assert.equal(activityBarRevealCalls.length, 0);
+  assert.equal(scmRevealCalls.length, 1);
+  assert.equal(scmRevealCalls[0].item.branchName, 'feature/demo');
+  assert.deepEqual(scmRevealCalls[0].options, {
     expand: 3,
     focus: true,
     select: true,

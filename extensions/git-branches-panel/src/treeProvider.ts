@@ -308,8 +308,8 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
   }
 
   async revealItem(item: BranchTreeItem, options: { clearFilter?: boolean } = {}): Promise<boolean> {
-    const primaryTreeView = this.treeViews[0];
-    if (!primaryTreeView) {
+    const revealTreeView = this.getRevealTreeView();
+    if (!revealTreeView) {
       return false;
     }
 
@@ -320,7 +320,7 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     await this.setActiveRepositoryFromItem(item);
     const revealTarget = findMatchingTreeItem(this.getVisibleTreeData(), item) ?? item;
 
-    await primaryTreeView.reveal(revealTarget, {
+    await revealTreeView.reveal(revealTarget, {
       expand: 3,
       focus: true,
       select: true,
@@ -333,8 +333,8 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     branchName: string,
     options: { clearFilter?: boolean } = {}
   ): Promise<boolean> {
-    const primaryTreeView = this.treeViews[0];
-    if (!primaryTreeView) {
+    const revealTreeView = this.getRevealTreeView();
+    if (!revealTreeView) {
       return false;
     }
 
@@ -354,12 +354,16 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
       return false;
     }
 
-    await primaryTreeView.reveal(revealTarget, {
+    await revealTreeView.reveal(revealTarget, {
       expand: 3,
       focus: true,
       select: true,
     });
     return true;
+  }
+
+  private getRevealTreeView(): vscode.TreeView<BranchTreeItem> | undefined {
+    return this.treeViews.find((treeView) => treeView.visible) ?? this.treeViews[0];
   }
 
   private getBaseVisibleTreeData(): readonly BranchTreeNode[] {
