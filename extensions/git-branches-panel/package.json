@@ -649,22 +649,22 @@
         },
         {
           "command": "gitBranchesPanel.branchActionInProgress",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showCurrentBranchAction && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.currentBranchBusy",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
           "group": "navigation@3"
         },
         {
           "command": "gitBranchesPanel.syncCurrentBranch",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showCurrentBranchAction && !gitBranchesPanel.groupedRepositories && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showCurrentBranchAction && !gitBranchesPanel.groupedRepositories && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
           "group": "navigation@3"
         },
         {
           "command": "gitBranchesPanel.publishCurrentBranch",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showCurrentBranchAction && !gitBranchesPanel.groupedRepositories && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showCurrentBranchAction && !gitBranchesPanel.groupedRepositories && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
           "group": "navigation@3"
         },
         {
           "command": "gitBranchesPanel.syncAllRepositoriesBranches",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showCurrentBranchAction && gitBranchesPanel.groupedRepositories",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showCurrentBranchAction && gitBranchesPanel.groupedRepositories && !gitBranchesPanel.operationInProgress",
           "group": "navigation@3"
         },
         {

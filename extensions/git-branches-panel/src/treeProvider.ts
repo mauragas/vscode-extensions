@@ -61,6 +61,7 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
   private readonly dataLoader: BranchDataLoader;
   private readonly pinnedItems: PinnedItemsStore;
   private readonly busyBranchKeys = new Set<string>();
+  private busyOperationCount = 0;
   private activeRepoRoot?: string;
   private filterState: RefFilterState = clearRefFilterState();
   private treeViews: readonly vscode.TreeView<BranchTreeItem>[] = [];
@@ -80,6 +81,7 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     this.updateRepositoryContexts();
     this.updateFilterContexts();
     this.updateCurrentBranchContext(this.getCurrentBranch());
+    this.updateOperationContext();
     this.onDidChangeTreeDataEmitter.fire();
   }
 
@@ -242,6 +244,31 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
         fetchRemoteState: false,
         onlyIfLoaded: true,
       });
+    }
+  }
+
+  async withLoadingIndicator<T>(
+    title: string,
+    operation: () => Promise<T>
+  ): Promise<T> {
+    this.busyOperationCount += 1;
+    this.updateOperationContext();
+
+    try {
+      if (typeof vscode.window.withProgress === 'function') {
+        return await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Window,
+            title,
+          },
+          async () => operation()
+        );
+      }
+
+      return await operation();
+    } finally {
+      this.busyOperationCount = Math.max(0, this.busyOperationCount - 1);
+      this.updateOperationContext();
     }
   }
 
@@ -451,6 +478,14 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
       'setContext',
       'gitBranchesPanel.filterShowOnlyPinned',
       this.filterState.showOnlyPinned
+    );
+  }
+
+  private updateOperationContext(): void {
+    void vscode.commands.executeCommand(
+      'setContext',
+      'gitBranchesPanel.operationInProgress',
+      this.busyOperationCount > 0
     );
   }
 

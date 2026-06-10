@@ -63,6 +63,7 @@ function createVscodeMock(state) {
 
 function createCommandContext() {
   const state = {
+    loadingTitles: [],
     successRefreshes: [],
     commandErrors: [],
     setActiveRepositoryCalls: [],
@@ -88,6 +89,10 @@ function createCommandContext() {
         },
       },
       activationTracker: {},
+      async runWithLoadingIndicator(title, operation) {
+        state.loadingTitles.push(title);
+        return operation();
+      },
       async refresh(options = {}) {
         state.refreshCalls.push(options);
       },
@@ -286,6 +291,7 @@ test('fetchAllRepositories fetches every repository and refreshes once', async (
   await vscodeState.registeredCommands['gitBranchesPanel.fetchAllRepositories']();
 
   assert.deepEqual(fetchCalls, ['/repo-a', '/repo-b']);
+  assert.deepEqual(commandContext.state.loadingTitles, ['Fetching all repositories…']);
   assert.deepEqual(commandContext.state.refreshCalls, [{ fetchRemoteState: false }]);
   assert.deepEqual(vscodeState.infoMessages.at(-1), 'Fetched all remotes in every repository.');
 });

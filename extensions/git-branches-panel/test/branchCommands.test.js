@@ -131,6 +131,7 @@ function createVscodeMock(state) {
 function createCommandContext() {
   const state = {
     currentBranch: undefined,
+    loadingTitles: [],
     successRefreshes: [],
     commandErrors: [],
     revealedBranches: [],
@@ -153,6 +154,10 @@ function createCommandContext() {
           return false;
         },
         reset() {},
+      },
+      async runWithLoadingIndicator(title, operation) {
+        state.loadingTitles.push(title);
+        return operation();
       },
       async refresh() {},
       async requireRepoRoot() {
@@ -746,6 +751,7 @@ test('publishBranch pushes the selected branch and refreshes remote state', asyn
 
   assert.deepEqual(validateSpy, []);
   assert.deepEqual(pushBranchCalls, [{ repoRoot: '/repo', branchName: 'feature/offline' }]);
+  assert.deepEqual(commandContext.state.loadingTitles, ["Publishing 'feature/offline'…"]);
   assert.deepEqual(commandContext.state.successRefreshes, [
     {
       message: 'sync',

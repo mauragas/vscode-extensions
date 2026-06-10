@@ -852,8 +852,11 @@ async function syncBranchByName(
   commandContext: CommandContext
 ): Promise<void> {
   try {
-    const syncResult = await commandContext.provider.withBusyBranch(repoRoot, branchName, () =>
-      syncBranch(repoRoot, branchName)
+    const syncResult = await commandContext.runWithLoadingIndicator(
+      `Syncing '${branchName}'…`,
+      () => commandContext.provider.withBusyBranch(repoRoot, branchName, () =>
+        syncBranch(repoRoot, branchName)
+      )
     );
     await commandContext.showSuccessAndRefresh(buildSyncResultMessage(syncResult), {
       fetchRemoteState: true,
@@ -870,8 +873,11 @@ async function pushBranchByName(
   commandContext: CommandContext
 ): Promise<void> {
   try {
-    const pushResult = await commandContext.provider.withBusyBranch(repoRoot, branchName, () =>
-      pushBranchToRemote(repoRoot, branchName)
+    const pushResult = await commandContext.runWithLoadingIndicator(
+      `Publishing '${branchName}'…`,
+      () => commandContext.provider.withBusyBranch(repoRoot, branchName, () =>
+        pushBranchToRemote(repoRoot, branchName)
+      )
     );
     await commandContext.showSuccessAndRefresh(buildSyncResultMessage(pushResult), {
       fetchRemoteState: true,

@@ -40,13 +40,22 @@ function createEventEmitter() {
   };
 }
 
-function createVscodeMock(commandCalls) {
+function createVscodeMock(commandCalls, progressCalls = []) {
   return {
     EventEmitter: createEventEmitter(),
+    ProgressLocation: {
+      Window: 'window',
+    },
     commands: {
       async executeCommand(command, ...args) {
         commandCalls.push({ command, args });
         return undefined;
+      },
+    },
+    window: {
+      async withProgress(options, task) {
+        progressCalls.push(options);
+        return task();
       },
     },
     workspace: {
@@ -506,6 +515,63 @@ test('BranchTreeProvider marks busy current branches in context', async () => {
   );
 });
 
+test('BranchTreeProvider tracks a global operation-in-progress context while showing window progress', async () => {
+  const commandCalls = [];
+  const progressCalls = [];
+  const dataLoader = createDataLoader({
+    treeData: [],
+  });
+  const { BranchTreeProvider } = loadFresh('../out/treeProvider.js', {
+    vscode: createVscodeMock(commandCalls, progressCalls),
+    './git': {
+      fetchRemoteState() {},
+      getBranches() {},
+      getHooks() {},
+      getRemoteBranches() {},
+      getRepoRoot() {},
+      getStashes() {},
+      getWorktrees() {},
+      getTags() {},
+    },
+    './gitApi': {
+      getWorkspaceRepositories: async () => [],
+      resolveRepoRootForUri: async () => undefined,
+    },
+    './treeDataLoader': {
+      BranchDataLoader: class BranchDataLoader {},
+      getBranchSectionKey: () => undefined,
+    },
+    './treeItem': createTreeItemMock(),
+    './treePresentation': {
+      findContainerNode,
+      findDescendantBranches,
+    },
+  });
+
+  const provider = new BranchTreeProvider({ subscriptions: [] }, dataLoader);
+  const result = await provider.withLoadingIndicator('Syncing all repositories…', async () => 'done');
+
+  assert.equal(result, 'done');
+  assert.deepEqual(progressCalls, [
+    {
+      location: 'window',
+      title: 'Syncing all repositories…',
+    },
+  ]);
+  assert.ok(
+    commandCalls.some(
+      (call) =>
+        call.command === 'setContext' &&
+        call.args[0] === 'gitBranchesPanel.operationInProgress' &&
+        call.args[1] === true
+    )
+  );
+  assert.deepEqual(commandCalls.at(-1), {
+    command: 'setContext',
+    args: ['gitBranchesPanel.operationInProgress', false],
+  });
+});
+
 test('BranchTreeProvider loads nested container children and clears branch context when no branch is active', async () => {
   const commandCalls = [];
   const state = {
@@ -638,13 +704,25 @@ test('BranchTreeProvider loads nested container children and clears branch conte
 
   await provider.refresh();
 
-  assert.deepEqual(commandCalls.at(-2), {
-    command: 'setContext',
-    args: ['gitBranchesPanel.currentBranchNeedsPublish', false],
-  });
+  assert.ok(
+    commandCalls.some(
+      (call) =>
+        call.command === 'setContext' &&
+        call.args[0] === 'gitBranchesPanel.currentBranchNeedsPublish' &&
+        call.args[1] === false
+    )
+  );
+  assert.ok(
+    commandCalls.some(
+      (call) =>
+        call.command === 'setContext' &&
+        call.args[0] === 'gitBranchesPanel.currentBranchBusy' &&
+        call.args[1] === false
+    )
+  );
   assert.deepEqual(commandCalls.at(-1), {
     command: 'setContext',
-    args: ['gitBranchesPanel.currentBranchBusy', false],
+    args: ['gitBranchesPanel.operationInProgress', false],
   });
 });
 

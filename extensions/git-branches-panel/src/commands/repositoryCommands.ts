@@ -42,7 +42,10 @@ export function registerRepositoryCommands(
 }
 
 async function handleRefresh(commandContext: CommandContext): Promise<void> {
-  await commandContext.refresh({ fetchRemoteState: true });
+  await commandContext.runWithLoadingIndicator(
+    'Refreshing branches…',
+    () => commandContext.refresh({ fetchRemoteState: true })
+  );
 }
 
 async function handleOpenSettings(): Promise<void> {
@@ -59,10 +62,15 @@ async function handleFetchAll(
   }
 
   try {
-    await fetchAllRemotes(repoRoot);
-    await commandContext.showSuccessAndRefresh(
-      'Fetched all remotes and refreshed branch status.',
-      { fetchRemoteState: false }
+    await commandContext.runWithLoadingIndicator(
+      'Fetching all remotes…',
+      async () => {
+        await fetchAllRemotes(repoRoot);
+        await commandContext.showSuccessAndRefresh(
+          'Fetched all remotes and refreshed branch status.',
+          { fetchRemoteState: false }
+        );
+      }
     );
   } catch (error) {
     commandContext.showCommandError('Failed to fetch remotes', error);
@@ -79,10 +87,15 @@ async function handleFetchAllPrune(
   }
 
   try {
-    await fetchRemoteState(repoRoot);
-    await commandContext.showSuccessAndRefresh(
-      'Fetched all remotes, pruned deleted refs, and refreshed branch status.',
-      { fetchRemoteState: false }
+    await commandContext.runWithLoadingIndicator(
+      'Fetching and pruning remotes…',
+      async () => {
+        await fetchRemoteState(repoRoot);
+        await commandContext.showSuccessAndRefresh(
+          'Fetched all remotes, pruned deleted refs, and refreshed branch status.',
+          { fetchRemoteState: false }
+        );
+      }
     );
   } catch (error) {
     commandContext.showCommandError('Failed to fetch and prune remotes', error);
@@ -108,10 +121,15 @@ async function handleCleanRepository(
   }
 
   try {
-    await cleanRepository(repoRoot);
-    await commandContext.showSuccessAndRefresh(
-      'Removed untracked and ignored files from the repository.',
-      { fetchRemoteState: false }
+    await commandContext.runWithLoadingIndicator(
+      'Cleaning repository…',
+      async () => {
+        await cleanRepository(repoRoot);
+        await commandContext.showSuccessAndRefresh(
+          'Removed untracked and ignored files from the repository.',
+          { fetchRemoteState: false }
+        );
+      }
     );
   } catch (error) {
     commandContext.showCommandError('Failed to clean the repository', error);
@@ -125,6 +143,7 @@ async function handleFetchAllRepositories(commandContext: CommandContext): Promi
       await fetchAllRemotes(repoRoot);
     },
     {
+      progressTitle: 'Fetching all repositories…',
       successMessage: 'Fetched all remotes in every repository.',
       partialSuccessPrefix: 'Fetched remotes for',
       errorPrefix: 'Failed to fetch all remotes across repositories',
@@ -140,6 +159,7 @@ async function handleFetchAllRepositoriesPrune(commandContext: CommandContext): 
       await fetchRemoteState(repoRoot);
     },
     {
+      progressTitle: 'Fetching and pruning all repositories…',
       successMessage: 'Fetched all remotes with pruning in every repository.',
       partialSuccessPrefix: 'Fetched and pruned remotes for',
       errorPrefix: 'Failed to fetch and prune remotes across repositories',
@@ -221,6 +241,7 @@ async function runForAllRepositories(
   commandContext: CommandContext,
   operation: (repoRoot: string) => Promise<void>,
   options: {
+    progressTitle: string;
     successMessage: string;
     partialSuccessPrefix: string;
     errorPrefix: string;
@@ -233,39 +254,41 @@ async function runForAllRepositories(
     return;
   }
 
-  const failures: Array<{ label: string; reason: string }> = [];
+  await commandContext.runWithLoadingIndicator(options.progressTitle, async () => {
+    const failures: Array<{ label: string; reason: string }> = [];
 
-  for (const repository of repositories) {
-    try {
-      await operation(repository.repoRoot);
-    } catch (error) {
-      failures.push({
-        label: repository.label,
-        reason: error instanceof Error ? error.message : String(error),
-      });
+    for (const repository of repositories) {
+      try {
+        await operation(repository.repoRoot);
+      } catch (error) {
+        failures.push({
+          label: repository.label,
+          reason: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
-  }
 
-  if (failures.length === repositories.length) {
-    commandContext.showCommandError(
-      options.errorPrefix,
-      new Error(failures.map((failure) => `${failure.label} (${failure.reason})`).join('; '))
-    );
-    return;
-  }
+    if (failures.length === repositories.length) {
+      commandContext.showCommandError(
+        options.errorPrefix,
+        new Error(failures.map((failure) => `${failure.label} (${failure.reason})`).join('; '))
+      );
+      return;
+    }
 
-  await commandContext.refresh({ fetchRemoteState: false });
+    await commandContext.refresh({ fetchRemoteState: false });
 
-  if (failures.length > 0) {
-    const successCount = repositories.length - failures.length;
+    if (failures.length > 0) {
+      const successCount = repositories.length - failures.length;
 
-    vscode.window.showWarningMessage(
-      `${options.partialSuccessPrefix} ${successCount} of ${repositories.length} repositories. Failed: ${failures
-        .map((failure) => `${failure.label} (${failure.reason})`)
-        .join('; ')}.`
-    );
-    return;
-  }
+      vscode.window.showWarningMessage(
+        `${options.partialSuccessPrefix} ${successCount} of ${repositories.length} repositories. Failed: ${failures
+          .map((failure) => `${failure.label} (${failure.reason})`)
+          .join('; ')}.`
+      );
+      return;
+    }
 
-  vscode.window.showInformationMessage(options.successMessage);
+    vscode.window.showInformationMessage(options.successMessage);
+  });
 }

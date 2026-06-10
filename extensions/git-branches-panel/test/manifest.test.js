@@ -167,8 +167,28 @@ test('package manifest exposes the 2.1.0 multi-repo, search, remote-host, histor
   );
   assert.ok(
     hasViewTitleMenu(
+      'gitBranchesPanel.branchActionInProgress',
+      (item) => item.when.includes('gitBranchesPanel.operationInProgress')
+    )
+  );
+  assert.ok(
+    hasViewTitleMenu(
       'gitBranchesPanel.syncAllRepositoriesBranches',
-      (item) => item.when.includes('gitBranchesPanel.groupedRepositories')
+      (item) =>
+        item.when.includes('gitBranchesPanel.groupedRepositories') &&
+        item.when.includes('!gitBranchesPanel.operationInProgress')
+    )
+  );
+  assert.ok(
+    hasViewTitleMenu(
+      'gitBranchesPanel.syncCurrentBranch',
+      (item) => item.when.includes('!gitBranchesPanel.operationInProgress')
+    )
+  );
+  assert.ok(
+    hasViewTitleMenu(
+      'gitBranchesPanel.publishCurrentBranch',
+      (item) => item.when.includes('!gitBranchesPanel.operationInProgress')
     )
   );
   assert.ok(
