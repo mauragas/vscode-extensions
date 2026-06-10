@@ -30,6 +30,7 @@ import {
   getDiffFilesBetweenRefs,
   mergeBranchIntoCurrent,
   parseCustomRemoteHostingProviders,
+  pullBranchChanges,
   pushBranch as pushBranchToRemote,
   removeRemoteTrackingRef,
   resolveCompareBaseBranch,
@@ -149,6 +150,12 @@ export function registerBranchDomainCommands(
     vscode.commands.registerCommand('gitBranchesPanel.syncBranch', async (item: BranchTreeItem) => {
       await handleSyncBranch(item, commandContext);
     }),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.pullBranchChanges',
+      async (item: BranchTreeItem) => {
+        await handlePullBranchChanges(item, commandContext);
+      }
+    ),
     vscode.commands.registerCommand('gitBranchesPanel.publishBranch', async (item: BranchTreeItem) => {
       await handlePublishBranch(item, commandContext);
     }),
@@ -343,6 +350,17 @@ async function handleSyncBranch(
   }
 
   await syncBranchByName(item.repoRoot, item.branchName, commandContext);
+}
+
+async function handlePullBranchChanges(
+  item: BranchTreeItem,
+  commandContext: CommandContext
+): Promise<void> {
+  if (!item.branchName || !item.repoRoot) {
+    return;
+  }
+
+  await pullBranchByName(item.repoRoot, item.branchName, commandContext);
 }
 
 async function handlePublishBranch(
@@ -867,6 +885,26 @@ async function syncBranchByName(
   }
 }
 
+async function pullBranchByName(
+  repoRoot: string,
+  branchName: string,
+  commandContext: CommandContext
+): Promise<void> {
+  try {
+    const pullResult = await commandContext.runWithLoadingIndicator(
+      `Pulling '${branchName}'…`,
+      () => commandContext.provider.withBusyBranch(repoRoot, branchName, () =>
+        pullBranchChanges(repoRoot, branchName)
+      )
+    );
+    await commandContext.showSuccessAndRefresh(buildSyncResultMessage(pullResult), {
+      fetchRemoteState: false,
+    });
+  } catch (error) {
+    commandContext.showCommandError(`Failed to pull '${branchName}'`, error);
+  }
+}
+
 async function pushBranchByName(
   repoRoot: string,
   branchName: string,
@@ -1002,6 +1040,20 @@ function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
         }
       )
     );
+
+    if (!isPublishableBranchItem(item)) {
+      items.push(
+        createBranchActionItem(
+          'pullBranchChanges',
+          isCurrentBranch
+            ? '$(repo-pull) Pull Current Branch Changes'
+            : '$(repo-pull) Pull Branch Changes',
+          async () => {
+            await vscode.commands.executeCommand('gitBranchesPanel.pullBranchChanges', item);
+          }
+        )
+      );
+    }
   }
 
   if (canCreateWorktreeFromItem(item)) {

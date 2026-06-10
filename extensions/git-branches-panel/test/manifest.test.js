@@ -52,8 +52,8 @@ function getInlineViewItemContextCommands() {
   )];
 }
 
-test('package manifest exposes the 2.1.0 multi-repo, search, remote-host, history, remote-management, worktree, tag, and advanced-branch contributions', () => {
-  assert.equal(packageJson.version, '2.1.0');
+test('package manifest exposes the 2.1.1 multi-repo, search, remote-host, history, remote-management, worktree, tag, and advanced-branch contributions', () => {
+  assert.equal(packageJson.version, '2.1.1');
 
   const expectedCommands = [
     ['gitBranchesPanel.selectRepository', 'Select Active Repository'],
@@ -67,6 +67,7 @@ test('package manifest exposes the 2.1.0 multi-repo, search, remote-host, histor
     ['gitBranchesPanel.fetchAllRepositoriesPrune', 'Fetch All Repositories (Prune)'],
     ['gitBranchesPanel.syncAllRepositoriesBranches', 'Sync All Repositories Branches'],
     ['gitBranchesPanel.pullAllRepositoriesChanges', 'Pull All Repositories Changes'],
+    ['gitBranchesPanel.pullBranchChanges', 'Pull Branch Changes'],
     ['gitBranchesPanel.showAllRepositoriesActions', 'More Actions'],
     ['gitBranchesPanel.showRepositoryActions', 'More Actions'],
     ['gitBranchesPanel.openBranchOnRemote', 'Open Branch on Remote'],
@@ -118,6 +119,7 @@ test('package manifest exposes the 2.1.0 multi-repo, search, remote-host, histor
   assert.equal(getCommand('gitBranchesPanel.fetchAllRepositoriesPrune').icon, '$(clear-all)');
   assert.equal(getCommand('gitBranchesPanel.syncAllRepositoriesBranches').icon, '$(sync)');
   assert.equal(getCommand('gitBranchesPanel.pullAllRepositoriesChanges').icon, '$(repo-pull)');
+  assert.equal(getCommand('gitBranchesPanel.pullBranchChanges').icon, '$(repo-pull)');
   assert.equal(getCommand('gitBranchesPanel.showAllRepositoriesActions').icon, '$(ellipsis)');
   assert.equal(getCommand('gitBranchesPanel.showRepositoryActions').icon, '$(ellipsis)');
   assert.equal(getCommand('gitBranchesPanel.pruneWorktrees').icon, '$(clear-all)');
@@ -462,6 +464,14 @@ test('package manifest exposes the 2.1.0 multi-repo, search, remote-host, histor
     hasViewItemMenu(
       'gitBranchesPanel.syncCurrentBranch',
       (item) => item.when === 'viewItem == repository || viewItem == activeRepository' && item.group === 'inline@2'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.pullBranchChanges',
+      (item) =>
+        item.when === 'viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)$/' &&
+        item.group === 'inline@1.5'
     )
   );
   assert.ok(
