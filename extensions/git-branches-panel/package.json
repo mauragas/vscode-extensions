@@ -634,93 +634,1803 @@
       "view/title": [
         {
           "command": "gitBranchesPanel.newBranch",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showNewBranch && !gitBranchesPanel.groupedRepositories",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot1 == 'newBranch'",
           "group": "navigation@1"
         },
         {
           "command": "gitBranchesPanel.stashSilently",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showStashSilently",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot1 == 'stashSilently'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.findRef",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot1 == 'findRef'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.branchActionInProgress",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot1 == 'currentBranchAction' && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot1 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot1 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot1 == 'fetchAll'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot1 == 'fetchAllPrune'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot1 == 'refresh'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.clearFilter",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot1 == 'clearFilter' && gitBranchesPanel.filterActive",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot1 == 'advancedActions'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.openSettings",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot1 == 'settings'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot2 == 'newBranch'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.stashSilently",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot2 == 'stashSilently'",
           "group": "navigation@2"
         },
         {
           "command": "gitBranchesPanel.findRef",
-          "when": "view == gitBranchesPanel || view == gitBranchesSCM",
-          "group": "navigation@2.5"
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot2 == 'findRef'",
+          "group": "navigation@2"
         },
         {
           "command": "gitBranchesPanel.branchActionInProgress",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot2 == 'currentBranchAction' && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot2 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot2 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot2 == 'fetchAll'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot2 == 'fetchAllPrune'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot2 == 'refresh'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.clearFilter",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot2 == 'clearFilter' && gitBranchesPanel.filterActive",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot2 == 'advancedActions'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.openSettings",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot2 == 'settings'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot3 == 'newBranch'",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.stashSilently",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot3 == 'stashSilently'",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.findRef",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot3 == 'findRef'",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.branchActionInProgress",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot3 == 'currentBranchAction' && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
           "group": "navigation@3"
         },
         {
           "command": "gitBranchesPanel.syncCurrentBranch",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showCurrentBranchAction && !gitBranchesPanel.groupedRepositories && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot3 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
           "group": "navigation@3"
         },
         {
           "command": "gitBranchesPanel.publishCurrentBranch",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showCurrentBranchAction && !gitBranchesPanel.groupedRepositories && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot3 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
           "group": "navigation@3"
-        },
-        {
-          "command": "gitBranchesPanel.syncAllRepositoriesBranches",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showCurrentBranchAction && gitBranchesPanel.groupedRepositories && !gitBranchesPanel.operationInProgress",
-          "group": "navigation@3"
-        },
-        {
-          "command": "gitBranchesPanel.pullAllRepositoriesChanges",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showPullAllRepositoriesChanges && gitBranchesPanel.groupedRepositories",
-          "group": "navigation@3.5"
         },
         {
           "command": "gitBranchesPanel.fetchAll",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showFetchAll && !gitBranchesPanel.groupedRepositories",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot3 == 'fetchAll'",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot3 == 'fetchAllPrune'",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot3 == 'refresh'",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.clearFilter",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot3 == 'clearFilter' && gitBranchesPanel.filterActive",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot3 == 'advancedActions'",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.openSettings",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot3 == 'settings'",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot4 == 'newBranch'",
           "group": "navigation@4"
         },
         {
-          "command": "gitBranchesPanel.fetchAllRepositories",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showFetchAll && gitBranchesPanel.groupedRepositories",
+          "command": "gitBranchesPanel.stashSilently",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot4 == 'stashSilently'",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.findRef",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot4 == 'findRef'",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.branchActionInProgress",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot4 == 'currentBranchAction' && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot4 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot4 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot4 == 'fetchAll'",
           "group": "navigation@4"
         },
         {
           "command": "gitBranchesPanel.fetchAllPrune",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showFetchAllPrune && !gitBranchesPanel.groupedRepositories",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot4 == 'fetchAllPrune'",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot4 == 'refresh'",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.clearFilter",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot4 == 'clearFilter' && gitBranchesPanel.filterActive",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot4 == 'advancedActions'",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.openSettings",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot4 == 'settings'",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot5 == 'newBranch'",
           "group": "navigation@5"
         },
         {
-          "command": "gitBranchesPanel.fetchAllRepositoriesPrune",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showFetchAllPrune && gitBranchesPanel.groupedRepositories",
+          "command": "gitBranchesPanel.stashSilently",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot5 == 'stashSilently'",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.findRef",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot5 == 'findRef'",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.branchActionInProgress",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot5 == 'currentBranchAction' && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot5 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot5 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot5 == 'fetchAll'",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot5 == 'fetchAllPrune'",
           "group": "navigation@5"
         },
         {
           "command": "gitBranchesPanel.refresh",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showRefresh",
-          "group": "navigation@6"
-        },
-        {
-          "command": "gitBranchesPanel.selectRepository",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories",
-          "group": "navigation@6.5"
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot5 == 'refresh'",
+          "group": "navigation@5"
         },
         {
           "command": "gitBranchesPanel.clearFilter",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.filterActive",
-          "group": "navigation@6.6"
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot5 == 'clearFilter' && gitBranchesPanel.filterActive",
+          "group": "navigation@5"
         },
         {
           "command": "gitBranchesPanel.showAdvancedActions",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showAdvancedActions && !gitBranchesPanel.groupedRepositories",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot5 == 'advancedActions'",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.openSettings",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot5 == 'settings'",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot6 == 'newBranch'",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.stashSilently",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot6 == 'stashSilently'",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.findRef",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot6 == 'findRef'",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.branchActionInProgress",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot6 == 'currentBranchAction' && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot6 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot6 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot6 == 'fetchAll'",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot6 == 'fetchAllPrune'",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot6 == 'refresh'",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.clearFilter",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot6 == 'clearFilter' && gitBranchesPanel.filterActive",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot6 == 'advancedActions'",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.openSettings",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot6 == 'settings'",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot7 == 'newBranch'",
           "group": "navigation@7"
         },
         {
-          "command": "gitBranchesPanel.showAllRepositoriesActions",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showAdvancedActions && gitBranchesPanel.groupedRepositories",
+          "command": "gitBranchesPanel.stashSilently",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot7 == 'stashSilently'",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.findRef",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot7 == 'findRef'",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.branchActionInProgress",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot7 == 'currentBranchAction' && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot7 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot7 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot7 == 'fetchAll'",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot7 == 'fetchAllPrune'",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot7 == 'refresh'",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.clearFilter",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot7 == 'clearFilter' && gitBranchesPanel.filterActive",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot7 == 'advancedActions'",
           "group": "navigation@7"
         },
         {
           "command": "gitBranchesPanel.openSettings",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && config.gitBranchesPanel.toolbar.showSettings",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot7 == 'settings'",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot8 == 'newBranch'",
           "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.stashSilently",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot8 == 'stashSilently'",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.findRef",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot8 == 'findRef'",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.branchActionInProgress",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot8 == 'currentBranchAction' && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot8 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot8 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot8 == 'fetchAll'",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot8 == 'fetchAllPrune'",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot8 == 'refresh'",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.clearFilter",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot8 == 'clearFilter' && gitBranchesPanel.filterActive",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot8 == 'advancedActions'",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.openSettings",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot8 == 'settings'",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot9 == 'newBranch'",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.stashSilently",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot9 == 'stashSilently'",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.findRef",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot9 == 'findRef'",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.branchActionInProgress",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot9 == 'currentBranchAction' && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot9 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot9 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot9 == 'fetchAll'",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot9 == 'fetchAllPrune'",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot9 == 'refresh'",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.clearFilter",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot9 == 'clearFilter' && gitBranchesPanel.filterActive",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot9 == 'advancedActions'",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.openSettings",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot9 == 'settings'",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot10 == 'newBranch'",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.stashSilently",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot10 == 'stashSilently'",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.findRef",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot10 == 'findRef'",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.branchActionInProgress",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot10 == 'currentBranchAction' && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot10 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot10 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot10 == 'fetchAll'",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot10 == 'fetchAllPrune'",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot10 == 'refresh'",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.clearFilter",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot10 == 'clearFilter' && gitBranchesPanel.filterActive",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot10 == 'advancedActions'",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.openSettings",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot10 == 'settings'",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot11 == 'newBranch'",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.stashSilently",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot11 == 'stashSilently'",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.findRef",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot11 == 'findRef'",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.branchActionInProgress",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot11 == 'currentBranchAction' && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot11 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot11 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot11 == 'fetchAll'",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot11 == 'fetchAllPrune'",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot11 == 'refresh'",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.clearFilter",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot11 == 'clearFilter' && gitBranchesPanel.filterActive",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot11 == 'advancedActions'",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.openSettings",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot11 == 'settings'",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot12 == 'newBranch'",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.stashSilently",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot12 == 'stashSilently'",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.findRef",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot12 == 'findRef'",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.branchActionInProgress",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot12 == 'currentBranchAction' && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot12 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot12 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot12 == 'fetchAll'",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot12 == 'fetchAllPrune'",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot12 == 'refresh'",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.clearFilter",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot12 == 'clearFilter' && gitBranchesPanel.filterActive",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot12 == 'advancedActions'",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.openSettings",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot12 == 'settings'",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot1 == 'newBranch'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.stashSilently",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot1 == 'stashSilently'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.findRef",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot1 == 'findRef'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.branchActionInProgress",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot1 == 'currentBranchAction' && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot1 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot1 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.syncAllRepositoriesBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot1 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.pullAllRepositoriesChanges",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot1 == 'pullAllRepositoriesChanges'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot1 == 'fetchAll'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositories",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot1 == 'fetchAll'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot1 == 'fetchAllPrune'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositoriesPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot1 == 'fetchAllPrune'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot1 == 'refresh'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.selectRepository",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot1 == 'selectRepository'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.clearFilter",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot1 == 'clearFilter' && gitBranchesPanel.filterActive",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot1 == 'advancedActions'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.showAllRepositoriesActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot1 == 'advancedActions'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.openSettings",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot1 == 'settings'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot2 == 'newBranch'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.stashSilently",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot2 == 'stashSilently'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.findRef",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot2 == 'findRef'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.branchActionInProgress",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot2 == 'currentBranchAction' && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot2 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot2 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.syncAllRepositoriesBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot2 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.pullAllRepositoriesChanges",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot2 == 'pullAllRepositoriesChanges'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot2 == 'fetchAll'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositories",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot2 == 'fetchAll'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot2 == 'fetchAllPrune'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositoriesPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot2 == 'fetchAllPrune'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot2 == 'refresh'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.selectRepository",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot2 == 'selectRepository'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.clearFilter",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot2 == 'clearFilter' && gitBranchesPanel.filterActive",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot2 == 'advancedActions'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.showAllRepositoriesActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot2 == 'advancedActions'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.openSettings",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot2 == 'settings'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot3 == 'newBranch'",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.stashSilently",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot3 == 'stashSilently'",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.findRef",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot3 == 'findRef'",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.branchActionInProgress",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot3 == 'currentBranchAction' && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot3 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot3 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.syncAllRepositoriesBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot3 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.pullAllRepositoriesChanges",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot3 == 'pullAllRepositoriesChanges'",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot3 == 'fetchAll'",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositories",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot3 == 'fetchAll'",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot3 == 'fetchAllPrune'",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositoriesPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot3 == 'fetchAllPrune'",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot3 == 'refresh'",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.selectRepository",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot3 == 'selectRepository'",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.clearFilter",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot3 == 'clearFilter' && gitBranchesPanel.filterActive",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot3 == 'advancedActions'",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.showAllRepositoriesActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot3 == 'advancedActions'",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.openSettings",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot3 == 'settings'",
+          "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot4 == 'newBranch'",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.stashSilently",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot4 == 'stashSilently'",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.findRef",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot4 == 'findRef'",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.branchActionInProgress",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot4 == 'currentBranchAction' && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot4 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot4 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.syncAllRepositoriesBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot4 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.pullAllRepositoriesChanges",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot4 == 'pullAllRepositoriesChanges'",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot4 == 'fetchAll'",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositories",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot4 == 'fetchAll'",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot4 == 'fetchAllPrune'",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositoriesPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot4 == 'fetchAllPrune'",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot4 == 'refresh'",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.selectRepository",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot4 == 'selectRepository'",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.clearFilter",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot4 == 'clearFilter' && gitBranchesPanel.filterActive",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot4 == 'advancedActions'",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.showAllRepositoriesActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot4 == 'advancedActions'",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.openSettings",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot4 == 'settings'",
+          "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot5 == 'newBranch'",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.stashSilently",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot5 == 'stashSilently'",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.findRef",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot5 == 'findRef'",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.branchActionInProgress",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot5 == 'currentBranchAction' && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot5 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot5 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.syncAllRepositoriesBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot5 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.pullAllRepositoriesChanges",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot5 == 'pullAllRepositoriesChanges'",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot5 == 'fetchAll'",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositories",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot5 == 'fetchAll'",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot5 == 'fetchAllPrune'",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositoriesPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot5 == 'fetchAllPrune'",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot5 == 'refresh'",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.selectRepository",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot5 == 'selectRepository'",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.clearFilter",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot5 == 'clearFilter' && gitBranchesPanel.filterActive",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot5 == 'advancedActions'",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.showAllRepositoriesActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot5 == 'advancedActions'",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.openSettings",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot5 == 'settings'",
+          "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot6 == 'newBranch'",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.stashSilently",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot6 == 'stashSilently'",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.findRef",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot6 == 'findRef'",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.branchActionInProgress",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot6 == 'currentBranchAction' && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot6 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot6 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.syncAllRepositoriesBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot6 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.pullAllRepositoriesChanges",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot6 == 'pullAllRepositoriesChanges'",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot6 == 'fetchAll'",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositories",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot6 == 'fetchAll'",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot6 == 'fetchAllPrune'",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositoriesPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot6 == 'fetchAllPrune'",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot6 == 'refresh'",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.selectRepository",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot6 == 'selectRepository'",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.clearFilter",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot6 == 'clearFilter' && gitBranchesPanel.filterActive",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot6 == 'advancedActions'",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.showAllRepositoriesActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot6 == 'advancedActions'",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.openSettings",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot6 == 'settings'",
+          "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot7 == 'newBranch'",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.stashSilently",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot7 == 'stashSilently'",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.findRef",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot7 == 'findRef'",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.branchActionInProgress",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot7 == 'currentBranchAction' && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot7 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot7 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.syncAllRepositoriesBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot7 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.pullAllRepositoriesChanges",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot7 == 'pullAllRepositoriesChanges'",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot7 == 'fetchAll'",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositories",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot7 == 'fetchAll'",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot7 == 'fetchAllPrune'",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositoriesPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot7 == 'fetchAllPrune'",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot7 == 'refresh'",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.selectRepository",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot7 == 'selectRepository'",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.clearFilter",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot7 == 'clearFilter' && gitBranchesPanel.filterActive",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot7 == 'advancedActions'",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.showAllRepositoriesActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot7 == 'advancedActions'",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.openSettings",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot7 == 'settings'",
+          "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot8 == 'newBranch'",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.stashSilently",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot8 == 'stashSilently'",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.findRef",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot8 == 'findRef'",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.branchActionInProgress",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot8 == 'currentBranchAction' && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot8 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot8 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.syncAllRepositoriesBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot8 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.pullAllRepositoriesChanges",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot8 == 'pullAllRepositoriesChanges'",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot8 == 'fetchAll'",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositories",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot8 == 'fetchAll'",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot8 == 'fetchAllPrune'",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositoriesPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot8 == 'fetchAllPrune'",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot8 == 'refresh'",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.selectRepository",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot8 == 'selectRepository'",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.clearFilter",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot8 == 'clearFilter' && gitBranchesPanel.filterActive",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot8 == 'advancedActions'",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.showAllRepositoriesActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot8 == 'advancedActions'",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.openSettings",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot8 == 'settings'",
+          "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot9 == 'newBranch'",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.stashSilently",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot9 == 'stashSilently'",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.findRef",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot9 == 'findRef'",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.branchActionInProgress",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot9 == 'currentBranchAction' && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot9 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot9 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.syncAllRepositoriesBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot9 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.pullAllRepositoriesChanges",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot9 == 'pullAllRepositoriesChanges'",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot9 == 'fetchAll'",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositories",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot9 == 'fetchAll'",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot9 == 'fetchAllPrune'",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositoriesPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot9 == 'fetchAllPrune'",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot9 == 'refresh'",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.selectRepository",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot9 == 'selectRepository'",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.clearFilter",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot9 == 'clearFilter' && gitBranchesPanel.filterActive",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot9 == 'advancedActions'",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.showAllRepositoriesActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot9 == 'advancedActions'",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.openSettings",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot9 == 'settings'",
+          "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot10 == 'newBranch'",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.stashSilently",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot10 == 'stashSilently'",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.findRef",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot10 == 'findRef'",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.branchActionInProgress",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot10 == 'currentBranchAction' && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot10 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot10 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.syncAllRepositoriesBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot10 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.pullAllRepositoriesChanges",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot10 == 'pullAllRepositoriesChanges'",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot10 == 'fetchAll'",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositories",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot10 == 'fetchAll'",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot10 == 'fetchAllPrune'",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositoriesPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot10 == 'fetchAllPrune'",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot10 == 'refresh'",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.selectRepository",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot10 == 'selectRepository'",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.clearFilter",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot10 == 'clearFilter' && gitBranchesPanel.filterActive",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot10 == 'advancedActions'",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.showAllRepositoriesActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot10 == 'advancedActions'",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.openSettings",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot10 == 'settings'",
+          "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot11 == 'newBranch'",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.stashSilently",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot11 == 'stashSilently'",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.findRef",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot11 == 'findRef'",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.branchActionInProgress",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot11 == 'currentBranchAction' && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot11 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot11 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.syncAllRepositoriesBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot11 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.pullAllRepositoriesChanges",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot11 == 'pullAllRepositoriesChanges'",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot11 == 'fetchAll'",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositories",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot11 == 'fetchAll'",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot11 == 'fetchAllPrune'",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositoriesPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot11 == 'fetchAllPrune'",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot11 == 'refresh'",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.selectRepository",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot11 == 'selectRepository'",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.clearFilter",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot11 == 'clearFilter' && gitBranchesPanel.filterActive",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot11 == 'advancedActions'",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.showAllRepositoriesActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot11 == 'advancedActions'",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.openSettings",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot11 == 'settings'",
+          "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.newBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot12 == 'newBranch'",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.stashSilently",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot12 == 'stashSilently'",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.findRef",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot12 == 'findRef'",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.branchActionInProgress",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot12 == 'currentBranchAction' && (gitBranchesPanel.currentBranchBusy || gitBranchesPanel.operationInProgress)",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.syncCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot12 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && !gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.publishCurrentBranch",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot12 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress && !gitBranchesPanel.currentBranchBusy && gitBranchesPanel.currentBranchNeedsPublish",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.syncAllRepositoriesBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot12 == 'currentBranchAction' && !gitBranchesPanel.operationInProgress",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.pullAllRepositoriesChanges",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot12 == 'pullAllRepositoriesChanges'",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAll",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot12 == 'fetchAll'",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositories",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot12 == 'fetchAll'",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot12 == 'fetchAllPrune'",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllRepositoriesPrune",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot12 == 'fetchAllPrune'",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.refresh",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot12 == 'refresh'",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.selectRepository",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot12 == 'selectRepository'",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.clearFilter",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot12 == 'clearFilter' && gitBranchesPanel.filterActive",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.showAdvancedActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && !gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot12 == 'advancedActions'",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.showAllRepositoriesActions",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot12 == 'advancedActions'",
+          "group": "navigation@12"
+        },
+        {
+          "command": "gitBranchesPanel.openSettings",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot12 == 'settings'",
+          "group": "navigation@12"
         }
       ],
       "view/item/context": [
@@ -2477,6 +4187,74 @@
           "type": "boolean",
           "default": false,
           "description": "Show the current branch summary above the branches tree views."
+        },
+        "gitBranchesPanel.toolbar.singleRepository.quickActions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "newBranch",
+              "stashSilently",
+              "findRef",
+              "currentBranchAction",
+              "pullAllRepositoriesChanges",
+              "fetchAll",
+              "fetchAllPrune",
+              "refresh",
+              "selectRepository",
+              "clearFilter",
+              "advancedActions",
+              "settings"
+            ]
+          },
+          "default": [
+            "newBranch",
+            "stashSilently",
+            "findRef",
+            "currentBranchAction",
+            "fetchAll",
+            "fetchAllPrune",
+            "refresh",
+            "clearFilter",
+            "advancedActions",
+            "settings"
+          ],
+          "description": "Ordered list of extension quick actions to show in the view toolbar when only one repository is open. Remove action ids to hide them and reorder the list to change the toolbar order."
+        },
+        "gitBranchesPanel.toolbar.multiRepository.quickActions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "newBranch",
+              "stashSilently",
+              "findRef",
+              "currentBranchAction",
+              "pullAllRepositoriesChanges",
+              "fetchAll",
+              "fetchAllPrune",
+              "refresh",
+              "selectRepository",
+              "clearFilter",
+              "advancedActions",
+              "settings"
+            ]
+          },
+          "default": [
+            "newBranch",
+            "stashSilently",
+            "findRef",
+            "currentBranchAction",
+            "pullAllRepositoriesChanges",
+            "fetchAll",
+            "fetchAllPrune",
+            "refresh",
+            "selectRepository",
+            "clearFilter",
+            "advancedActions",
+            "settings"
+          ],
+          "description": "Ordered list of extension quick actions to show in the view toolbar when multiple repositories are open. Actions automatically adapt between active-repository and grouped all-repositories commands when needed."
         },
         "gitBranchesPanel.showStatusBarBranchAction": {
           "type": "boolean",

@@ -192,6 +192,7 @@ test('activate orchestrates provider, views, commands, and auto-refresh wiring',
   const calls = {
     trackers: 0,
     branchContextMenus: [],
+    toolbarQuickActions: [],
     providerContexts: [],
     views: [],
     commands: [],
@@ -228,6 +229,11 @@ test('activate orchestrates provider, views, commands, and auto-refresh wiring',
         calls.branchContextMenus.push(args);
       },
     },
+    './toolbarQuickActions': {
+      registerToolbarQuickActionContextKeys: (...args) => {
+        calls.toolbarQuickActions.push(args);
+      },
+    },
     './extensionCommands': {
       registerBranchCommands: (...args) => {
         calls.commands.push(args);
@@ -254,12 +260,14 @@ test('activate orchestrates provider, views, commands, and auto-refresh wiring',
 
   assert.equal(calls.trackers, 1);
   assert.equal(calls.branchContextMenus.length, 1);
+  assert.equal(calls.toolbarQuickActions.length, 1);
   assert.equal(calls.providerContexts.length, 1);
   assert.equal(calls.views.length, 1);
   assert.equal(calls.commands.length, 1);
   assert.equal(calls.autoRefresh.length, 1);
   assert.deepEqual(calls.refreshes, []);
   assert.equal(calls.branchContextMenus[0][0], context);
+  assert.equal(calls.toolbarQuickActions[0][0], context);
   assert.equal(calls.views[0][0], context);
   assert.equal(calls.commands[0][0], context);
   assert.equal(calls.autoRefresh[0][0], context);
