@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.1] - 2026-06-10
+
+- Added inline `Pull Branch Changes` and `Push Branch Changes` buttons for tracked local branches: pull stays visible for tracked branches because it fetches remote state before pulling, while push only appears when the branch has outgoing commits.
+
 ## [2.1.0] - 2026-06-10
 
 - Added ordered `toolbar.singleRepository.quickActions` and `toolbar.multiRepository.quickActions` settings so the Branches/SCM title-bar buttons can be reordered or hidden per mode while the older `toolbar.show*` booleans remain as compatibility fallbacks

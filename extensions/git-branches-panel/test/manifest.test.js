@@ -52,8 +52,8 @@ function getInlineViewItemContextCommands() {
   )];
 }
 
-test('package manifest exposes the 2.1.0 multi-repo, search, remote-host, history, remote-management, worktree, tag, and advanced-branch contributions', () => {
-  assert.equal(packageJson.version, '2.1.0');
+test('package manifest exposes the 2.1.1 multi-repo, search, remote-host, history, remote-management, worktree, tag, and advanced-branch contributions', () => {
+  assert.equal(packageJson.version, '2.1.1');
 
   const expectedCommands = [
     ['gitBranchesPanel.selectRepository', 'Select Active Repository'],
@@ -67,6 +67,8 @@ test('package manifest exposes the 2.1.0 multi-repo, search, remote-host, histor
     ['gitBranchesPanel.fetchAllRepositoriesPrune', 'Fetch All Repositories (Prune)'],
     ['gitBranchesPanel.syncAllRepositoriesBranches', 'Sync All Repositories Branches'],
     ['gitBranchesPanel.pullAllRepositoriesChanges', 'Pull All Repositories Changes'],
+    ['gitBranchesPanel.pullBranchChanges', 'Pull Branch Changes'],
+    ['gitBranchesPanel.pushBranchChanges', 'Push Branch Changes'],
     ['gitBranchesPanel.showAllRepositoriesActions', 'More Actions'],
     ['gitBranchesPanel.showRepositoryActions', 'More Actions'],
     ['gitBranchesPanel.openBranchOnRemote', 'Open Branch on Remote'],
@@ -118,6 +120,8 @@ test('package manifest exposes the 2.1.0 multi-repo, search, remote-host, histor
   assert.equal(getCommand('gitBranchesPanel.fetchAllRepositoriesPrune').icon, '$(clear-all)');
   assert.equal(getCommand('gitBranchesPanel.syncAllRepositoriesBranches').icon, '$(sync)');
   assert.equal(getCommand('gitBranchesPanel.pullAllRepositoriesChanges').icon, '$(repo-pull)');
+  assert.equal(getCommand('gitBranchesPanel.pullBranchChanges').icon, '$(repo-pull)');
+  assert.equal(getCommand('gitBranchesPanel.pushBranchChanges').icon, '$(cloud-upload)');
   assert.equal(getCommand('gitBranchesPanel.showAllRepositoriesActions').icon, '$(ellipsis)');
   assert.equal(getCommand('gitBranchesPanel.showRepositoryActions').icon, '$(ellipsis)');
   assert.equal(getCommand('gitBranchesPanel.pruneWorktrees').icon, '$(clear-all)');
@@ -466,6 +470,22 @@ test('package manifest exposes the 2.1.0 multi-repo, search, remote-host, histor
   );
   assert.ok(
     hasViewItemMenu(
+      'gitBranchesPanel.pullBranchChanges',
+      (item) =>
+        item.when === 'viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|protectedBranch(?::ahead)?)$/' &&
+        item.group === 'inline@1.5'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.pushBranchChanges',
+      (item) =>
+        item.when === 'viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch):ahead$/' &&
+        item.group === 'inline@1.6'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
       'gitBranchesPanel.fetchAllPrune',
       (item) => item.when === 'viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' && item.group === 'inline@3'
     )
@@ -588,7 +608,7 @@ test('package manifest exposes the 2.1.0 multi-repo, search, remote-host, histor
       'gitBranchesPanel.rebaseCurrentOntoSelected',
       (item) =>
         item.when ===
-          'config.gitBranchesPanel.branchContextMenu.showRebaseCurrentOntoSelected && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/' &&
+          'config.gitBranchesPanel.branchContextMenu.showRebaseCurrentOntoSelected && viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/' &&
         item.group === '2_advanced@1'
     )
   );
@@ -597,7 +617,7 @@ test('package manifest exposes the 2.1.0 multi-repo, search, remote-host, histor
       'gitBranchesPanel.rebaseSelectedOntoCurrent',
       (item) =>
         item.when ===
-          'config.gitBranchesPanel.branchContextMenu.showRebaseSelectedOntoCurrent && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/' &&
+          'config.gitBranchesPanel.branchContextMenu.showRebaseSelectedOntoCurrent && viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|publishableBranch|missingUpstreamBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedMissingUpstreamBranch)$/' &&
         item.group === '2_advanced@2'
     )
   );
@@ -606,7 +626,7 @@ test('package manifest exposes the 2.1.0 multi-repo, search, remote-host, histor
       'gitBranchesPanel.squashMergeIntoCurrent',
       (item) =>
         item.when ===
-          'config.gitBranchesPanel.branchContextMenu.showSquashMergeIntoCurrent && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/' &&
+          'config.gitBranchesPanel.branchContextMenu.showSquashMergeIntoCurrent && viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/' &&
         item.group === '2_advanced@3'
     )
   );
@@ -615,7 +635,7 @@ test('package manifest exposes the 2.1.0 multi-repo, search, remote-host, histor
       'gitBranchesPanel.resetCurrentToSelected',
       (item) =>
         item.when ===
-          'config.gitBranchesPanel.branchContextMenu.showResetCurrentToSelected && viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/' &&
+          'config.gitBranchesPanel.branchContextMenu.showResetCurrentToSelected && viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/' &&
         item.group === '2_advanced@4'
     )
   );
@@ -624,7 +644,7 @@ test('package manifest exposes the 2.1.0 multi-repo, search, remote-host, histor
       'gitBranchesPanel.forcePushWithLease',
       (item) =>
         item.when ===
-          'config.gitBranchesPanel.branchContextMenu.showForcePushWithLease && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)$/' &&
+          'config.gitBranchesPanel.branchContextMenu.showForcePushWithLease && viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|protectedBranch(?::ahead)?)$/' &&
         item.group === '2_advanced@5'
     )
   );
