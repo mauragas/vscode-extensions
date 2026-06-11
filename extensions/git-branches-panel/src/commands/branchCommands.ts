@@ -1097,8 +1097,8 @@ function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
           createBranchActionItem(
             'pushBranchChanges',
             isCurrentBranch
-              ? '$(cloud-upload) Push Current Branch Changes'
-              : '$(cloud-upload) Push Branch Changes',
+              ? '$(repo-push) Push Current Branch Changes'
+              : '$(repo-push) Push Branch Changes',
             async () => {
               await vscode.commands.executeCommand('gitBranchesPanel.pushBranchChanges', item);
             }

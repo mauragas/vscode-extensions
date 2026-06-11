@@ -52,8 +52,8 @@ function getInlineViewItemContextCommands() {
   )];
 }
 
-test('package manifest exposes the 2.1.1 multi-repo, search, remote-host, history, remote-management, worktree, tag, and advanced-branch contributions', () => {
-  assert.equal(packageJson.version, '2.1.1');
+test('package manifest exposes the 2.1.2 multi-repo, search, remote-host, history, remote-management, worktree, tag, and advanced-branch contributions', () => {
+  assert.equal(packageJson.version, '2.1.2');
 
   const expectedCommands = [
     ['gitBranchesPanel.selectRepository', 'Select Active Repository'],
@@ -121,7 +121,7 @@ test('package manifest exposes the 2.1.1 multi-repo, search, remote-host, histor
   assert.equal(getCommand('gitBranchesPanel.syncAllRepositoriesBranches').icon, '$(sync)');
   assert.equal(getCommand('gitBranchesPanel.pullAllRepositoriesChanges').icon, '$(repo-pull)');
   assert.equal(getCommand('gitBranchesPanel.pullBranchChanges').icon, '$(repo-pull)');
-  assert.equal(getCommand('gitBranchesPanel.pushBranchChanges').icon, '$(cloud-upload)');
+  assert.equal(getCommand('gitBranchesPanel.pushBranchChanges').icon, '$(repo-push)');
   assert.equal(getCommand('gitBranchesPanel.showAllRepositoriesActions').icon, '$(ellipsis)');
   assert.equal(getCommand('gitBranchesPanel.showRepositoryActions').icon, '$(ellipsis)');
   assert.equal(getCommand('gitBranchesPanel.pruneWorktrees').icon, '$(clear-all)');

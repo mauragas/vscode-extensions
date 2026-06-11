@@ -2,8 +2,11 @@ import * as vscode from 'vscode';
 
 import { type BranchItemActivationTracker } from './extensionHelpers';
 import { resetTrackerAndRefresh } from './providerRefresh';
-import { type BranchSectionKey } from './treeDataLoader';
+import { type BranchLoadOptions } from './treeDataLoader';
 import { BranchTreeProvider } from './treeProvider';
+
+const CHECK_INTERVAL_MS = 30_000;
+const DEBOUNCE_MS = 200;
 
 export function registerAutoRefresh(
   context: vscode.ExtensionContext,
@@ -21,116 +24,36 @@ export function registerAutoRefresh(
   const localHooksWatcher = vscode.workspace.createFileSystemWatcher('**/.git/hooks/**');
   const fetchHeadWatcher = vscode.workspace.createFileSystemWatcher('**/.git/FETCH_HEAD');
   const packedRefsWatcher = vscode.workspace.createFileSystemWatcher('**/.git/packed-refs');
+  const indexWatcher = vscode.workspace.createFileSystemWatcher('**/.git/index');
 
-  const refresh = (
-    sections?: readonly BranchSectionKey[],
-    fetchRemoteState = false,
-    onlyIfLoaded = false
-  ): void => {
-    void resetTrackerAndRefresh(provider, activationTracker, {
-      sections,
-      fetchRemoteState,
-      onlyIfLoaded,
-    });
+  let lastRefreshTime = 0;
+  let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const refresh = (options?: BranchLoadOptions): void => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+
+    debounceTimer = setTimeout(() => {
+      debounceTimer = undefined;
+      lastRefreshTime = Date.now();
+      void resetTrackerAndRefresh(provider, activationTracker, options);
+    }, DEBOUNCE_MS);
   };
 
-  const refreshLoadedSections = (sections: readonly BranchSectionKey[]): void => {
-    refresh(sections, false, true);
+  const periodicRefresh = async (): Promise<void> => {
+    const now = Date.now();
+    if (now - lastRefreshTime < CHECK_INTERVAL_MS) {
+      return;
+    }
+
+    lastRefreshTime = now;
+    await resetTrackerAndRefresh(provider, activationTracker);
   };
 
-  headWatcher.onDidChange(() => {
-    refreshLoadedSections(['local']);
-  });
-  headWatcher.onDidCreate(() => {
-    refreshLoadedSections(['local']);
-  });
-  refsWatcher.onDidChange(() => {
-    refreshLoadedSections(['local']);
-  });
-  refsWatcher.onDidCreate(() => {
-    refreshLoadedSections(['local']);
-  });
-  refsWatcher.onDidDelete(() => {
-    refreshLoadedSections(['local']);
-  });
-  remoteRefsWatcher.onDidChange(() => {
-    refreshLoadedSections(['local', 'remote']);
-  });
-  remoteRefsWatcher.onDidCreate(() => {
-    refreshLoadedSections(['local', 'remote']);
-  });
-  remoteRefsWatcher.onDidDelete(() => {
-    refreshLoadedSections(['local', 'remote']);
-  });
-  tagRefsWatcher.onDidChange(() => {
-    refreshLoadedSections(['tags']);
-  });
-  tagRefsWatcher.onDidCreate(() => {
-    refreshLoadedSections(['tags']);
-  });
-  tagRefsWatcher.onDidDelete(() => {
-    refreshLoadedSections(['tags']);
-  });
-  stashRefWatcher.onDidChange(() => {
-    refreshLoadedSections(['stash']);
-  });
-  stashRefWatcher.onDidCreate(() => {
-    refreshLoadedSections(['stash']);
-  });
-  stashRefWatcher.onDidDelete(() => {
-    refreshLoadedSections(['stash']);
-  });
-  stashLogWatcher.onDidChange(() => {
-    refreshLoadedSections(['stash']);
-  });
-  stashLogWatcher.onDidCreate(() => {
-    refreshLoadedSections(['stash']);
-  });
-  stashLogWatcher.onDidDelete(() => {
-    refreshLoadedSections(['stash']);
-  });
-  worktreesWatcher.onDidChange(() => {
-    refreshLoadedSections(['worktree']);
-  });
-  worktreesWatcher.onDidCreate(() => {
-    refreshLoadedSections(['worktree']);
-  });
-  worktreesWatcher.onDidDelete(() => {
-    refreshLoadedSections(['worktree']);
-  });
-  gitConfigWatcher.onDidChange(() => {
-    refreshLoadedSections(['hooks']);
-  });
-  gitConfigWatcher.onDidCreate(() => {
-    refreshLoadedSections(['hooks']);
-  });
-  gitConfigWatcher.onDidDelete(() => {
-    refreshLoadedSections(['hooks']);
-  });
-  localHooksWatcher.onDidChange(() => {
-    refreshLoadedSections(['hooks']);
-  });
-  localHooksWatcher.onDidCreate(() => {
-    refreshLoadedSections(['hooks']);
-  });
-  localHooksWatcher.onDidDelete(() => {
-    refreshLoadedSections(['hooks']);
-  });
-  fetchHeadWatcher.onDidChange(() => {
-    refreshLoadedSections(['local', 'remote']);
-  });
-  fetchHeadWatcher.onDidCreate(() => {
-    refreshLoadedSections(['local', 'remote']);
-  });
-  packedRefsWatcher.onDidChange(() => {
-    refreshLoadedSections(['local', 'remote', 'tags']);
-  });
-  packedRefsWatcher.onDidCreate(() => {
-    refreshLoadedSections(['local', 'remote', 'tags']);
-  });
-  packedRefsWatcher.onDidDelete(() => {
-    refreshLoadedSections(['local', 'remote', 'tags']);
-  });
+  const periodicTimer = setInterval(() => {
+    void periodicRefresh();
+  }, CHECK_INTERVAL_MS);
 
   context.subscriptions.push(
     headWatcher,
@@ -144,13 +67,57 @@ export function registerAutoRefresh(
     localHooksWatcher,
     fetchHeadWatcher,
     packedRefsWatcher,
+    indexWatcher,
+    new vscode.Disposable(() => clearInterval(periodicTimer)),
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration('gitBranchesPanel')) {
-        refresh();
+        void resetTrackerAndRefresh(provider, activationTracker);
       }
     }),
     vscode.workspace.onDidChangeWorkspaceFolders(() => {
-      refresh();
+      void resetTrackerAndRefresh(provider, activationTracker);
     })
   );
+
+  const refreshLocal = () => refresh({ sections: ['local'] });
+  const refreshLocalRemote = () => refresh({ sections: ['local', 'remote'] });
+  const refreshTags = () => refresh({ sections: ['tags'] });
+  const refreshStash = () => refresh({ sections: ['stash'] });
+  const refreshWorktree = () => refresh({ sections: ['worktree'] });
+  const refreshHooks = () => refresh({ sections: ['hooks'] });
+
+  headWatcher.onDidChange(refreshLocal);
+  headWatcher.onDidCreate(refreshLocal);
+  refsWatcher.onDidChange(refreshLocal);
+  refsWatcher.onDidCreate(refreshLocal);
+  refsWatcher.onDidDelete(refreshLocal);
+  remoteRefsWatcher.onDidChange(refreshLocalRemote);
+  remoteRefsWatcher.onDidCreate(refreshLocalRemote);
+  remoteRefsWatcher.onDidDelete(refreshLocalRemote);
+  tagRefsWatcher.onDidChange(refreshTags);
+  tagRefsWatcher.onDidCreate(refreshTags);
+  tagRefsWatcher.onDidDelete(refreshTags);
+  stashRefWatcher.onDidChange(refreshStash);
+  stashRefWatcher.onDidCreate(refreshStash);
+  stashRefWatcher.onDidDelete(refreshStash);
+  stashLogWatcher.onDidChange(refreshStash);
+  stashLogWatcher.onDidCreate(refreshStash);
+  stashLogWatcher.onDidDelete(refreshStash);
+  worktreesWatcher.onDidChange(refreshWorktree);
+  worktreesWatcher.onDidCreate(refreshWorktree);
+  worktreesWatcher.onDidDelete(refreshWorktree);
+  gitConfigWatcher.onDidChange(refreshHooks);
+  gitConfigWatcher.onDidCreate(refreshHooks);
+  gitConfigWatcher.onDidDelete(refreshHooks);
+  localHooksWatcher.onDidChange(refreshHooks);
+  localHooksWatcher.onDidCreate(refreshHooks);
+  localHooksWatcher.onDidDelete(refreshHooks);
+  fetchHeadWatcher.onDidChange(refreshLocalRemote);
+  fetchHeadWatcher.onDidCreate(refreshLocalRemote);
+  packedRefsWatcher.onDidChange(refreshLocalRemote);
+  packedRefsWatcher.onDidCreate(refreshLocalRemote);
+  packedRefsWatcher.onDidDelete(refreshLocalRemote);
+  indexWatcher.onDidChange(refreshLocal);
+  indexWatcher.onDidCreate(refreshLocal);
+  indexWatcher.onDidDelete(refreshLocal);
 }
