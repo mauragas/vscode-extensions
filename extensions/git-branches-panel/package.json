@@ -2795,33 +2795,33 @@
           "group": "inline@1"
         },
         {
+          "command": "gitBranchesPanel.newBranchFromSelectedAndCheckout",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
+          "group": "inline@1"
+        },
+        {
           "command": "gitBranchesPanel.syncBranch",
           "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|protectedBranch(?::ahead)?)$/",
-          "group": "inline@1"
+          "group": "inline@2"
         },
         {
           "command": "gitBranchesPanel.pullBranchChanges",
           "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|protectedBranch(?::ahead)?)$/",
-          "group": "inline@1.5"
+          "group": "inline@2.5"
         },
         {
           "command": "gitBranchesPanel.pushBranchChanges",
           "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch):ahead$/",
-          "group": "inline@1.6"
+          "group": "inline@2.6"
         },
         {
           "command": "gitBranchesPanel.publishBranch",
           "when": "viewItem =~ /^(?:pinned:)?(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
-          "group": "inline@1"
+          "group": "inline@2"
         },
         {
           "command": "gitBranchesPanel.checkout",
           "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
-          "group": "inline@2"
-        },
-        {
-          "command": "gitBranchesPanel.newBranchFromSelectedAndCheckout",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "inline@3"
         },
         {
