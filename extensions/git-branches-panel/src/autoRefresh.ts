@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 import { type BranchItemActivationTracker } from './extensionHelpers';
 import { resetTrackerAndRefresh } from './providerRefresh';
-import { type BranchLoadOptions, type BranchSectionKey } from './treeDataLoader';
+import { type BranchLoadOptions } from './treeDataLoader';
 import { BranchTreeProvider } from './treeProvider';
 
 const CHECK_INTERVAL_MS = 30_000;

@@ -198,44 +198,45 @@ test('periodicRefresh fires full reset when interval elapses', async () => {
 
   // Intercept Date.now before module loads so the compiled CHECK_INTERVAL_MS path uses fake time
   const originalSetInterval = global.setInterval;
-  let periodicFired = false;
   let savedCallback = null;
   let savedMs = 0;
 
-  global.setInterval = (cb, ms) => {
-    savedCallback = cb;
-    savedMs = ms;
-    return { _isMock: true };
-  };
+  try {
+    global.setInterval = (cb, ms) => {
+      savedCallback = cb;
+      savedMs = ms;
+      return { _isMock: true };
+    };
 
-  const { registerAutoRefresh } = loadFresh('../out/autoRefresh.js', {
-    vscode: vscodeMock,
-    './providerRefresh': {
-      resetTrackerAndRefresh: async (_provider, _activationTracker, options) => {
-        refreshCalls.push(options);
+    const { registerAutoRefresh } = loadFresh('../out/autoRefresh.js', {
+      vscode: vscodeMock,
+      './providerRefresh': {
+        resetTrackerAndRefresh: async (_provider, _activationTracker, options) => {
+          refreshCalls.push(options);
+        },
       },
-    },
-  });
+    });
 
-  const context = { subscriptions: [] };
-  registerAutoRefresh(context, { refresh() {} }, { reset() {} });
+    const context = { subscriptions: [] };
+    registerAutoRefresh(context, { refresh() {} }, { reset() {} });
 
-  // Simulate periodic timer firing after interval elapses
-  fakeTime = 31000;
-  Date.now = () => fakeTime;
-  savedCallback();
+    // Simulate periodic timer firing after interval elapses
+    fakeTime = 31000;
+    Date.now = () => fakeTime;
+    savedCallback();
 
-  assert.equal(refreshCalls.length, 1);
-  assert.deepEqual(refreshCalls[0], undefined);
+    assert.equal(refreshCalls.length, 1);
+    assert.deepEqual(refreshCalls[0], undefined);
 
-  // Second tick should be skipped because lastRefreshTime was already updated
-  refreshCalls.length = 0;
-  savedCallback();
+    // Second tick should be skipped because lastRefreshTime was already updated
+    refreshCalls.length = 0;
+    savedCallback();
 
-  assert.equal(refreshCalls.length, 0);
-
-  global.setInterval = originalSetInterval;
-  Date.now = originalNow;
+    assert.equal(refreshCalls.length, 0);
+  } finally {
+    global.setInterval = originalSetInterval;
+    Date.now = originalNow;
+  }
 });
 
 test('subscription cleanup disposes periodic timer', async () => {

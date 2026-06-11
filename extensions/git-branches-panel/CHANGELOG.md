@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [2.1.2] - 2026-06-11
 
 - Updated the `Push Branch Changes` icon to use VS Code's native `repo-push` product icon, matching the push action shown in the Graph panel.
+- Reordered inline toolbar buttons: `New Branch From Selected` moved after sync/pull/push for a more logical action sequence.
 
 ## [2.1.1] - 2026-06-10
 
