@@ -964,7 +964,7 @@ test('showBranchActions exposes single-branch pull for tracked local branches', 
   );
   assert.ok(
     !vscodeState.quickPickRequests[0].items.some(
-      (quickPickItem) => quickPickItem.label === '$(cloud-upload) Push Branch Changes'
+      (quickPickItem) => quickPickItem.label === '$(repo-push) Push Branch Changes'
     )
   );
   assert.deepEqual(vscodeState.executedCommands, [
@@ -1049,7 +1049,7 @@ test('showBranchActions exposes push changes for tracked branches with outgoing 
   );
   assert.ok(
     vscodeState.quickPickRequests[0].items.some(
-      (quickPickItem) => quickPickItem.label === '$(cloud-upload) Push Branch Changes'
+      (quickPickItem) => quickPickItem.label === '$(repo-push) Push Branch Changes'
     )
   );
   assert.deepEqual(vscodeState.executedCommands, [
