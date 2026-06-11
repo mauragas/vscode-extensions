@@ -6,6 +6,7 @@ import { type BranchLoadOptions } from './treeDataLoader';
 import { BranchTreeProvider } from './treeProvider';
 
 const CHECK_INTERVAL_MS = 30_000;
+const DEBOUNCE_MS = 200;
 
 export function registerAutoRefresh(
   context: vscode.ExtensionContext,
@@ -37,7 +38,7 @@ export function registerAutoRefresh(
       debounceTimer = undefined;
       lastRefreshTime = Date.now();
       void resetTrackerAndRefresh(provider, activationTracker, options);
-    }, 200);
+    }, DEBOUNCE_MS);
   };
 
   const periodicRefresh = async (): Promise<void> => {

@@ -227,6 +227,7 @@ test('periodicRefresh fires full reset when interval elapses', async () => {
 
     assert.equal(refreshCalls.length, 1);
     assert.deepEqual(refreshCalls[0], undefined);
+    assert.equal(savedMs, 30_000);
 
     // Second tick should be skipped because lastRefreshTime was already updated
     refreshCalls.length = 0;
