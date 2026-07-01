@@ -8,7 +8,9 @@ import {
 } from '../branchRules';
 import { getErrorMessage } from '../errorUtils';
 import { looksLikeMergeSafetyError } from '../extensionHelpers';
+import { runGit } from '../git/shared';
 import {
+  createBranch,
   deleteBranch,
   deleteRemoteBranch,
   deleteTag,
@@ -954,7 +956,7 @@ async function pullAllLocalBranches(
   branches: readonly BranchInfo[]
 ): Promise<BulkSyncResult> {
   return executeTrackedLocalBranchAction(branches, async (branchName) =>
-    pullBranchChanges(repoRoot, branchName, { refreshRemoteState: false })
+    runPullWithConflictRecovery(repoRoot, branchName)
   );
 }
 
@@ -981,6 +983,61 @@ async function pushFolderBranches(
   }
 
   return result;
+}
+
+async function runPullWithConflictRecovery(
+  repoRoot: string,
+  branchName: string
+): Promise<SyncBranchResult> {
+  try {
+    return await pullBranchChanges(repoRoot, branchName, { refreshRemoteState: false });
+  } catch (error) {
+    if (!looksLikeCheckoutConflictError(error)) {
+      throw error;
+    }
+
+    const action = await vscode.window.showWarningMessage(
+      `Pulling '${branchName}' is blocked by local changes that would be overwritten. What would you like to do?`,
+      { modal: true },
+      'Create a new branch',
+      'Discard changes and retry',
+      'Cancel'
+    );
+
+    if (action === 'Create a new branch') {
+      const newBranchName = await vscode.window.showInputBox({
+        prompt: `Create a branch to keep the current changes before pulling '${branchName}'`,
+        placeHolder: 'feature/recovery',
+      });
+
+      if (!newBranchName) {
+        throw new Error('Branch creation cancelled.');
+      }
+
+      await createBranch(repoRoot, newBranchName);
+      return {
+        branchName: newBranchName,
+        upstreamName: branchName,
+        didPull: false,
+        didPush: false,
+        publishedUpstream: false,
+      };
+    }
+
+    if (action === 'Discard changes and retry') {
+      await runGit(repoRoot, ['reset', '--hard', 'HEAD']);
+      await runGit(repoRoot, ['clean', '-fd']);
+      return await pullBranchChanges(repoRoot, branchName, { refreshRemoteState: false });
+    }
+
+    throw new Error('Pull cancelled.');
+  }
+}
+
+function looksLikeCheckoutConflictError(error: unknown): boolean {
+  const message = getErrorMessage(error, '').toLowerCase();
+
+  return /would be overwritten by (checkout|pull)|local changes to the following files would be overwritten|please commit your changes|stash them before you switch branches/i.test(message);
 }
 
 async function executeTrackedLocalBranchAction(
