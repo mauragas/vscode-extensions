@@ -62,6 +62,7 @@ import {
   discardLocalChanges,
   looksLikeCheckoutConflictError,
   promptForConflictRecoveryAction,
+  promptForRecoveryBranchName,
 } from './conflictRecovery';
 
 const NORMALIZE_NEW_BRANCH_NAMES_SETTING = 'normalizeNewBranchNames';
@@ -276,7 +277,7 @@ async function runCheckoutWithConflictRecovery<T>(
     });
 
     if (action === 'createBranch') {
-      const newBranchName = await promptForNewBranchName({
+      const newBranchName = await promptForRecoveryBranchName({
         prompt: `Create a branch to keep the current changes before switching to '${branchName}'`,
         normalize: shouldNormalizeNewBranchNames(),
       });
@@ -315,8 +316,6 @@ async function runCheckoutWithConflictRecovery<T>(
 
       return;
     }
-
-    commandContext.showCommandError(failurePrefix, new Error('Checkout cancelled.'));
   }
 }
 
@@ -993,15 +992,66 @@ async function pullBranchByName(
   try {
     const pullResult = await commandContext.runWithLoadingIndicator(
       `Pulling '${branchName}'…`,
-      () => commandContext.provider.withBusyBranch(repoRoot, branchName, () =>
-        pullBranchChanges(repoRoot, branchName)
-      )
+      () =>
+        commandContext.provider.withBusyBranch(repoRoot, branchName, async () =>
+          runPullWithConflictRecovery(repoRoot, branchName)
+        )
     );
     await commandContext.showSuccessAndRefresh(buildSyncResultMessage(pullResult), {
       fetchRemoteState: false,
     });
   } catch (error) {
+    if (error instanceof Error && error.message === 'Pull cancelled.') {
+      return;
+    }
+
     commandContext.showCommandError(`Failed to pull '${branchName}'`, error);
+  }
+}
+
+async function runPullWithConflictRecovery(
+  repoRoot: string,
+  branchName: string
+): Promise<ReturnType<typeof pullBranchChanges>> {
+  try {
+    return await pullBranchChanges(repoRoot, branchName);
+  } catch (error) {
+    if (!looksLikeCheckoutConflictError(error)) {
+      throw error;
+    }
+
+    const action = await promptForConflictRecoveryAction({
+      branchName,
+      operationDescription: 'Pulling',
+      discardActionLabel: 'Discard local changes and retry',
+    });
+
+    if (action === 'createBranch') {
+      const newBranchName = await promptForRecoveryBranchName({
+        prompt: `Create a branch to keep the current changes before pulling '${branchName}'`,
+        normalize: shouldNormalizeNewBranchNames(),
+      });
+
+      if (!newBranchName) {
+        throw new Error('Pull cancelled.');
+      }
+
+      await createBranch(repoRoot, newBranchName);
+      return {
+        branchName: newBranchName,
+        upstreamName: branchName,
+        didPull: false,
+        didPush: false,
+        publishedUpstream: false,
+      } as Awaited<ReturnType<typeof pullBranchChanges>>;
+    }
+
+    if (action === 'discardAndRetry') {
+      await discardLocalChanges(repoRoot);
+      return await pullBranchChanges(repoRoot, branchName);
+    }
+
+    throw new Error('Pull cancelled.');
   }
 }
 

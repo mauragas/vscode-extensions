@@ -166,6 +166,14 @@ function createBulkActionsModule({ vscodeState, gitMock, gitSharedMock = { async
 
       return 'cancel';
     },
+    async promptForRecoveryBranchName({ prompt }) {
+      const value = await createVscodeMock(vscodeState).window.showInputBox({
+        prompt,
+        placeHolder: 'feature/my-feature or hotfix/bug-123',
+      });
+
+      return typeof value === 'string' ? value.trim() : undefined;
+    },
   };
   const bulkActions = loadFresh('../out/commands/bulkActions.js', {
     vscode: createVscodeMock(vscodeState),
@@ -345,7 +353,7 @@ test('pullAllLocalBranches trims recovery branch names before creating a branch'
   assert.deepEqual(createdBranches, [{ repoRoot: '/repo', branchName: 'feature/recovery' }]);
 });
 
-test('pullAllLocalBranches reports recovery-created branches as skipped instead of up to date', async () => {
+test('pullAllLocalBranches reports recovery-created branches as processed', async () => {
   const vscodeState = createVscodeState();
   vscodeState.warningResponses.push('Create a new branch');
   vscodeState.inputBoxResponse = 'feature/recovery';
@@ -381,7 +389,7 @@ test('pullAllLocalBranches reports recovery-created branches as skipped instead 
 
   await vscodeState.registeredCommands['gitBranchesPanel.pullAllLocalBranches']();
 
-  assert.ok(vscodeState.infoMessages.some((message) => /1 skipped/u.test(message)));
+  assert.ok(vscodeState.infoMessages.some((message) => /Processed 1 tracked local branch/u.test(message)));
 });
 
 test('showAdvancedActions routes the quick-pick selection to the prune command', async () => {

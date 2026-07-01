@@ -12,6 +12,7 @@ import {
   discardLocalChanges,
   looksLikeCheckoutConflictError,
   promptForConflictRecoveryAction,
+  promptForRecoveryBranchName,
 } from './conflictRecovery';
 import {
   createBranch,
@@ -959,9 +960,14 @@ async function pullAllLocalBranches(
   repoRoot: string,
   branches: readonly BranchInfo[]
 ): Promise<BulkSyncResult> {
-  return executeTrackedLocalBranchAction(branches, async (branchName) =>
-    runPullWithConflictRecovery(repoRoot, branchName)
-  );
+  return executeTrackedLocalBranchAction(branches, async (branchName) => {
+    const result = await runPullWithConflictRecovery(repoRoot, branchName);
+    if (!result) {
+      throw new Error('Pull cancelled.');
+    }
+
+    return result;
+  });
 }
 
 async function pushFolderBranches(
@@ -992,7 +998,7 @@ async function pushFolderBranches(
 async function runPullWithConflictRecovery(
   repoRoot: string,
   branchName: string
-): Promise<SyncBranchResult> {
+): Promise<SyncBranchResult | undefined> {
   try {
     return await pullBranchChanges(repoRoot, branchName, { refreshRemoteState: false });
   } catch (error) {
@@ -1007,23 +1013,18 @@ async function runPullWithConflictRecovery(
     });
 
     if (action === 'createBranch') {
-      const newBranchName = await vscode.window.showInputBox({
+      const newBranchName = await promptForRecoveryBranchName({
         prompt: `Create a branch to keep the current changes before pulling '${branchName}'`,
-        placeHolder: 'feature/recovery',
+        normalize: false,
       });
 
       if (!newBranchName) {
-        throw new Error('Branch creation cancelled.');
+        throw new Error('Pull cancelled.');
       }
 
-      const trimmedBranchName = newBranchName.trim();
-      if (!trimmedBranchName) {
-        throw new Error('Branch creation cancelled.');
-      }
-
-      await createBranch(repoRoot, trimmedBranchName);
+      await createBranch(repoRoot, newBranchName);
       return {
-        branchName: trimmedBranchName,
+        branchName: newBranchName,
         upstreamName: branchName,
         didPull: false,
         didPush: false,
@@ -1058,7 +1059,10 @@ async function executeTrackedLocalBranchAction(
     }
 
     try {
-      result.processed.push(await action(branch.name));
+      const actionResult = await action(branch.name);
+      if (actionResult) {
+        result.processed.push(actionResult);
+      }
     } catch (error) {
       result.failed.push({
         name: branch.name,

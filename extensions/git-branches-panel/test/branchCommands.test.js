@@ -222,6 +222,14 @@ function createBranchCommandsModule({
 
       return 'cancel';
     },
+    async promptForRecoveryBranchName({ prompt }) {
+      const value = await createVscodeMock(vscodeState).window.showInputBox({
+        prompt,
+        placeHolder: 'feature/my-feature or hotfix/bug-123',
+      });
+
+      return typeof value === 'string' ? value.trim() : undefined;
+    },
   };
   const branchCommands = loadFresh('../out/commands/branchCommands.js', {
     vscode: createVscodeMock(vscodeState),
@@ -2085,12 +2093,7 @@ test('checkout cancels when the user declines conflict recovery', async () => {
 
   assert.deepEqual(checkoutCalls, [{ repoRoot: '/repo', branchName: 'feature/demo' }]);
   assert.deepEqual(discardCalls, []);
-  assert.deepEqual(commandContext.state.commandErrors, [
-    {
-      prefix: "Failed to checkout 'feature/demo'",
-      message: 'Checkout cancelled.',
-    },
-  ]);
+  assert.deepEqual(commandContext.state.commandErrors, []);
 });
 
 test('checkout discards local changes and retries checkout when requested', async () => {
