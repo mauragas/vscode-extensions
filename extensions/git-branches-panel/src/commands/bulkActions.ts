@@ -1015,7 +1015,7 @@ async function runPullWithConflictRecovery(
     if (action === 'createBranch') {
       const newBranchName = await promptForRecoveryBranchName({
         prompt: `Create a branch to keep the current changes before pulling '${branchName}'`,
-        normalize: false,
+        normalize: shouldNormalizeNewBranchNames(),
       });
 
       if (!newBranchName) {
@@ -1040,6 +1040,12 @@ async function runPullWithConflictRecovery(
 
     throw new Error('Pull cancelled.');
   }
+}
+
+function shouldNormalizeNewBranchNames(): boolean {
+  return vscode.workspace
+    .getConfiguration('gitBranchesPanel')
+    .get<boolean>('normalizeNewBranchNames', false);
 }
 
 async function executeTrackedLocalBranchAction(

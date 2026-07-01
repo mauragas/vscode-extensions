@@ -24,6 +24,9 @@ function loadFresh(modulePath, mocks) {
 
 function createVscodeState() {
   return {
+    configurationValues: {
+      normalizeNewBranchNames: false,
+    },
     registeredCommands: {},
     executedCommands: [],
     infoMessages: [],
@@ -46,6 +49,22 @@ function createVscodeMock(state) {
       },
       async executeCommand(command, ...args) {
         state.executedCommands.push({ command, args });
+      },
+    },
+    workspace: {
+      getConfiguration(section) {
+        return {
+          get(key, defaultValue) {
+            if (
+              section === 'gitBranchesPanel' &&
+              Object.prototype.hasOwnProperty.call(state.configurationValues, key)
+            ) {
+              return state.configurationValues[key];
+            }
+
+            return defaultValue;
+          },
+        };
       },
     },
     window: {
@@ -166,13 +185,17 @@ function createBulkActionsModule({ vscodeState, gitMock, gitSharedMock = { async
 
       return 'cancel';
     },
-    async promptForRecoveryBranchName({ prompt }) {
+    async promptForRecoveryBranchName({ prompt, normalize }) {
       const value = await createVscodeMock(vscodeState).window.showInputBox({
         prompt,
         placeHolder: 'feature/my-feature or hotfix/bug-123',
       });
 
-      return typeof value === 'string' ? value.trim() : undefined;
+      if (typeof value !== 'string') {
+        return undefined;
+      }
+
+      return normalize ? 'feature/hello-world' : value.trim();
     },
   };
   const bulkActions = loadFresh('../out/commands/bulkActions.js', {
@@ -351,6 +374,49 @@ test('pullAllLocalBranches trims recovery branch names before creating a branch'
   await vscodeState.registeredCommands['gitBranchesPanel.pullAllLocalBranches']();
 
   assert.deepEqual(createdBranches, [{ repoRoot: '/repo', branchName: 'feature/recovery' }]);
+});
+
+test('pullAllLocalBranches respects configured branch-name normalization during recovery', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.configurationValues.normalizeNewBranchNames = true;
+  vscodeState.warningResponses.push('Create a new branch');
+  vscodeState.inputBoxResponse = ' - Feature / Hello--- World - ';
+  const createdBranches = [];
+
+  createBulkActionsModule({
+    vscodeState,
+    gitMock: {
+      async createBranch(repoRoot, branchName) {
+        createdBranches.push({ repoRoot, branchName });
+      },
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async deleteTag() {},
+      async fetchRemoteState() {},
+      async getBranches() {
+        return [
+          {
+            name: 'main',
+            isCurrent: true,
+            upstreamName: 'origin/main',
+            aheadCount: 0,
+            behindCount: 0,
+          },
+        ];
+      },
+      async pullBranchChanges() {
+        throw new Error('error: Your local changes to the following files would be overwritten by pull:');
+      },
+      async pushBranch() {},
+      async syncBranch() {
+        throw new Error('syncBranch should not be called in this test');
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.pullAllLocalBranches']();
+
+  assert.deepEqual(createdBranches, [{ repoRoot: '/repo', branchName: 'feature/hello-world' }]);
 });
 
 test('pullAllLocalBranches reports recovery-created branches as processed', async () => {
