@@ -332,6 +332,17 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
       scope: 'tag',
     },
   });
+  const currentTagPresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'release/v1.0.0',
+    label: 'release/v1.0.0',
+    path: 'release/v1.0.0',
+    info: {
+      name: 'release/v1.0.0',
+      isCurrent: true,
+      scope: 'tag',
+    },
+  });
   const stashPresentation = buildTreeItemPresentation({
     kind: 'branch',
     fullName: 'stash@{0}',
@@ -543,6 +554,11 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(tagPresentation.nodeType, 'tag');
   assert.equal(tagPresentation.icon.id, 'tag');
   assert.equal(tagPresentation.command, undefined);
+
+  assert.equal(currentTagPresentation.nodeType, 'tag');
+  assert.equal(currentTagPresentation.icon.id, 'tag');
+  assert.equal(currentTagPresentation.icon.colorId, 'gitDecoration.addedResourceForeground');
+  assert.equal(currentTagPresentation.command, undefined);
 
   assert.equal(stashPresentation.nodeType, 'stash');
   assert.equal(stashPresentation.icon.id, 'archive');

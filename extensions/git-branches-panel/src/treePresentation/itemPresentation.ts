@@ -238,7 +238,7 @@ export function buildBranchTooltipContent(node: TreeBranch): string {
   if (isStash) {
     tooltipLines.push('', '_Stash_');
   } else if (isTag) {
-    tooltipLines.push('', '_Tag_');
+    tooltipLines.push('', node.info.isCurrent ? '_Current tag_' : '_Tag_');
   } else if (isRemoteBranch) {
     tooltipLines.push('', isStaleRemoteBranch ? '_Stale remote-tracking ref_' : '_Remote branch_');
 
@@ -415,7 +415,7 @@ function buildTreeItemLabel(
   if (isPinned) {
     prefixParts.push('★');
   }
-  if (nodeType === 'currentBranch' || (nodeType === 'worktree' && isCurrent)) {
+  if (nodeType === 'currentBranch' || (nodeType === 'worktree' && isCurrent) || (nodeType === 'tag' && isCurrent)) {
     prefixParts.push('●');
   }
 
@@ -553,7 +553,12 @@ function getItemIcon(nodeType: NodeType, branch?: BranchInfo): TreeItemIconDescr
         colorId: 'list.warningForeground',
       };
     case 'tag':
-      return { id: 'tag' };
+      return branch?.isCurrent
+        ? {
+            id: 'tag',
+            colorId: 'gitDecoration.addedResourceForeground',
+          }
+        : { id: 'tag' };
     case 'stash':
       return { id: 'archive' };
     case 'hook':

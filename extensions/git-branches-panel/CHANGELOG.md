@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.3] - 2026-07-01
+
+- Current tags now sort to the top of the Tags section when they are checked out in detached HEAD state, and their tree icon turns green to show that checkout state clearly.
+
 ## [2.1.2] - 2026-06-11
 
 - Updated the `Push Branch Changes` icon to use VS Code's native `repo-push` product icon, matching the push action shown in the Graph panel.
