@@ -182,6 +182,11 @@ function createCommandContext() {
 function createBranchCommandsModule({
   vscodeState,
   gitMock,
+  gitSharedMock = {
+    async runGit() {
+      return { stdout: '', stderr: '' };
+    },
+  },
   validateSpy,
   validateImpl = () => undefined,
   sanitizeSpy = [],
@@ -227,6 +232,7 @@ function createBranchCommandsModule({
       },
     },
     '../git': gitMock,
+    '../git/shared': gitSharedMock,
     '../treeProvider': {
       BranchTreeItem: class BranchTreeItem {},
     },
@@ -1917,6 +1923,151 @@ test('showBranchActions exposes actions for missing upstream branches', async ()
     {
       command: 'gitBranchesPanel.deleteBranch',
       args: [item],
+    },
+  ]);
+});
+
+test('checkout prompts to create a new branch when checkout would overwrite local changes', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Create a new branch');
+  vscodeState.inputBoxResponse = 'feature/recovery';
+  const branchCreateCalls = [];
+  const checkoutCalls = [];
+
+  const { commandContext } = createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    gitMock: {
+      async checkoutBranch(repoRoot, branchName) {
+        checkoutCalls.push({ repoRoot, branchName });
+        throw new Error(
+          "error: Your local changes to the following files would be overwritten by checkout:"
+        );
+      },
+      async checkoutRemoteBranch() {
+        throw new Error('checkout conflict');
+      },
+      async createBranch(repoRoot, branchName) {
+        branchCreateCalls.push({ repoRoot, branchName });
+      },
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.checkout']({
+    nodeType: 'branch',
+    branchName: 'main',
+    repoRoot: '/repo',
+  });
+
+  assert.deepEqual(checkoutCalls, [{ repoRoot: '/repo', branchName: 'main' }]);
+  assert.deepEqual(branchCreateCalls, [{ repoRoot: '/repo', branchName: 'feature/recovery' }]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: "Created branch 'feature/recovery' from the current commit and kept the current changes there.",
+      options: { fetchRemoteState: false },
+    },
+  ]);
+});
+
+test('checkout discards local changes and retries checkout when requested', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Discard changes and switch');
+  const checkoutCalls = [];
+  const discardCalls = [];
+
+  const { commandContext } = createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    gitMock: {
+      async checkoutBranch(repoRoot, branchName) {
+        checkoutCalls.push({ repoRoot, branchName });
+        if (checkoutCalls.length === 1) {
+          throw new Error('error: Your local changes to the following files would be overwritten by checkout:');
+        }
+      },
+      async checkoutRemoteBranch() {
+        throw new Error('checkout conflict');
+      },
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+    gitSharedMock: {
+      async runGit(repoRoot, args) {
+        discardCalls.push({ repoRoot, args });
+        return { stdout: '', stderr: '' };
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.checkout']({
+    nodeType: 'branch',
+    branchName: 'feature/demo',
+    repoRoot: '/repo',
+  });
+
+  assert.deepEqual(checkoutCalls, [
+    { repoRoot: '/repo', branchName: 'feature/demo' },
+    { repoRoot: '/repo', branchName: 'feature/demo' },
+  ]);
+  assert.deepEqual(discardCalls, [
+    { repoRoot: '/repo', args: ['reset', '--hard', 'HEAD'] },
+    { repoRoot: '/repo', args: ['clean', '-fd'] },
+  ]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: "Switched to 'feature/demo'.",
+      options: { fetchRemoteState: false },
     },
   ]);
 });

@@ -58,6 +58,7 @@ import {
 import { BranchTreeItem } from '../treeProvider';
 import { getGitApi, NO_CURRENT_BRANCH_MESSAGE, type CommandContext } from './shared';
 import { getAdvancedBranchActionDefinitions } from './advancedBranchCommands';
+import { runGit } from '../git/shared';
 
 const NORMALIZE_NEW_BRANCH_NAMES_SETTING = 'normalizeNewBranchNames';
 const PROTECTED_BRANCH_NAMES_SETTING = 'protectedBranchNames';
@@ -73,6 +74,9 @@ const OPEN_GIT_OUTPUT_ACTION = 'Open Git Output';
 const REMOTE_HOSTING_PREFERRED_REMOTE_SETTING = 'remoteHosting.preferredRemote';
 const REMOTE_HOSTING_COMPARE_BASE_SETTING = 'remoteHosting.compareBase';
 const REMOTE_HOSTING_CUSTOM_PROVIDERS_SETTING = 'remoteHosting.customProviders';
+const CREATE_NEW_BRANCH_FOR_CHECKOUT_ACTION = 'Create a new branch';
+const DISCARD_CHANGES_AND_SWITCH_ACTION = 'Discard changes and switch';
+const CANCEL_CHECKOUT_ACTION = 'Cancel';
 
 type RemoteBranchTrackingState = RemoteTrackingState;
 type RemoteBranchDeleteFailureKind =
@@ -246,20 +250,100 @@ async function handleBranchItemActivation(
   await handleCheckout(item, commandContext, false);
 }
 
+function looksLikeCheckoutConflictError(error: unknown): boolean {
+  const message = getErrorMessage(error, '').toLowerCase();
+
+  return /would be overwritten by checkout|local changes to the following files would be overwritten|please commit your changes|stash them before you switch branches/i.test(message);
+}
+
+async function discardLocalChanges(repoRoot: string): Promise<void> {
+  await runGit(repoRoot, ['reset', '--hard', 'HEAD']);
+  await runGit(repoRoot, ['clean', '-fd']);
+}
+
+async function runCheckoutWithConflictRecovery<T>(
+  repoRoot: string,
+  branchName: string,
+  commandContext: CommandContext,
+  checkoutOperation: () => Promise<T>,
+  onSuccess: (value: T) => Promise<void>,
+  failurePrefix: string
+): Promise<void> {
+  try {
+    const result = await checkoutOperation();
+    await onSuccess(result);
+  } catch (error) {
+    if (!looksLikeCheckoutConflictError(error)) {
+      commandContext.showCommandError(failurePrefix, error);
+      return;
+    }
+
+    const action = await vscode.window.showWarningMessage(
+      `Checkout of '${branchName}' is blocked by local changes that would be overwritten. What would you like to do?`,
+      { modal: true },
+      CREATE_NEW_BRANCH_FOR_CHECKOUT_ACTION,
+      DISCARD_CHANGES_AND_SWITCH_ACTION,
+      CANCEL_CHECKOUT_ACTION
+    );
+
+    if (action === CREATE_NEW_BRANCH_FOR_CHECKOUT_ACTION) {
+      const newBranchName = await promptForNewBranchName({
+        prompt: `Create a branch to keep the current changes before switching to '${branchName}'`,
+        normalize: shouldNormalizeNewBranchNames(),
+      });
+
+      if (!newBranchName) {
+        return;
+      }
+
+      try {
+        await createBranch(repoRoot, newBranchName);
+        await commandContext.showSuccessAndRefresh(
+          `Created branch '${newBranchName}' from the current commit and kept the current changes there.`,
+          { fetchRemoteState: false }
+        );
+      } catch (createError) {
+        commandContext.showCommandError(`Failed to create branch '${newBranchName}'`, createError);
+      }
+
+      return;
+    }
+
+    if (action === DISCARD_CHANGES_AND_SWITCH_ACTION) {
+      try {
+        await discardLocalChanges(repoRoot);
+      } catch (discardError) {
+        commandContext.showCommandError('Failed to discard local changes', discardError);
+        return;
+      }
+
+      try {
+        const result = await checkoutOperation();
+        await onSuccess(result);
+      } catch (retryError) {
+        commandContext.showCommandError(failurePrefix, retryError);
+      }
+
+      return;
+    }
+  }
+}
+
 async function handleCheckout(
   item: BranchTreeItem,
   commandContext: CommandContext,
   allowCurrentBranchMessage = true
 ): Promise<void> {
-  if (!item.branchName || !item.repoRoot) {
+  const branchName = item.branchName;
+  const repoRoot = item.repoRoot;
+
+  if (!branchName || !repoRoot) {
     return;
   }
 
   if (item.nodeType === 'currentBranch' || item.branchInfo?.isCurrent) {
     if (allowCurrentBranchMessage) {
-      vscode.window.showInformationMessage(
-        buildCurrentBranchAlreadyCheckedOutMessage(item.branchName)
-      );
+      vscode.window.showInformationMessage(buildCurrentBranchAlreadyCheckedOutMessage(branchName));
     }
 
     commandContext.activationTracker.reset();
@@ -268,33 +352,41 @@ async function handleCheckout(
 
   if (item.nodeType === 'staleRemoteBranch') {
     vscode.window.showWarningMessage(
-      `Remote-tracking ref '${item.branchName}' is stale. Create a new local branch from it instead of checking it out directly.`
+      `Remote-tracking ref '${branchName}' is stale. Create a new local branch from it instead of checking it out directly.`
     );
     return;
   }
 
   if (item.nodeType === 'remoteBranch') {
-    try {
-      const checkoutResult = await checkoutRemoteBranch(item.repoRoot, item.branchName);
-      await commandContext.showSuccessAndRefresh(
-        buildRemoteBranchCheckoutMessage(checkoutResult),
-        { fetchRemoteState: false }
-      );
-    } catch (error) {
-      commandContext.showCommandError(`Failed to checkout '${item.branchName}'`, error);
-    }
+    await runCheckoutWithConflictRecovery(
+      repoRoot,
+      branchName,
+      commandContext,
+      () => checkoutRemoteBranch(repoRoot, branchName),
+      async (checkoutResult) => {
+        await commandContext.showSuccessAndRefresh(
+          buildRemoteBranchCheckoutMessage(checkoutResult),
+          { fetchRemoteState: false }
+        );
+      },
+      `Failed to checkout '${branchName}'`
+    );
 
     return;
   }
 
-  try {
-    await checkoutBranch(item.repoRoot, item.branchName);
-    await commandContext.showSuccessAndRefresh(`Switched to '${item.branchName}'.`, {
-      fetchRemoteState: false,
-    });
-  } catch (error) {
-    commandContext.showCommandError(`Failed to checkout '${item.branchName}'`, error);
-  }
+  await runCheckoutWithConflictRecovery(
+    repoRoot,
+    branchName,
+    commandContext,
+    () => checkoutBranch(repoRoot, branchName),
+    async () => {
+      await commandContext.showSuccessAndRefresh(`Switched to '${branchName}'.`, {
+        fetchRemoteState: false,
+      });
+    },
+    `Failed to checkout '${branchName}'`
+  );
 }
 
 async function handleShowBranchActions(item: BranchTreeItem | undefined): Promise<void> {
