@@ -206,6 +206,18 @@ test('checkoutTag switches to a detached HEAD at the selected tag', async (t) =>
   assert.equal(runGit(repoRoot, ['describe', '--tags', '--exact-match']), 'v1.0.0');
 });
 
+test('getTags marks the checked-out tag as current', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  await checkoutTag(repoRoot, 'v1.0.0');
+
+  const tags = await getTags(repoRoot);
+  const checkedOutTag = tags.find((tag) => tag.name === 'v1.0.0');
+
+  assert.ok(checkedOutTag);
+  assert.equal(checkedOutTag.isCurrent, true);
+});
+
 test('deleteTag removes the selected local tag', async (t) => {
   const repoRoot = createTempRepository(t);
 

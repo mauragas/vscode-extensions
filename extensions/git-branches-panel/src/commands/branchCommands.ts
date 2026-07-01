@@ -58,6 +58,12 @@ import {
 import { BranchTreeItem } from '../treeProvider';
 import { getGitApi, NO_CURRENT_BRANCH_MESSAGE, type CommandContext } from './shared';
 import { getAdvancedBranchActionDefinitions } from './advancedBranchCommands';
+import {
+  discardLocalChanges,
+  looksLikeCheckoutConflictError,
+  promptForConflictRecoveryAction,
+  promptForRecoveryBranchName,
+} from './conflictRecovery';
 
 const NORMALIZE_NEW_BRANCH_NAMES_SETTING = 'normalizeNewBranchNames';
 const PROTECTED_BRANCH_NAMES_SETTING = 'protectedBranchNames';
@@ -73,6 +79,7 @@ const OPEN_GIT_OUTPUT_ACTION = 'Open Git Output';
 const REMOTE_HOSTING_PREFERRED_REMOTE_SETTING = 'remoteHosting.preferredRemote';
 const REMOTE_HOSTING_COMPARE_BASE_SETTING = 'remoteHosting.compareBase';
 const REMOTE_HOSTING_CUSTOM_PROVIDERS_SETTING = 'remoteHosting.customProviders';
+const DISCARD_CHANGES_AND_SWITCH_ACTION = 'Discard local changes and switch';
 
 type RemoteBranchTrackingState = RemoteTrackingState;
 type RemoteBranchDeleteFailureKind =
@@ -246,20 +253,87 @@ async function handleBranchItemActivation(
   await handleCheckout(item, commandContext, false);
 }
 
+async function runCheckoutWithConflictRecovery<T>(
+  repoRoot: string,
+  branchName: string,
+  commandContext: CommandContext,
+  checkoutOperation: () => Promise<T>,
+  onSuccess: (value: T) => Promise<void>,
+  failurePrefix: string
+): Promise<void> {
+  try {
+    const result = await checkoutOperation();
+    await onSuccess(result);
+  } catch (error) {
+    if (!looksLikeCheckoutConflictError(error)) {
+      commandContext.showCommandError(failurePrefix, error);
+      return;
+    }
+
+    const action = await promptForConflictRecoveryAction({
+      branchName,
+      operationDescription: 'Checkout of',
+      discardActionLabel: DISCARD_CHANGES_AND_SWITCH_ACTION,
+    });
+
+    if (action === 'createBranch') {
+      const newBranchName = await promptForRecoveryBranchName({
+        prompt: `Create a branch to keep the current changes before switching to '${branchName}'`,
+        normalize: shouldNormalizeNewBranchNames(),
+      });
+
+      if (!newBranchName) {
+        return;
+      }
+
+      try {
+        await createBranch(repoRoot, newBranchName);
+        await commandContext.showSuccessAndRefresh(
+          `Created branch '${newBranchName}' from the current commit and kept the current changes there.`,
+          { fetchRemoteState: false }
+        );
+      } catch (createError) {
+        commandContext.showCommandError(`Failed to create branch '${newBranchName}'`, createError);
+      }
+
+      return;
+    }
+
+    if (action === 'discardAndRetry') {
+      try {
+        await discardLocalChanges(repoRoot);
+      } catch (discardError) {
+        commandContext.showCommandError('Failed to discard local changes', discardError);
+        return;
+      }
+
+      try {
+        const result = await checkoutOperation();
+        await onSuccess(result);
+      } catch (retryError) {
+        commandContext.showCommandError(failurePrefix, retryError);
+      }
+
+      return;
+    }
+  }
+}
+
 async function handleCheckout(
   item: BranchTreeItem,
   commandContext: CommandContext,
   allowCurrentBranchMessage = true
 ): Promise<void> {
-  if (!item.branchName || !item.repoRoot) {
+  const branchName = item.branchName;
+  const repoRoot = item.repoRoot;
+
+  if (!branchName || !repoRoot) {
     return;
   }
 
   if (item.nodeType === 'currentBranch' || item.branchInfo?.isCurrent) {
     if (allowCurrentBranchMessage) {
-      vscode.window.showInformationMessage(
-        buildCurrentBranchAlreadyCheckedOutMessage(item.branchName)
-      );
+      vscode.window.showInformationMessage(buildCurrentBranchAlreadyCheckedOutMessage(branchName));
     }
 
     commandContext.activationTracker.reset();
@@ -268,33 +342,41 @@ async function handleCheckout(
 
   if (item.nodeType === 'staleRemoteBranch') {
     vscode.window.showWarningMessage(
-      `Remote-tracking ref '${item.branchName}' is stale. Create a new local branch from it instead of checking it out directly.`
+      `Remote-tracking ref '${branchName}' is stale. Create a new local branch from it instead of checking it out directly.`
     );
     return;
   }
 
   if (item.nodeType === 'remoteBranch') {
-    try {
-      const checkoutResult = await checkoutRemoteBranch(item.repoRoot, item.branchName);
-      await commandContext.showSuccessAndRefresh(
-        buildRemoteBranchCheckoutMessage(checkoutResult),
-        { fetchRemoteState: false }
-      );
-    } catch (error) {
-      commandContext.showCommandError(`Failed to checkout '${item.branchName}'`, error);
-    }
+    await runCheckoutWithConflictRecovery(
+      repoRoot,
+      branchName,
+      commandContext,
+      () => checkoutRemoteBranch(repoRoot, branchName),
+      async (checkoutResult) => {
+        await commandContext.showSuccessAndRefresh(
+          buildRemoteBranchCheckoutMessage(checkoutResult),
+          { fetchRemoteState: false }
+        );
+      },
+      `Failed to checkout '${branchName}'`
+    );
 
     return;
   }
 
-  try {
-    await checkoutBranch(item.repoRoot, item.branchName);
-    await commandContext.showSuccessAndRefresh(`Switched to '${item.branchName}'.`, {
-      fetchRemoteState: false,
-    });
-  } catch (error) {
-    commandContext.showCommandError(`Failed to checkout '${item.branchName}'`, error);
-  }
+  await runCheckoutWithConflictRecovery(
+    repoRoot,
+    branchName,
+    commandContext,
+    () => checkoutBranch(repoRoot, branchName),
+    async () => {
+      await commandContext.showSuccessAndRefresh(`Switched to '${branchName}'.`, {
+        fetchRemoteState: false,
+      });
+    },
+    `Failed to checkout '${branchName}'`
+  );
 }
 
 async function handleShowBranchActions(item: BranchTreeItem | undefined): Promise<void> {
@@ -910,15 +992,66 @@ async function pullBranchByName(
   try {
     const pullResult = await commandContext.runWithLoadingIndicator(
       `Pulling '${branchName}'…`,
-      () => commandContext.provider.withBusyBranch(repoRoot, branchName, () =>
-        pullBranchChanges(repoRoot, branchName)
-      )
+      () =>
+        commandContext.provider.withBusyBranch(repoRoot, branchName, async () =>
+          runPullWithConflictRecovery(repoRoot, branchName)
+        )
     );
     await commandContext.showSuccessAndRefresh(buildSyncResultMessage(pullResult), {
       fetchRemoteState: false,
     });
   } catch (error) {
+    if (error instanceof Error && error.message === 'Pull cancelled.') {
+      return;
+    }
+
     commandContext.showCommandError(`Failed to pull '${branchName}'`, error);
+  }
+}
+
+async function runPullWithConflictRecovery(
+  repoRoot: string,
+  branchName: string
+): Promise<ReturnType<typeof pullBranchChanges>> {
+  try {
+    return await pullBranchChanges(repoRoot, branchName);
+  } catch (error) {
+    if (!looksLikeCheckoutConflictError(error)) {
+      throw error;
+    }
+
+    const action = await promptForConflictRecoveryAction({
+      branchName,
+      operationDescription: 'Pulling',
+      discardActionLabel: 'Discard local changes and retry',
+    });
+
+    if (action === 'createBranch') {
+      const newBranchName = await promptForRecoveryBranchName({
+        prompt: `Create a branch to keep the current changes before pulling '${branchName}'`,
+        normalize: shouldNormalizeNewBranchNames(),
+      });
+
+      if (!newBranchName) {
+        throw new Error('Pull cancelled.');
+      }
+
+      await createBranch(repoRoot, newBranchName);
+      return {
+        branchName: newBranchName,
+        upstreamName: branchName,
+        didPull: false,
+        didPush: false,
+        publishedUpstream: false,
+      } as Awaited<ReturnType<typeof pullBranchChanges>>;
+    }
+
+    if (action === 'discardAndRetry') {
+      await discardLocalChanges(repoRoot);
+      return await pullBranchChanges(repoRoot, branchName);
+    }
+
+    throw new Error('Pull cancelled.');
   }
 }
 

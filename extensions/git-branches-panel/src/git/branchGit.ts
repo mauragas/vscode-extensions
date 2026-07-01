@@ -19,6 +19,7 @@ export interface SyncBranchResult {
   didPull: boolean;
   didPush: boolean;
   publishedUpstream: boolean;
+  didSkip?: boolean;
 }
 
 export interface SyncBranchOptions {

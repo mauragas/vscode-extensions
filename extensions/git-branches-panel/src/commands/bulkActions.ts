@@ -9,6 +9,13 @@ import {
 import { getErrorMessage } from '../errorUtils';
 import { looksLikeMergeSafetyError } from '../extensionHelpers';
 import {
+  discardLocalChanges,
+  looksLikeCheckoutConflictError,
+  promptForConflictRecoveryAction,
+  promptForRecoveryBranchName,
+} from './conflictRecovery';
+import {
+  createBranch,
   deleteBranch,
   deleteRemoteBranch,
   deleteTag,
@@ -953,9 +960,14 @@ async function pullAllLocalBranches(
   repoRoot: string,
   branches: readonly BranchInfo[]
 ): Promise<BulkSyncResult> {
-  return executeTrackedLocalBranchAction(branches, async (branchName) =>
-    pullBranchChanges(repoRoot, branchName, { refreshRemoteState: false })
-  );
+  return executeTrackedLocalBranchAction(branches, async (branchName) => {
+    const result = await runPullWithConflictRecovery(repoRoot, branchName);
+    if (!result) {
+      throw new Error('Pull cancelled.');
+    }
+
+    return result;
+  });
 }
 
 async function pushFolderBranches(
@@ -983,6 +995,59 @@ async function pushFolderBranches(
   return result;
 }
 
+async function runPullWithConflictRecovery(
+  repoRoot: string,
+  branchName: string
+): Promise<SyncBranchResult | undefined> {
+  try {
+    return await pullBranchChanges(repoRoot, branchName, { refreshRemoteState: false });
+  } catch (error) {
+    if (!looksLikeCheckoutConflictError(error)) {
+      throw error;
+    }
+
+    const action = await promptForConflictRecoveryAction({
+      branchName,
+      operationDescription: 'Pulling',
+      discardActionLabel: 'Discard local changes and retry',
+    });
+
+    if (action === 'createBranch') {
+      const newBranchName = await promptForRecoveryBranchName({
+        prompt: `Create a branch to keep the current changes before pulling '${branchName}'`,
+        normalize: shouldNormalizeNewBranchNames(),
+      });
+
+      if (!newBranchName) {
+        throw new Error('Pull cancelled.');
+      }
+
+      await createBranch(repoRoot, newBranchName);
+      return {
+        branchName: newBranchName,
+        upstreamName: branchName,
+        didPull: false,
+        didPush: false,
+        publishedUpstream: false,
+        didSkip: true,
+      };
+    }
+
+    if (action === 'discardAndRetry') {
+      await discardLocalChanges(repoRoot);
+      return await pullBranchChanges(repoRoot, branchName, { refreshRemoteState: false });
+    }
+
+    throw new Error('Pull cancelled.');
+  }
+}
+
+function shouldNormalizeNewBranchNames(): boolean {
+  return vscode.workspace
+    .getConfiguration('gitBranchesPanel')
+    .get<boolean>('normalizeNewBranchNames', false);
+}
+
 async function executeTrackedLocalBranchAction(
   branches: readonly BranchInfo[],
   action: (branchName: string) => Promise<SyncBranchResult>
@@ -1000,7 +1065,10 @@ async function executeTrackedLocalBranchAction(
     }
 
     try {
-      result.processed.push(await action(branch.name));
+      const actionResult = await action(branch.name);
+      if (actionResult) {
+        result.processed.push(actionResult);
+      }
     } catch (error) {
       result.failed.push({
         name: branch.name,
@@ -1349,6 +1417,7 @@ function buildFolderPullResultMessage(folderLabel: string, result: BulkSyncResul
 
   const attemptedCount = result.processed.length + result.failed.length;
   const pulledCount = result.processed.filter((branch) => branch.didPull).length;
+  const skippedCount = result.processed.filter((branch) => branch.didSkip).length;
   const upToDateCount = countUpToDateSyncs(result.processed);
   const parts = [
     `Processed ${attemptedCount} tracked local ${pluralize('branch', attemptedCount)} under '${folderLabel}'.`,
@@ -1357,6 +1426,9 @@ function buildFolderPullResultMessage(folderLabel: string, result: BulkSyncResul
   const details: string[] = [];
   if (pulledCount > 0) {
     details.push(`${pulledCount} pulled`);
+  }
+  if (skippedCount > 0) {
+    details.push(`${skippedCount} skipped`);
   }
   if (upToDateCount > 0) {
     details.push(`${upToDateCount} already up to date`);
@@ -1528,7 +1600,7 @@ function formatFailureList(
 }
 
 function countUpToDateSyncs(results: readonly SyncBranchResult[]): number {
-  return results.filter((result) => !result.didPull && !result.didPush).length;
+  return results.filter((result) => !result.didPull && !result.didPush && !result.didSkip).length;
 }
 
 function pluralize(noun: string, count: number): string {

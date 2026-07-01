@@ -21,6 +21,7 @@ export async function listRefs(
   refPattern: string,
   scope: 'local' | 'remote' | 'tag'
 ): Promise<BranchInfo[]> {
+  const currentTagNames = scope === 'tag' ? await getCurrentTagNames(repoRoot) : new Set<string>();
   const { stdout } = await runGit(repoRoot, [
     'for-each-ref',
     '--sort=-committerdate',
@@ -47,7 +48,10 @@ export async function listRefs(
 
       return {
         name,
-        isCurrent: scope === 'local' && headMarker === '*',
+        isCurrent:
+          scope === 'tag'
+            ? currentTagNames.has(name)
+            : scope === 'local' && headMarker === '*',
         scope,
         remoteName: remoteBranchRef?.remoteName,
         lastCommitDate,
@@ -61,4 +65,20 @@ export async function listRefs(
         upstreamMissing: syncState.upstreamMissing,
       } satisfies BranchInfo;
     });
+}
+
+async function getCurrentTagNames(repoRoot: string): Promise<Set<string>> {
+  try {
+    await runGit(repoRoot, ['symbolic-ref', '-q', 'HEAD']);
+    return new Set<string>();
+  } catch {
+    const { stdout } = await runGit(repoRoot, ['tag', '--points-at', 'HEAD']);
+
+    return new Set(
+      stdout
+        .split(/\r?\n/u)
+        .map((tagName) => tagName.trim())
+        .filter(Boolean)
+    );
+  }
 }

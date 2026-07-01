@@ -24,12 +24,17 @@ function loadFresh(modulePath, mocks) {
 
 function createVscodeState() {
   return {
+    configurationValues: {
+      normalizeNewBranchNames: false,
+    },
     registeredCommands: {},
     executedCommands: [],
     infoMessages: [],
     warningMessages: [],
     errorMessages: [],
     warningResponses: [],
+    inputBoxRequests: [],
+    inputBoxResponse: undefined,
     quickPickRequests: [],
     quickPickSelector: undefined,
   };
@@ -46,7 +51,27 @@ function createVscodeMock(state) {
         state.executedCommands.push({ command, args });
       },
     },
+    workspace: {
+      getConfiguration(section) {
+        return {
+          get(key, defaultValue) {
+            if (
+              section === 'gitBranchesPanel' &&
+              Object.prototype.hasOwnProperty.call(state.configurationValues, key)
+            ) {
+              return state.configurationValues[key];
+            }
+
+            return defaultValue;
+          },
+        };
+      },
+    },
     window: {
+      async showInputBox(options) {
+        state.inputBoxRequests.push(options);
+        return state.inputBoxResponse;
+      },
       async showQuickPick(items, options) {
         state.quickPickRequests.push({ items, options });
         return typeof state.quickPickSelector === 'function'
@@ -131,8 +156,48 @@ function createCommandContext() {
   };
 }
 
-function createBulkActionsModule({ vscodeState, gitMock }) {
+function createBulkActionsModule({ vscodeState, gitMock, gitSharedMock = { async runGit() { return { stdout: '', stderr: '' }; } } }) {
   const commandContext = createCommandContext();
+  const conflictRecoveryMock = {
+    looksLikeCheckoutConflictError(error) {
+      return /would be overwritten/i.test(String(error));
+    },
+    async discardLocalChanges(repoRoot) {
+      await gitSharedMock.runGit(repoRoot, ['reset', '--hard', 'HEAD']);
+      await gitSharedMock.runGit(repoRoot, ['clean', '-fd']);
+    },
+    async promptForConflictRecoveryAction({ branchName, operationDescription, discardActionLabel }) {
+      const action = await createVscodeMock(vscodeState).window.showWarningMessage(
+        `${operationDescription} '${branchName}' is blocked by local changes that would be overwritten. This will discard local changes with git reset --hard and git clean -fd if you choose to continue. What would you like to do?`,
+        { modal: true },
+        'Create a new branch',
+        discardActionLabel,
+        'Cancel'
+      );
+
+      if (action === 'Create a new branch') {
+        return 'createBranch';
+      }
+
+      if (action === discardActionLabel) {
+        return 'discardAndRetry';
+      }
+
+      return 'cancel';
+    },
+    async promptForRecoveryBranchName({ prompt, normalize }) {
+      const value = await createVscodeMock(vscodeState).window.showInputBox({
+        prompt,
+        placeHolder: 'feature/my-feature or hotfix/bug-123',
+      });
+
+      if (typeof value !== 'string') {
+        return undefined;
+      }
+
+      return normalize ? 'feature/hello-world' : value.trim();
+    },
+  };
   const bulkActions = loadFresh('../out/commands/bulkActions.js', {
     vscode: createVscodeMock(vscodeState),
     '../errorUtils': {
@@ -146,6 +211,8 @@ function createBulkActionsModule({ vscodeState, gitMock }) {
       },
     },
     '../git': gitMock,
+    '../git/shared': gitSharedMock,
+    './conflictRecovery': conflictRecoveryMock,
   });
 
   bulkActions.registerBulkActionCommands({ subscriptions: [] }, commandContext.context);
@@ -155,6 +222,241 @@ function createBulkActionsModule({ vscodeState, gitMock }) {
     commandContext,
   };
 }
+
+test('pullAllLocalBranches creates a branch and refreshes when a current-branch pull is blocked by local changes', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Create a new branch');
+  vscodeState.inputBoxResponse = 'feature/recovery';
+  const createdBranches = [];
+  const pullCalls = [];
+
+  const { commandContext } = createBulkActionsModule({
+    vscodeState,
+    gitMock: {
+      async createBranch(repoRoot, branchName) {
+        createdBranches.push({ repoRoot, branchName });
+      },
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async deleteTag() {},
+      async fetchRemoteState() {},
+      async getBranches() {
+        return [
+          {
+            name: 'main',
+            isCurrent: true,
+            upstreamName: 'origin/main',
+            aheadCount: 0,
+            behindCount: 0,
+          },
+        ];
+      },
+      async pullBranchChanges(repoRoot, branchName) {
+        pullCalls.push({ repoRoot, branchName });
+        throw new Error('error: Your local changes to the following files would be overwritten by pull:');
+      },
+      async pushBranch() {},
+      async syncBranch() {
+        throw new Error('syncBranch should not be called in this test');
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.pullAllLocalBranches']();
+
+  assert.deepEqual(pullCalls, [{ repoRoot: '/repo', branchName: 'main' }]);
+  assert.deepEqual(createdBranches, [{ repoRoot: '/repo', branchName: 'feature/recovery' }]);
+  assert.deepEqual(commandContext.state.refreshCalls, [{ fetchRemoteState: false }]);
+});
+
+test('pullAllLocalBranches discards local changes and retries a blocked pull when requested', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Discard local changes and retry');
+  const discardCalls = [];
+  const pullCalls = [];
+
+  const { commandContext } = createBulkActionsModule({
+    vscodeState,
+    gitMock: {
+      async createBranch() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async deleteTag() {},
+      async fetchRemoteState() {},
+      async getBranches() {
+        return [
+          {
+            name: 'main',
+            isCurrent: true,
+            upstreamName: 'origin/main',
+            aheadCount: 0,
+            behindCount: 0,
+          },
+        ];
+      },
+      async pullBranchChanges(repoRoot, branchName) {
+        pullCalls.push({ repoRoot, branchName });
+        if (pullCalls.length === 1) {
+          throw new Error('error: Your local changes to the following files would be overwritten by pull:');
+        }
+
+        return {
+          branchName,
+          upstreamName: 'origin/main',
+          didPull: true,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async pushBranch() {},
+      async syncBranch() {
+        throw new Error('syncBranch should not be called in this test');
+      },
+    },
+    gitSharedMock: {
+      async runGit(repoRoot, args) {
+        discardCalls.push({ repoRoot, args });
+        return { stdout: '', stderr: '' };
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.pullAllLocalBranches']();
+
+  assert.deepEqual(discardCalls, [
+    { repoRoot: '/repo', args: ['reset', '--hard', 'HEAD'] },
+    { repoRoot: '/repo', args: ['clean', '-fd'] },
+  ]);
+  assert.deepEqual(pullCalls, [
+    { repoRoot: '/repo', branchName: 'main' },
+    { repoRoot: '/repo', branchName: 'main' },
+  ]);
+  assert.deepEqual(commandContext.state.refreshCalls, [{ fetchRemoteState: false }]);
+});
+
+test('pullAllLocalBranches trims recovery branch names before creating a branch', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Create a new branch');
+  vscodeState.inputBoxResponse = '  feature/recovery  ';
+  const createdBranches = [];
+
+  createBulkActionsModule({
+    vscodeState,
+    gitMock: {
+      async createBranch(repoRoot, branchName) {
+        createdBranches.push({ repoRoot, branchName });
+      },
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async deleteTag() {},
+      async fetchRemoteState() {},
+      async getBranches() {
+        return [
+          {
+            name: 'main',
+            isCurrent: true,
+            upstreamName: 'origin/main',
+            aheadCount: 0,
+            behindCount: 0,
+          },
+        ];
+      },
+      async pullBranchChanges() {
+        throw new Error('error: Your local changes to the following files would be overwritten by pull:');
+      },
+      async pushBranch() {},
+      async syncBranch() {
+        throw new Error('syncBranch should not be called in this test');
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.pullAllLocalBranches']();
+
+  assert.deepEqual(createdBranches, [{ repoRoot: '/repo', branchName: 'feature/recovery' }]);
+});
+
+test('pullAllLocalBranches respects configured branch-name normalization during recovery', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.configurationValues.normalizeNewBranchNames = true;
+  vscodeState.warningResponses.push('Create a new branch');
+  vscodeState.inputBoxResponse = ' - Feature / Hello--- World - ';
+  const createdBranches = [];
+
+  createBulkActionsModule({
+    vscodeState,
+    gitMock: {
+      async createBranch(repoRoot, branchName) {
+        createdBranches.push({ repoRoot, branchName });
+      },
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async deleteTag() {},
+      async fetchRemoteState() {},
+      async getBranches() {
+        return [
+          {
+            name: 'main',
+            isCurrent: true,
+            upstreamName: 'origin/main',
+            aheadCount: 0,
+            behindCount: 0,
+          },
+        ];
+      },
+      async pullBranchChanges() {
+        throw new Error('error: Your local changes to the following files would be overwritten by pull:');
+      },
+      async pushBranch() {},
+      async syncBranch() {
+        throw new Error('syncBranch should not be called in this test');
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.pullAllLocalBranches']();
+
+  assert.deepEqual(createdBranches, [{ repoRoot: '/repo', branchName: 'feature/hello-world' }]);
+});
+
+test('pullAllLocalBranches reports recovery-created branches as processed', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Create a new branch');
+  vscodeState.inputBoxResponse = 'feature/recovery';
+
+  createBulkActionsModule({
+    vscodeState,
+    gitMock: {
+      async createBranch() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async deleteTag() {},
+      async fetchRemoteState() {},
+      async getBranches() {
+        return [
+          {
+            name: 'main',
+            isCurrent: true,
+            upstreamName: 'origin/main',
+            aheadCount: 0,
+            behindCount: 0,
+          },
+        ];
+      },
+      async pullBranchChanges() {
+        throw new Error('error: Your local changes to the following files would be overwritten by pull:');
+      },
+      async pushBranch() {},
+      async syncBranch() {
+        throw new Error('syncBranch should not be called in this test');
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.pullAllLocalBranches']();
+
+  assert.ok(vscodeState.infoMessages.some((message) => /Processed 1 tracked local branch/u.test(message)));
+});
 
 test('showAdvancedActions routes the quick-pick selection to the prune command', async () => {
   const vscodeState = createVscodeState();
