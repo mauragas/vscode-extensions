@@ -75,7 +75,7 @@ const REMOTE_HOSTING_PREFERRED_REMOTE_SETTING = 'remoteHosting.preferredRemote';
 const REMOTE_HOSTING_COMPARE_BASE_SETTING = 'remoteHosting.compareBase';
 const REMOTE_HOSTING_CUSTOM_PROVIDERS_SETTING = 'remoteHosting.customProviders';
 const CREATE_NEW_BRANCH_FOR_CHECKOUT_ACTION = 'Create a new branch';
-const DISCARD_CHANGES_AND_SWITCH_ACTION = 'Discard changes and switch';
+const DISCARD_CHANGES_AND_SWITCH_ACTION = 'Discard local changes and switch';
 const CANCEL_CHECKOUT_ACTION = 'Cancel';
 
 type RemoteBranchTrackingState = RemoteTrackingState;
@@ -279,7 +279,7 @@ async function runCheckoutWithConflictRecovery<T>(
     }
 
     const action = await vscode.window.showWarningMessage(
-      `Checkout of '${branchName}' is blocked by local changes that would be overwritten. What would you like to do?`,
+      `Checkout of '${branchName}' is blocked by local changes that would be overwritten. This will discard local changes with git reset --hard and git clean -fd if you choose to continue. What would you like to do?`,
       { modal: true },
       CREATE_NEW_BRANCH_FOR_CHECKOUT_ACTION,
       DISCARD_CHANGES_AND_SWITCH_ACTION,

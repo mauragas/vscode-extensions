@@ -1997,7 +1997,7 @@ test('checkout prompts to create a new branch when checkout would overwrite loca
 
 test('checkout discards local changes and retries checkout when requested', async () => {
   const vscodeState = createVscodeState();
-  vscodeState.warningResponses.push('Discard changes and switch');
+  vscodeState.warningResponses.push('Discard local changes and switch');
   const checkoutCalls = [];
   const discardCalls = [];
 
@@ -2056,6 +2056,11 @@ test('checkout discards local changes and retries checkout when requested', asyn
     repoRoot: '/repo',
   });
 
+  assert.ok(
+    vscodeState.warningMessages.some((warning) =>
+      warning.message.includes('git reset --hard and git clean -fd')
+    )
+  );
   assert.deepEqual(checkoutCalls, [
     { repoRoot: '/repo', branchName: 'feature/demo' },
     { repoRoot: '/repo', branchName: 'feature/demo' },

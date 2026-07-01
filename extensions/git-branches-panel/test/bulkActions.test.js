@@ -211,7 +211,7 @@ test('pullAllLocalBranches creates a branch and refreshes when a current-branch 
 
 test('pullAllLocalBranches discards local changes and retries a blocked pull when requested', async () => {
   const vscodeState = createVscodeState();
-  vscodeState.warningResponses.push('Discard changes and retry');
+  vscodeState.warningResponses.push('Discard local changes and retry');
   const discardCalls = [];
   const pullCalls = [];
 

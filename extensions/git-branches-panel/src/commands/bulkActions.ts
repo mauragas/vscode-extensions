@@ -997,10 +997,10 @@ async function runPullWithConflictRecovery(
     }
 
     const action = await vscode.window.showWarningMessage(
-      `Pulling '${branchName}' is blocked by local changes that would be overwritten. What would you like to do?`,
+      `Pulling '${branchName}' is blocked by local changes that would be overwritten. This will discard local changes with git reset --hard and git clean -fd if you choose to continue. What would you like to do?`,
       { modal: true },
       'Create a new branch',
-      'Discard changes and retry',
+      'Discard local changes and retry',
       'Cancel'
     );
 
@@ -1024,7 +1024,7 @@ async function runPullWithConflictRecovery(
       };
     }
 
-    if (action === 'Discard changes and retry') {
+    if (action === 'Discard local changes and retry') {
       await runGit(repoRoot, ['reset', '--hard', 'HEAD']);
       await runGit(repoRoot, ['clean', '-fd']);
       return await pullBranchChanges(repoRoot, branchName, { refreshRemoteState: false });
