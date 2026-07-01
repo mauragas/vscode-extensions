@@ -139,6 +139,34 @@ function createCommandContext() {
 
 function createBulkActionsModule({ vscodeState, gitMock, gitSharedMock = { async runGit() { return { stdout: '', stderr: '' }; } } }) {
   const commandContext = createCommandContext();
+  const conflictRecoveryMock = {
+    looksLikeCheckoutConflictError(error) {
+      return /would be overwritten/i.test(String(error));
+    },
+    async discardLocalChanges(repoRoot) {
+      await gitSharedMock.runGit(repoRoot, ['reset', '--hard', 'HEAD']);
+      await gitSharedMock.runGit(repoRoot, ['clean', '-fd']);
+    },
+    async promptForConflictRecoveryAction({ branchName, operationDescription, discardActionLabel }) {
+      const action = await createVscodeMock(vscodeState).window.showWarningMessage(
+        `${operationDescription} '${branchName}' is blocked by local changes that would be overwritten. This will discard local changes with git reset --hard and git clean -fd if you choose to continue. What would you like to do?`,
+        { modal: true },
+        'Create a new branch',
+        discardActionLabel,
+        'Cancel'
+      );
+
+      if (action === 'Create a new branch') {
+        return 'createBranch';
+      }
+
+      if (action === discardActionLabel) {
+        return 'discardAndRetry';
+      }
+
+      return 'cancel';
+    },
+  };
   const bulkActions = loadFresh('../out/commands/bulkActions.js', {
     vscode: createVscodeMock(vscodeState),
     '../errorUtils': {
@@ -153,6 +181,7 @@ function createBulkActionsModule({ vscodeState, gitMock, gitSharedMock = { async
     },
     '../git': gitMock,
     '../git/shared': gitSharedMock,
+    './conflictRecovery': conflictRecoveryMock,
   });
 
   bulkActions.registerBulkActionCommands({ subscriptions: [] }, commandContext.context);

@@ -8,7 +8,11 @@ import {
 } from '../branchRules';
 import { getErrorMessage } from '../errorUtils';
 import { looksLikeMergeSafetyError } from '../extensionHelpers';
-import { runGit } from '../git/shared';
+import {
+  discardLocalChanges,
+  looksLikeCheckoutConflictError,
+  promptForConflictRecoveryAction,
+} from './conflictRecovery';
 import {
   createBranch,
   deleteBranch,
@@ -996,15 +1000,13 @@ async function runPullWithConflictRecovery(
       throw error;
     }
 
-    const action = await vscode.window.showWarningMessage(
-      `Pulling '${branchName}' is blocked by local changes that would be overwritten. This will discard local changes with git reset --hard and git clean -fd if you choose to continue. What would you like to do?`,
-      { modal: true },
-      'Create a new branch',
-      'Discard local changes and retry',
-      'Cancel'
-    );
+    const action = await promptForConflictRecoveryAction({
+      branchName,
+      operationDescription: 'Pulling',
+      discardActionLabel: 'Discard local changes and retry',
+    });
 
-    if (action === 'Create a new branch') {
+    if (action === 'createBranch') {
       const newBranchName = await vscode.window.showInputBox({
         prompt: `Create a branch to keep the current changes before pulling '${branchName}'`,
         placeHolder: 'feature/recovery',
@@ -1024,20 +1026,13 @@ async function runPullWithConflictRecovery(
       };
     }
 
-    if (action === 'Discard local changes and retry') {
-      await runGit(repoRoot, ['reset', '--hard', 'HEAD']);
-      await runGit(repoRoot, ['clean', '-fd']);
+    if (action === 'discardAndRetry') {
+      await discardLocalChanges(repoRoot);
       return await pullBranchChanges(repoRoot, branchName, { refreshRemoteState: false });
     }
 
     throw new Error('Pull cancelled.');
   }
-}
-
-function looksLikeCheckoutConflictError(error: unknown): boolean {
-  const message = getErrorMessage(error, '').toLowerCase();
-
-  return /would be overwritten by (checkout|pull)|local changes to the following files would be overwritten|please commit your changes|stash them before you switch branches/i.test(message);
 }
 
 async function executeTrackedLocalBranchAction(

@@ -58,7 +58,11 @@ import {
 import { BranchTreeItem } from '../treeProvider';
 import { getGitApi, NO_CURRENT_BRANCH_MESSAGE, type CommandContext } from './shared';
 import { getAdvancedBranchActionDefinitions } from './advancedBranchCommands';
-import { runGit } from '../git/shared';
+import {
+  discardLocalChanges,
+  looksLikeCheckoutConflictError,
+  promptForConflictRecoveryAction,
+} from './conflictRecovery';
 
 const NORMALIZE_NEW_BRANCH_NAMES_SETTING = 'normalizeNewBranchNames';
 const PROTECTED_BRANCH_NAMES_SETTING = 'protectedBranchNames';
@@ -74,9 +78,7 @@ const OPEN_GIT_OUTPUT_ACTION = 'Open Git Output';
 const REMOTE_HOSTING_PREFERRED_REMOTE_SETTING = 'remoteHosting.preferredRemote';
 const REMOTE_HOSTING_COMPARE_BASE_SETTING = 'remoteHosting.compareBase';
 const REMOTE_HOSTING_CUSTOM_PROVIDERS_SETTING = 'remoteHosting.customProviders';
-const CREATE_NEW_BRANCH_FOR_CHECKOUT_ACTION = 'Create a new branch';
 const DISCARD_CHANGES_AND_SWITCH_ACTION = 'Discard local changes and switch';
-const CANCEL_CHECKOUT_ACTION = 'Cancel';
 
 type RemoteBranchTrackingState = RemoteTrackingState;
 type RemoteBranchDeleteFailureKind =
@@ -250,17 +252,6 @@ async function handleBranchItemActivation(
   await handleCheckout(item, commandContext, false);
 }
 
-function looksLikeCheckoutConflictError(error: unknown): boolean {
-  const message = getErrorMessage(error, '').toLowerCase();
-
-  return /would be overwritten by checkout|local changes to the following files would be overwritten|please commit your changes|stash them before you switch branches/i.test(message);
-}
-
-async function discardLocalChanges(repoRoot: string): Promise<void> {
-  await runGit(repoRoot, ['reset', '--hard', 'HEAD']);
-  await runGit(repoRoot, ['clean', '-fd']);
-}
-
 async function runCheckoutWithConflictRecovery<T>(
   repoRoot: string,
   branchName: string,
@@ -278,15 +269,13 @@ async function runCheckoutWithConflictRecovery<T>(
       return;
     }
 
-    const action = await vscode.window.showWarningMessage(
-      `Checkout of '${branchName}' is blocked by local changes that would be overwritten. This will discard local changes with git reset --hard and git clean -fd if you choose to continue. What would you like to do?`,
-      { modal: true },
-      CREATE_NEW_BRANCH_FOR_CHECKOUT_ACTION,
-      DISCARD_CHANGES_AND_SWITCH_ACTION,
-      CANCEL_CHECKOUT_ACTION
-    );
+    const action = await promptForConflictRecoveryAction({
+      branchName,
+      operationDescription: 'Checkout of',
+      discardActionLabel: DISCARD_CHANGES_AND_SWITCH_ACTION,
+    });
 
-    if (action === CREATE_NEW_BRANCH_FOR_CHECKOUT_ACTION) {
+    if (action === 'createBranch') {
       const newBranchName = await promptForNewBranchName({
         prompt: `Create a branch to keep the current changes before switching to '${branchName}'`,
         normalize: shouldNormalizeNewBranchNames(),
@@ -309,7 +298,7 @@ async function runCheckoutWithConflictRecovery<T>(
       return;
     }
 
-    if (action === DISCARD_CHANGES_AND_SWITCH_ACTION) {
+    if (action === 'discardAndRetry') {
       try {
         await discardLocalChanges(repoRoot);
       } catch (discardError) {
@@ -326,6 +315,8 @@ async function runCheckoutWithConflictRecovery<T>(
 
       return;
     }
+
+    commandContext.showCommandError(failurePrefix, new Error('Checkout cancelled.'));
   }
 }
 
