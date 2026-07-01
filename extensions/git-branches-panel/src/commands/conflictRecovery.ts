@@ -28,7 +28,7 @@ export async function promptForConflictRecoveryAction({
   discardActionLabel,
 }: ConflictRecoveryPromptOptions): Promise<ConflictRecoveryAction> {
   const action = await vscode.window.showWarningMessage(
-    `${operationDescription} '${branchName}' is blocked by local changes that would be overwritten. This will discard local changes with git reset --hard and git clean -fd if you choose to continue. What would you like to do?`,
+    `${operationDescription} '${branchName}' is blocked by local changes that would be overwritten. You can keep the current changes on a new branch, discard them and retry, or cancel. What would you like to do?`,
     { modal: true },
     'Create a new branch',
     discardActionLabel,

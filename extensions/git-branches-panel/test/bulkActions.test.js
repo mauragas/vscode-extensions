@@ -303,6 +303,87 @@ test('pullAllLocalBranches discards local changes and retries a blocked pull whe
   assert.deepEqual(commandContext.state.refreshCalls, [{ fetchRemoteState: false }]);
 });
 
+test('pullAllLocalBranches trims recovery branch names before creating a branch', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Create a new branch');
+  vscodeState.inputBoxResponse = '  feature/recovery  ';
+  const createdBranches = [];
+
+  createBulkActionsModule({
+    vscodeState,
+    gitMock: {
+      async createBranch(repoRoot, branchName) {
+        createdBranches.push({ repoRoot, branchName });
+      },
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async deleteTag() {},
+      async fetchRemoteState() {},
+      async getBranches() {
+        return [
+          {
+            name: 'main',
+            isCurrent: true,
+            upstreamName: 'origin/main',
+            aheadCount: 0,
+            behindCount: 0,
+          },
+        ];
+      },
+      async pullBranchChanges() {
+        throw new Error('error: Your local changes to the following files would be overwritten by pull:');
+      },
+      async pushBranch() {},
+      async syncBranch() {
+        throw new Error('syncBranch should not be called in this test');
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.pullAllLocalBranches']();
+
+  assert.deepEqual(createdBranches, [{ repoRoot: '/repo', branchName: 'feature/recovery' }]);
+});
+
+test('pullAllLocalBranches reports recovery-created branches as skipped instead of up to date', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Create a new branch');
+  vscodeState.inputBoxResponse = 'feature/recovery';
+
+  createBulkActionsModule({
+    vscodeState,
+    gitMock: {
+      async createBranch() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async deleteTag() {},
+      async fetchRemoteState() {},
+      async getBranches() {
+        return [
+          {
+            name: 'main',
+            isCurrent: true,
+            upstreamName: 'origin/main',
+            aheadCount: 0,
+            behindCount: 0,
+          },
+        ];
+      },
+      async pullBranchChanges() {
+        throw new Error('error: Your local changes to the following files would be overwritten by pull:');
+      },
+      async pushBranch() {},
+      async syncBranch() {
+        throw new Error('syncBranch should not be called in this test');
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.pullAllLocalBranches']();
+
+  assert.ok(vscodeState.infoMessages.some((message) => /1 skipped/u.test(message)));
+});
+
 test('showAdvancedActions routes the quick-pick selection to the prune command', async () => {
   const vscodeState = createVscodeState();
   vscodeState.quickPickSelector = (items) =>

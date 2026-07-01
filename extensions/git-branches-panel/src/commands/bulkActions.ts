@@ -1016,13 +1016,19 @@ async function runPullWithConflictRecovery(
         throw new Error('Branch creation cancelled.');
       }
 
-      await createBranch(repoRoot, newBranchName);
+      const trimmedBranchName = newBranchName.trim();
+      if (!trimmedBranchName) {
+        throw new Error('Branch creation cancelled.');
+      }
+
+      await createBranch(repoRoot, trimmedBranchName);
       return {
-        branchName: newBranchName,
+        branchName: trimmedBranchName,
         upstreamName: branchName,
         didPull: false,
         didPush: false,
         publishedUpstream: false,
+        didSkip: true,
       };
     }
 
@@ -1401,6 +1407,7 @@ function buildFolderPullResultMessage(folderLabel: string, result: BulkSyncResul
 
   const attemptedCount = result.processed.length + result.failed.length;
   const pulledCount = result.processed.filter((branch) => branch.didPull).length;
+  const skippedCount = result.processed.filter((branch) => branch.didSkip).length;
   const upToDateCount = countUpToDateSyncs(result.processed);
   const parts = [
     `Processed ${attemptedCount} tracked local ${pluralize('branch', attemptedCount)} under '${folderLabel}'.`,
@@ -1409,6 +1416,9 @@ function buildFolderPullResultMessage(folderLabel: string, result: BulkSyncResul
   const details: string[] = [];
   if (pulledCount > 0) {
     details.push(`${pulledCount} pulled`);
+  }
+  if (skippedCount > 0) {
+    details.push(`${skippedCount} skipped`);
   }
   if (upToDateCount > 0) {
     details.push(`${upToDateCount} already up to date`);
@@ -1580,7 +1590,7 @@ function formatFailureList(
 }
 
 function countUpToDateSyncs(results: readonly SyncBranchResult[]): number {
-  return results.filter((result) => !result.didPull && !result.didPush).length;
+  return results.filter((result) => !result.didPull && !result.didPush && !result.didSkip).length;
 }
 
 function pluralize(noun: string, count: number): string {

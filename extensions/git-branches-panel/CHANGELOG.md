@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.2] - 2026-07-01
+## [2.2.0] - 2026-07-01
 
 - Current tags now sort to the top of the Tags section when they are checked out in detached HEAD state, and their tree icon turns green to show that checkout state clearly.
 - Branch checkout now surfaces a recovery prompt when local changes would be overwritten, offering to create a new branch with the current changes, discard the changes and retry the checkout, or cancel.
