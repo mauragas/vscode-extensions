@@ -1335,6 +1335,18 @@ function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
       )
     );
 
+    if (item.branchInfo && hasSourceBranchUpdate(item.branchInfo)) {
+      items.push(
+        createBranchActionItem(
+          'updateBranchFromSource',
+          '$(git-merge) Update from Source Branch',
+          async () => {
+            await vscode.commands.executeCommand('gitBranchesPanel.updateBranchFromSource', item);
+          }
+        )
+      );
+    }
+
     if (!isPublishableBranchItem(item)) {
       items.push(
         createBranchActionItem(

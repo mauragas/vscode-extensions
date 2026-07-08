@@ -5,6 +5,7 @@ import {
   type BranchSortOrder,
   type TagSortOrder,
   type BranchTreeNode,
+  hasSourceBranchUpdate,
   isPublishableBranch,
   type TreeBranch,
 } from './branchModel';
@@ -80,7 +81,7 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     await this.ensureActiveRepoRoot();
     this.updateRepositoryContexts();
     this.updateFilterContexts();
-    this.updateCurrentBranchContext(this.getCurrentBranch());
+    this.updateCurrentBranchContexts();
     this.updateOperationContext();
     this.onDidChangeTreeDataEmitter.fire();
   }
@@ -297,7 +298,7 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     }
 
     this.activeRepoRoot = repoRoot;
-    this.updateCurrentBranchContext(this.getCurrentBranch());
+    this.updateCurrentBranchContexts();
     this.onDidChangeTreeDataEmitter.fire();
     return true;
   }
@@ -434,7 +435,12 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     this.activeRepoRoot = repoRoots[0];
   }
 
-  private updateCurrentBranchContext(currentBranch: BranchInfo | undefined): void {
+  private updateCurrentBranchContexts(): void {
+    const currentBranch = this.getCurrentBranch();
+    const visibleCurrentBranchCanUpdateFromSource = this.getVisibleRepoRoots().some((repoRoot) => {
+      const visibleCurrentBranch = this.getCurrentBranch(repoRoot);
+      return Boolean(visibleCurrentBranch && hasSourceBranchUpdate(visibleCurrentBranch));
+    });
     const currentBranchNeedsPublish = Boolean(currentBranch && isPublishableBranch(currentBranch));
     const currentBranchBusy = Boolean(currentBranch?.isSyncing);
     void vscode.commands.executeCommand(
@@ -446,6 +452,11 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
       'setContext',
       'gitBranchesPanel.currentBranchBusy',
       currentBranchBusy
+    );
+    void vscode.commands.executeCommand(
+      'setContext',
+      'gitBranchesPanel.currentBranchCanUpdateFromSource',
+      visibleCurrentBranchCanUpdateFromSource
     );
   }
 
