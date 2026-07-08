@@ -154,6 +154,12 @@ export function registerBranchDomainCommands(
     vscode.commands.registerCommand('gitBranchesPanel.publishCurrentBranch', async (item?: BranchTreeItem) => {
       await handlePublishCurrentBranch(item, commandContext);
     }),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.updateBranchFromSource',
+      async (item?: BranchTreeItem) => {
+        await handleUpdateBranchFromSource(item, commandContext);
+      }
+    ),
     vscode.commands.registerCommand('gitBranchesPanel.syncBranch', async (item: BranchTreeItem) => {
       await handleSyncBranch(item, commandContext);
     }),
@@ -427,6 +433,51 @@ async function handlePublishCurrentBranch(
   }
 
   await pushBranchByName(repoRoot, currentBranch.name, commandContext);
+}
+
+async function handleUpdateBranchFromSource(
+  item: BranchTreeItem | undefined,
+  commandContext: CommandContext
+): Promise<void> {
+  if (!item?.branchName || !item.repoRoot || !item.branchInfo?.isCurrent) {
+    return;
+  }
+
+  const branchInfo = item.branchInfo;
+  const sourceRef = branchInfo.createdFromRef;
+  const currentBranchName = item.branchName;
+  const repoRoot = item.repoRoot;
+  if (!sourceRef || !currentBranchName || !repoRoot || (branchInfo.sourceBehindCount ?? 0) <= 0) {
+    return;
+  }
+
+  const confirmation = await vscode.window.showWarningMessage(
+    `Merge '${sourceRef}' into current branch '${currentBranchName}'?`,
+    { modal: true },
+    'Merge'
+  );
+  if (confirmation !== 'Merge') {
+    return;
+  }
+
+  try {
+    await commandContext.runWithLoadingIndicator(
+      `Updating '${currentBranchName}' from '${sourceRef}'…`,
+      () =>
+        commandContext.provider.withBusyBranch(repoRoot, currentBranchName, async () => {
+          await mergeBranchIntoCurrent(repoRoot, sourceRef);
+        })
+    );
+    await commandContext.showSuccessAndRefresh(
+      `Merged '${sourceRef}' into '${currentBranchName}'.`,
+      { fetchRemoteState: false }
+    );
+  } catch (error) {
+    commandContext.showCommandError(
+      `Failed to merge '${sourceRef}' into '${currentBranchName}'`,
+      error
+    );
+  }
 }
 
 async function handleSyncBranch(
@@ -1254,6 +1305,18 @@ function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
       createBranchActionItem('checkout', '$(arrow-right) Checkout Branch', async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.checkout', item);
       })
+    );
+  }
+
+  if (item.branchInfo?.isCurrent && item.branchInfo.createdFromRef && (item.branchInfo.sourceBehindCount ?? 0) > 0) {
+    items.push(
+      createBranchActionItem(
+        'updateBranchFromSource',
+        '$(git-merge) Update from Source Branch',
+        async () => {
+          await vscode.commands.executeCommand('gitBranchesPanel.updateBranchFromSource', item);
+        }
+      )
     );
   }
 

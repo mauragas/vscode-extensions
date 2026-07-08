@@ -218,6 +218,24 @@ test('getTags marks the checked-out tag as current', async (t) => {
   assert.equal(checkedOutTag.isCurrent, true);
 });
 
+test('getBranches preserves source metadata for branches created from another ref', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/demo']);
+
+  await createBranchFromRef(repoRoot, 'feature/child', 'feature/demo', {
+    checkout: false,
+    sourceRef: 'feature/demo',
+  });
+
+  const branches = await getBranches(repoRoot);
+  const childBranch = branches.find((branch) => branch.name === 'feature/child');
+
+  assert.ok(childBranch);
+  assert.equal(childBranch.createdFromRef, 'feature/demo');
+  assert.equal(childBranch.createdFromDisplayName, 'feature/demo');
+});
+
 test('deleteTag removes the selected local tag', async (t) => {
   const repoRoot = createTempRepository(t);
 

@@ -910,7 +910,9 @@ async function syncFolderBranches(
   branches: readonly TreeBranch[]
 ): Promise<BulkSyncResult> {
   const latestBranches = await getBranches(repoRoot);
-  const latestBranchesByName = new Map(latestBranches.map((branch) => [branch.name, branch]));
+  const latestBranchesByName = new Map<string, BranchInfo>(
+    latestBranches.map((branch: BranchInfo) => [branch.name, branch])
+  );
   const result: BulkSyncResult = {
     processed: [],
     skippedNeedsPublish: [],

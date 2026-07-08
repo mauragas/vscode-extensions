@@ -2,6 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import type { BranchInfo } from '../branchModel';
 import { isTrackedBranch } from '../branchModel';
 import { listRefs } from './refListing';
 import { fetchRemoteState } from './remoteGit';
@@ -10,7 +11,10 @@ import {
   ensureRemoteExists,
   getAheadBehindCounts,
   readGitConfig,
+  readGitConfigEntries,
   runGit,
+  unsetGitConfig,
+  writeGitConfig,
 } from './shared';
 
 export interface SyncBranchResult {
@@ -28,6 +32,7 @@ export interface SyncBranchOptions {
 
 export interface CreateBranchFromRefOptions {
   checkout?: boolean;
+  sourceRef?: string;
 }
 
 export type ResetMode = 'soft' | 'mixed' | 'hard';
@@ -59,8 +64,33 @@ interface BranchRemoteState {
   };
 }
 
-export async function getBranches(repoRoot: string) {
-  return listRefs(repoRoot, 'refs/heads', 'local');
+export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
+  const branches = await listRefs(repoRoot, 'refs/heads', 'local');
+  const createdFromEntries = await readGitConfigEntries(repoRoot, '^branch\\..*\\.createdFromRef$');
+
+  if (createdFromEntries.size === 0) {
+    return branches;
+  }
+
+  const enrichedBranches: BranchInfo[] = await Promise.all(
+    branches.map(async (branch: BranchInfo) => {
+      const configKey = `branch.${branch.name}.createdFromRef`;
+      const createdFromRef = createdFromEntries.get(configKey);
+      if (!createdFromRef) {
+        return branch;
+      }
+
+      const sourceState = await resolveSourceBranchState(repoRoot, branch, createdFromRef);
+      return {
+        ...branch,
+        createdFromRef,
+        createdFromDisplayName: formatRefForDisplay(createdFromRef),
+        ...sourceState,
+      };
+    })
+  );
+
+  return enrichedBranches;
 }
 
 export async function checkoutBranch(repoRoot: string, branchName: string): Promise<void> {
@@ -68,7 +98,7 @@ export async function checkoutBranch(repoRoot: string, branchName: string): Prom
 }
 
 export async function createBranch(repoRoot: string, branchName: string): Promise<void> {
-  await createBranchFromRef(repoRoot, branchName, 'HEAD', { checkout: true });
+  await createBranchFromRef(repoRoot, branchName, 'HEAD', { checkout: true, sourceRef: 'HEAD' });
 }
 
 export async function createBranchFromRef(
@@ -79,10 +109,14 @@ export async function createBranchFromRef(
 ): Promise<void> {
   if (options.checkout ?? false) {
     await runGit(repoRoot, ['checkout', '-b', branchName, startPoint]);
-    return;
+  } else {
+    await runGit(repoRoot, ['branch', branchName, startPoint]);
   }
 
-  await runGit(repoRoot, ['branch', branchName, startPoint]);
+  const resolvedSourceRef = options.sourceRef ?? startPoint;
+  if (resolvedSourceRef) {
+    await writeGitConfig(repoRoot, `branch.${branchName}.createdFromRef`, resolvedSourceRef);
+  }
 }
 
 export async function renameBranch(
@@ -91,6 +125,12 @@ export async function renameBranch(
   newBranchName: string
 ): Promise<void> {
   await runGit(repoRoot, ['branch', '-m', branchName, newBranchName]);
+
+  const createdFromRef = await readGitConfig(repoRoot, `branch.${branchName}.createdFromRef`);
+  if (createdFromRef) {
+    await writeGitConfig(repoRoot, `branch.${newBranchName}.createdFromRef`, createdFromRef);
+    await unsetGitConfig(repoRoot, `branch.${branchName}.createdFromRef`);
+  }
 }
 
 export async function deleteBranch(
@@ -99,6 +139,7 @@ export async function deleteBranch(
   force: boolean
 ): Promise<void> {
   await runGit(repoRoot, ['branch', force ? '-D' : '-d', branchName]);
+  await unsetGitConfig(repoRoot, `branch.${branchName}.createdFromRef`);
 }
 
 export async function syncBranch(
@@ -538,6 +579,57 @@ async function resolveBranchSyncTarget(
 
 function looksLikeBranchAlreadyCheckedOutError(message: string): boolean {
   return /already used by worktree/i.test(message);
+}
+
+function formatRefForDisplay(refName: string): string {
+  if (!refName) {
+    return refName;
+  }
+
+  if (refName.startsWith('refs/heads/')) {
+    return refName.slice('refs/heads/'.length);
+  }
+
+  if (refName.startsWith('refs/remotes/')) {
+    return refName.slice('refs/remotes/'.length);
+  }
+
+  if (refName.startsWith('refs/tags/')) {
+    return refName.slice('refs/tags/'.length);
+  }
+
+  return refName;
+}
+
+async function resolveSourceBranchState(
+  repoRoot: string,
+  branch: BranchInfo,
+  sourceRef: string
+): Promise<Pick<BranchInfo, 'sourceAheadCount' | 'sourceBehindCount' | 'sourceRefMissing'>> {
+  try {
+    await runGit(repoRoot, ['rev-parse', '--verify', '--quiet', sourceRef]);
+  } catch {
+    return {
+      sourceAheadCount: 0,
+      sourceBehindCount: 0,
+      sourceRefMissing: true,
+    };
+  }
+
+  if (!branch.isCurrent) {
+    return {
+      sourceAheadCount: 0,
+      sourceBehindCount: 0,
+      sourceRefMissing: false,
+    };
+  }
+
+  const counts = await getAheadBehindCounts(repoRoot, branch.name, sourceRef);
+  return {
+    sourceAheadCount: counts.aheadCount,
+    sourceBehindCount: counts.behindCount,
+    sourceRefMissing: false,
+  };
 }
 
 function parseRefComparison(stdout: string): RefComparisonChange[] {

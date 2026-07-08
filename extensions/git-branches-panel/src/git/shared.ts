@@ -130,6 +130,48 @@ export async function readGitConfig(
   }
 }
 
+export async function readGitConfigEntries(
+  repoRoot: string,
+  keyPattern: string
+): Promise<Map<string, string>> {
+  try {
+    const { stdout } = await runGit(repoRoot, ['config', '--get-regexp', keyPattern]);
+    const entries = new Map<string, string>();
+
+    for (const line of stdout.split(/\r?\n/u).filter(Boolean)) {
+      const separatorIndex = line.indexOf(' ');
+      if (separatorIndex < 0) {
+        continue;
+      }
+
+      const key = line.slice(0, separatorIndex).trim();
+      const value = line.slice(separatorIndex + 1).trim();
+      if (key) {
+        entries.set(key, value);
+      }
+    }
+
+    return entries;
+  } catch {
+    return new Map<string, string>();
+  }
+}
+
+export async function writeGitConfig(
+  repoRoot: string,
+  key: string,
+  value: string
+): Promise<void> {
+  await runGit(repoRoot, ['config', key, value]);
+}
+
+export async function unsetGitConfig(
+  repoRoot: string,
+  key: string
+): Promise<void> {
+  await runGit(repoRoot, ['config', '--unset-all', key]);
+}
+
 export async function getAheadBehindCounts(
   repoRoot: string,
   localRef: string,

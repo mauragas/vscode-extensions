@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.0] - 2026-07-08
+
+- Added branch source tracking so branches created from another ref now remember their source branch and surface it in the tooltip.
+- Added a current-branch-only Update from Source Branch action that merges the recorded source branch into the current branch when the source has new commits.
+- Updated branch context and inline actions so source-update availability is visible only when the current branch is actually behind its recorded source.
+
 ## [2.2.0] - 2026-07-01
 
 - Current tags now sort to the top of the Tags section when they are checked out in detached HEAD state, and their tree icon turns green to show that checkout state clearly.

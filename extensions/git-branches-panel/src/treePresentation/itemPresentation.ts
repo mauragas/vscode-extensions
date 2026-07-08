@@ -253,6 +253,10 @@ export function buildBranchTooltipContent(node: TreeBranch): string {
     tooltipLines.push('', '_Current branch_');
   }
 
+  if (node.info.createdFromDisplayName) {
+    tooltipLines.push('', `Created from: ${node.info.createdFromDisplayName}`);
+  }
+
   if (node.info.lastCommitDate) {
     if (isStash) {
       tooltipLines.push('', `Saved: ${node.info.lastCommitDate}`);
@@ -434,6 +438,10 @@ function getItemContextValue(nodeType: NodeType, branch: BranchInfo): string {
     }
 
     contextValue = resolveAheadContextValue(contextValue, branch);
+  }
+
+  if (branch.isCurrent && branch.createdFromRef && (branch.sourceBehindCount ?? 0) > 0) {
+    contextValue = `${contextValue}:sourceBehind`;
   }
 
   return resolvePinnedContextValue(contextValue, branch.isPinned);

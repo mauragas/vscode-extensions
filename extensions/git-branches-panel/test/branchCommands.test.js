@@ -939,6 +939,75 @@ test('pushBranchChanges pushes the selected branch and refreshes remote state', 
   ]);
 });
 
+test('showBranchActions exposes update-from-source for the current branch when it is behind the recorded source', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.quickPickSelector = (items) => items.find((item) => item.actionId === 'updateBranchFromSource');
+
+  createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  const item = {
+    nodeType: 'currentBranch',
+    contextValue: 'currentBranch:sourceBehind',
+    branchName: 'feature/demo',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'feature/demo',
+      isCurrent: true,
+      scope: 'local',
+      createdFromRef: 'main',
+      sourceBehindCount: 1,
+    },
+  };
+
+  await vscodeState.registeredCommands['gitBranchesPanel.showBranchActions'](item);
+
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(git-merge) Update from Source Branch'
+    )
+  );
+  assert.deepEqual(vscodeState.executedCommands, [
+    {
+      command: 'gitBranchesPanel.updateBranchFromSource',
+      args: [item],
+    },
+  ]);
+});
+
 test('showBranchActions exposes single-branch pull for tracked local branches', async () => {
   const vscodeState = createVscodeState();
   vscodeState.quickPickSelector = (items) =>

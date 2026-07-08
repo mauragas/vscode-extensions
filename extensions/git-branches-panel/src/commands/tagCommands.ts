@@ -494,7 +494,7 @@ async function promptForTagSource(
   ]);
 
   const items: TagSourceQuickPickItem[] = [
-    ...branches.map((branch) => toTagSourceQuickPickItem(branch, repoRoot)),
+    ...branches.map((branch: BranchInfo) => toTagSourceQuickPickItem(branch, repoRoot)),
     ...remoteBranches.map((branch) => toTagSourceQuickPickItem(branch, repoRoot)),
     ...tags.map((tag) => toTagSourceQuickPickItem(tag, repoRoot)),
     ...stashes.map((stash) => toTagSourceQuickPickItem(stash, repoRoot)),

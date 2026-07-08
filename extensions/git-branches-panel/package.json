@@ -1,8 +1,8 @@
 {
   "name": "git-branches-panel",
   "displayName": "Git Branches Panel",
-  "description": "Tree view for branches, tags, stashes, worktrees, hooks, and remotes across one or multiple Git repositories with grouping, search, filtering, compare/history workflows, remote-host integration, worktree maintenance, sync state, and quick actions.",
-  "version": "2.2.0",
+  "description": "Tree view for branches, tags, stashes, worktrees, hooks, and remotes across one or multiple Git repositories with grouping, search, filtering, compare/history workflows, remote host integration, worktree maintenance, sync state, and quick actions.",
+  "version": "2.3.0",
   "publisher": "karolis-mauragas",
   "license": "MIT",
   "repository": {
@@ -259,6 +259,11 @@
         "command": "gitBranchesPanel.createWorktreeFromCurrentBranch",
         "title": "Create New Worktree...",
         "icon": "$(new-folder)"
+      },
+      {
+        "command": "gitBranchesPanel.updateBranchFromSource",
+        "title": "Update from Source Branch",
+        "icon": "$(git-merge)"
       },
       {
         "command": "gitBranchesPanel.syncBranch",
@@ -2798,6 +2803,11 @@
           "command": "gitBranchesPanel.newBranchFromSelectedAndCheckout",
           "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
           "group": "inline@1"
+        },
+        {
+          "command": "gitBranchesPanel.updateBranchFromSource",
+          "when": "viewItem =~ /^(?:pinned:)?currentBranch(?::ahead)?(?::sourceBehind)?$/",
+          "group": "inline@2"
         },
         {
           "command": "gitBranchesPanel.syncBranch",
