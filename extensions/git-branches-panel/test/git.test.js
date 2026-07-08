@@ -24,6 +24,7 @@ const {
   createBranchFromRef,
   createWorktree,
   createTag,
+  deleteBranch,
   deleteRemoteTag,
   deleteRemoteBranch,
   deleteTag,
@@ -216,6 +217,16 @@ test('getTags marks the checked-out tag as current', async (t) => {
 
   assert.ok(checkedOutTag);
   assert.equal(checkedOutTag.isCurrent, true);
+});
+
+test('deleteBranch succeeds when the branch never had source metadata', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['branch', 'feature/temporary']);
+
+  await deleteBranch(repoRoot, 'feature/temporary', false);
+
+  assert.equal(hasRef(repoRoot, 'refs/heads/feature/temporary'), false);
 });
 
 test('getBranches preserves source metadata for branches created from another ref', async (t) => {

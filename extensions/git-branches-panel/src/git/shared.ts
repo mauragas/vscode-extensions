@@ -169,6 +169,11 @@ export async function unsetGitConfig(
   repoRoot: string,
   key: string
 ): Promise<void> {
+  const existingValue = await readGitConfig(repoRoot, key);
+  if (existingValue === null) {
+    return;
+  }
+
   await runGit(repoRoot, ['config', '--unset-all', key]);
 }
 
