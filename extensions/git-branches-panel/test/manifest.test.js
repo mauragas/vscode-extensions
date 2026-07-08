@@ -475,7 +475,7 @@ test('package manifest exposes the 2.3.0 multi-repo, source-update, search, remo
       'gitBranchesPanel.pullBranchChanges',
       (item) =>
         item.when === 'viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|protectedBranch(?::ahead)?)$/' &&
-        item.group === 'inline@1.5'
+        item.group === 'inline@2.5'
     )
   );
   assert.ok(
@@ -483,7 +483,7 @@ test('package manifest exposes the 2.3.0 multi-repo, source-update, search, remo
       'gitBranchesPanel.pushBranchChanges',
       (item) =>
         item.when === 'viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch):ahead$/' &&
-        item.group === 'inline@1.6'
+        item.group === 'inline@2.6'
     )
   );
   assert.ok(

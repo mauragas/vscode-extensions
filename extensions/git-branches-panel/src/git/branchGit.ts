@@ -17,6 +17,8 @@ import {
   writeGitConfig,
 } from './shared';
 
+const CREATED_FROM_CONFIG_KEY_SUFFIX = 'gitbranchespanelcreatedfromref';
+
 export interface SyncBranchResult {
   branchName: string;
   upstreamName: string;
@@ -70,7 +72,10 @@ interface BranchRemoteState {
 
 export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
   const branches = await listRefs(repoRoot, 'refs/heads', 'local');
-  const createdFromEntries = await readGitConfigEntries(repoRoot, '^branch\\..*\\.createdFromRef$');
+  const createdFromEntries = await readGitConfigEntries(
+    repoRoot,
+    `^branch\\..*\\.${CREATED_FROM_CONFIG_KEY_SUFFIX}$`
+  );
 
   if (createdFromEntries.size === 0) {
     return branches;
@@ -78,7 +83,7 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
 
   const enrichedBranches: BranchInfo[] = await Promise.all(
     branches.map(async (branch: BranchInfo) => {
-      const configKey = `branch.${branch.name}.createdFromRef`;
+      const configKey = buildCreatedFromConfigKey(branch.name);
       const createdFromRef = createdFromEntries.get(configKey);
       if (!createdFromRef) {
         return branch;
@@ -125,7 +130,7 @@ export async function createBranchFromRef(
   }
 
   if (options.sourceRef) {
-    await writeGitConfig(repoRoot, `branch.${branchName}.createdFromRef`, options.sourceRef);
+    await writeGitConfig(repoRoot, buildCreatedFromConfigKey(branchName), options.sourceRef);
   }
 }
 
@@ -136,10 +141,10 @@ export async function renameBranch(
 ): Promise<void> {
   await runGit(repoRoot, ['branch', '-m', branchName, newBranchName]);
 
-  const createdFromRef = await readGitConfig(repoRoot, `branch.${branchName}.createdFromRef`);
+  const createdFromRef = await readGitConfig(repoRoot, buildCreatedFromConfigKey(branchName));
   if (createdFromRef) {
-    await writeGitConfig(repoRoot, `branch.${newBranchName}.createdFromRef`, createdFromRef);
-    await unsetGitConfig(repoRoot, `branch.${branchName}.createdFromRef`);
+    await writeGitConfig(repoRoot, buildCreatedFromConfigKey(newBranchName), createdFromRef);
+    await unsetGitConfig(repoRoot, buildCreatedFromConfigKey(branchName));
   }
 }
 
@@ -149,7 +154,7 @@ export async function deleteBranch(
   force: boolean
 ): Promise<void> {
   await runGit(repoRoot, ['branch', force ? '-D' : '-d', branchName]);
-  await unsetGitConfig(repoRoot, `branch.${branchName}.createdFromRef`);
+  await unsetGitConfig(repoRoot, buildCreatedFromConfigKey(branchName));
 }
 
 export async function syncBranch(
@@ -589,6 +594,10 @@ async function resolveBranchSyncTarget(
 
 function looksLikeBranchAlreadyCheckedOutError(message: string): boolean {
   return /already used by worktree/i.test(message);
+}
+
+function buildCreatedFromConfigKey(branchName: string): string {
+  return `branch.${branchName}.${CREATED_FROM_CONFIG_KEY_SUFFIX}`;
 }
 
 function formatRefForDisplay(refName: string): string {
