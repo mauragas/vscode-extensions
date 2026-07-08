@@ -1,5 +1,6 @@
 import {
   buildBranchDescription,
+  formatSourceBranchStatus,
   formatSyncStatus,
   getPublishTargetName,
   isPublishableBranch,
@@ -255,6 +256,11 @@ export function buildBranchTooltipContent(node: TreeBranch): string {
 
   if (node.info.createdFromDisplayName) {
     tooltipLines.push('', `Created from: ${node.info.createdFromDisplayName}`);
+
+    const sourceStatus = formatSourceBranchStatus(node.info);
+    if (sourceStatus) {
+      tooltipLines.push('', `Source status: ${sourceStatus}`);
+    }
   }
 
   if (node.info.lastCommitDate) {
@@ -438,10 +444,6 @@ function getItemContextValue(nodeType: NodeType, branch: BranchInfo): string {
     }
 
     contextValue = resolveAheadContextValue(contextValue, branch);
-  }
-
-  if (branch.isCurrent && branch.createdFromRef && (branch.sourceBehindCount ?? 0) > 0) {
-    contextValue = `${contextValue}:sourceBehind`;
   }
 
   return resolvePinnedContextValue(contextValue, branch.isPinned);

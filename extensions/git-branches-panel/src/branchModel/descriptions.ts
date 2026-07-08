@@ -64,6 +64,43 @@ export function getPublishTargetName(
   return branch.upstreamName ?? `origin/${branch.name}`;
 }
 
+export function hasSourceBranchUpdate(
+  branch: Pick<BranchInfo, 'isCurrent' | 'createdFromRef' | 'sourceBehindCount' | 'sourceRefMissing'>
+): boolean {
+  return (
+    branch.isCurrent &&
+    Boolean(branch.createdFromRef) &&
+    !branch.sourceRefMissing &&
+    (branch.sourceBehindCount ?? 0) > 0
+  );
+}
+
+export function formatSourceBranchStatus(
+  branch: Pick<
+    BranchInfo,
+    'createdFromDisplayName' | 'isCurrent' | 'sourceBehindCount' | 'sourceRefMissing'
+  >
+): string | undefined {
+  if (!branch.createdFromDisplayName) {
+    return undefined;
+  }
+
+  if (branch.sourceRefMissing) {
+    return 'source ref missing';
+  }
+
+  if (!branch.isCurrent) {
+    return undefined;
+  }
+
+  const behindCount = branch.sourceBehindCount ?? 0;
+  if (behindCount > 0) {
+    return `${behindCount} ${behindCount === 1 ? 'commit' : 'commits'} available`;
+  }
+
+  return 'up to date';
+}
+
 export function buildBranchDescription(
   branch: Pick<
     BranchInfo,

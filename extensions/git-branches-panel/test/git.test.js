@@ -225,15 +225,62 @@ test('getBranches preserves source metadata for branches created from another re
 
   await createBranchFromRef(repoRoot, 'feature/child', 'feature/demo', {
     checkout: false,
-    sourceRef: 'feature/demo',
+    sourceRef: 'refs/heads/feature/demo',
   });
 
   const branches = await getBranches(repoRoot);
   const childBranch = branches.find((branch) => branch.name === 'feature/child');
 
   assert.ok(childBranch);
-  assert.equal(childBranch.createdFromRef, 'feature/demo');
+  assert.equal(childBranch.createdFromRef, 'refs/heads/feature/demo');
   assert.equal(childBranch.createdFromDisplayName, 'feature/demo');
+});
+
+test('getBranches reports when the current branch is behind its recorded local source branch', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/source']);
+  await createBranchFromRef(repoRoot, 'feature/child', 'feature/source', {
+    checkout: true,
+    sourceRef: 'refs/heads/feature/source',
+  });
+
+  runGit(repoRoot, ['checkout', 'feature/source']);
+  commitFile(repoRoot, 'source.txt', 'source\n', 'Advance source branch');
+  runGit(repoRoot, ['checkout', 'feature/child']);
+
+  const branches = await getBranches(repoRoot);
+  const childBranch = branches.find((branch) => branch.name === 'feature/child');
+
+  assert.ok(childBranch);
+  assert.equal(childBranch.createdFromDisplayName, 'feature/source');
+  assert.equal(childBranch.sourceRefMissing, false);
+  assert.equal(childBranch.sourceBehindCount, 1);
+});
+
+test('getBranches reports when the current branch is behind its recorded remote-tracking source branch', async (t) => {
+  const { repoRoot, remoteRoot } = createRemoteBackedRepository(t);
+  const collaboratorRoot = cloneRepository(t, remoteRoot);
+
+  await createBranchFromRef(repoRoot, 'feature/from-origin', 'origin/main', {
+    checkout: true,
+    sourceRef: 'refs/remotes/origin/main',
+  });
+
+  writeFileSync(join(collaboratorRoot, 'README.md'), '# Test repo\nremote update\n');
+  runGit(collaboratorRoot, ['commit', '-am', 'Advance origin main']);
+  runGit(collaboratorRoot, ['push', 'origin', 'main']);
+
+  await fetchRemoteState(repoRoot);
+
+  const branches = await getBranches(repoRoot);
+  const currentBranch = branches.find((branch) => branch.name === 'feature/from-origin');
+
+  assert.ok(currentBranch);
+  assert.equal(currentBranch.createdFromRef, 'refs/remotes/origin/main');
+  assert.equal(currentBranch.createdFromDisplayName, 'origin/main');
+  assert.equal(currentBranch.sourceRefMissing, false);
+  assert.equal(currentBranch.sourceBehindCount, 1);
 });
 
 test('deleteTag removes the selected local tag', async (t) => {

@@ -6,6 +6,10 @@ import {
   type BranchViewId,
   updateSelectedItemPinnedContext,
 } from './pinContext';
+import {
+  syncSelectedItemCanUpdateFromSourceContexts,
+  updateSelectedItemCanUpdateFromSourceContext,
+} from './sourceUpdateContext';
 import { BranchTreeProvider, BranchTreeItem } from './treeProvider';
 
 interface RegisteredBranchView {
@@ -25,12 +29,14 @@ export function registerBranchViews(
   const selectionSubscriptions = treeViews.map(({ viewId, treeView }) =>
     treeView.onDidChangeSelection(({ selection }) => {
       void updateSelectedItemPinnedContext(viewId, selection[0]);
+      void updateSelectedItemCanUpdateFromSourceContext(viewId, selection[0]);
       void provider.setActiveRepositoryFromItem(selection[0]);
     })
   );
 
   updateTreeViewMessages(treeViews.map(({ treeView }) => treeView), provider);
   void syncSelectedItemPinnedContexts(treeViews);
+  void syncSelectedItemCanUpdateFromSourceContexts(treeViews);
   void provider.syncActiveRepositoryToEditorIfEnabled();
 
   context.subscriptions.push(
@@ -42,6 +48,7 @@ export function registerBranchViews(
     provider.onDidChangeTreeData(() => {
       updateTreeViewMessages(treeViews.map(({ treeView }) => treeView), provider);
       void syncSelectedItemPinnedContexts(treeViews);
+      void syncSelectedItemCanUpdateFromSourceContexts(treeViews);
     })
   );
 }

@@ -52,8 +52,8 @@ function getInlineViewItemContextCommands() {
   )];
 }
 
-test('package manifest exposes the 2.1.2 multi-repo, search, remote-host, history, remote-management, worktree, tag, and advanced-branch contributions', () => {
-  assert.equal(packageJson.version, '2.1.2');
+test('package manifest exposes the 2.3.0 multi-repo, source-update, search, remote-host, history, remote-management, worktree, tag, and advanced-branch contributions', () => {
+  assert.equal(packageJson.version, '2.3.0');
 
   const expectedCommands = [
     ['gitBranchesPanel.selectRepository', 'Select Active Repository'],
@@ -67,6 +67,7 @@ test('package manifest exposes the 2.1.2 multi-repo, search, remote-host, histor
     ['gitBranchesPanel.fetchAllRepositoriesPrune', 'Fetch All Repositories (Prune)'],
     ['gitBranchesPanel.syncAllRepositoriesBranches', 'Sync All Repositories Branches'],
     ['gitBranchesPanel.pullAllRepositoriesChanges', 'Pull All Repositories Changes'],
+    ['gitBranchesPanel.updateBranchFromSource', 'Update from Source Branch'],
     ['gitBranchesPanel.pullBranchChanges', 'Pull Branch Changes'],
     ['gitBranchesPanel.pushBranchChanges', 'Push Branch Changes'],
     ['gitBranchesPanel.showAllRepositoriesActions', 'More Actions'],
@@ -120,6 +121,7 @@ test('package manifest exposes the 2.1.2 multi-repo, search, remote-host, histor
   assert.equal(getCommand('gitBranchesPanel.fetchAllRepositoriesPrune').icon, '$(clear-all)');
   assert.equal(getCommand('gitBranchesPanel.syncAllRepositoriesBranches').icon, '$(sync)');
   assert.equal(getCommand('gitBranchesPanel.pullAllRepositoriesChanges').icon, '$(repo-pull)');
+  assert.equal(getCommand('gitBranchesPanel.updateBranchFromSource').icon, '$(git-merge)');
   assert.equal(getCommand('gitBranchesPanel.pullBranchChanges').icon, '$(repo-pull)');
   assert.equal(getCommand('gitBranchesPanel.pushBranchChanges').icon, '$(repo-push)');
   assert.equal(getCommand('gitBranchesPanel.showAllRepositoriesActions').icon, '$(ellipsis)');
@@ -660,6 +662,16 @@ test('package manifest exposes the 2.1.2 multi-repo, search, remote-host, histor
   );
   assert.ok(
     hasViewItemMenu(
+      'gitBranchesPanel.updateBranchFromSource',
+      (item) =>
+        item.when.includes('gitBranchesPanel.branchesViewSelectedItemCanUpdateFromSource') &&
+        item.when.includes('gitBranchesPanel.scmViewSelectedItemCanUpdateFromSource') &&
+        item.when.includes('publishableCurrentBranch') &&
+        item.group === '1_branchSource@1'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
       'gitBranchesPanel.showTagDetails',
       (item) => item.when === 'viewItem == tag' && item.group === '1_tag@2.8'
     )
@@ -696,6 +708,7 @@ test('package manifest exposes the 2.1.2 multi-repo, search, remote-host, histor
   );
 
   const inlineCommandIds = getInlineViewItemContextCommands();
+  assert.ok(!inlineCommandIds.includes('gitBranchesPanel.updateBranchFromSource'));
   for (const commandId of inlineCommandIds) {
     const command = getCommand(commandId);
     assert.ok(command, `Inline command '${commandId}' must be contributed.`);

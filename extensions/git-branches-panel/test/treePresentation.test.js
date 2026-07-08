@@ -23,8 +23,9 @@ test('buildBranchTooltipContent describes local, remote, stash, hook, tag, and w
       upstreamName: 'origin/feature/demo',
       aheadCount: 1,
       behindCount: 2,
-      createdFromRef: 'main',
+      createdFromRef: 'refs/heads/main',
       createdFromDisplayName: 'main',
+      sourceBehindCount: 1,
     },
   });
   const publishableTooltip = buildBranchTooltipContent({
@@ -122,7 +123,8 @@ test('buildBranchTooltipContent describes local, remote, stash, hook, tag, and w
 
   assert.match(localTooltip, /\*\*feature\/demo\*\*/);
   assert.match(localTooltip, /_Current branch_/);
-  assert.match(localTooltip, /Created from: feature\/demo/);
+  assert.match(localTooltip, /Created from: main/);
+  assert.match(localTooltip, /Source status: 1 commit available/);
   assert.match(localTooltip, /Last commit: 2 hours ago/);
   assert.match(localTooltip, /Upstream: origin\/feature\/demo/);
   assert.match(localTooltip, /Sync state: 2↓ 1↑/);
@@ -539,21 +541,6 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(currentBranchPresentation.nodeType, 'currentBranch');
   assert.equal(currentBranchPresentation.label, '● main');
   assert.equal(currentBranchPresentation.contextValue, 'publishableCurrentBranch');
-  const sourceBehindCurrentBranchPresentation = buildTreeItemPresentation({
-    kind: 'branch',
-    label: 'feature/demo',
-    path: 'feature/demo',
-    repoRoot: '/repo',
-    children: [],
-    info: {
-      name: 'feature/demo',
-      isCurrent: true,
-      scope: 'local',
-      createdFromRef: 'main',
-      sourceBehindCount: 1,
-    },
-  });
-  assert.equal(sourceBehindCurrentBranchPresentation.contextValue, 'currentBranch:sourceBehind');
   assert.equal(currentBranchPresentation.command, undefined);
   assert.equal(currentBranchPresentation.icon.id, 'git-branch');
   assert.equal(currentBranchPresentation.icon.colorId, 'gitDecoration.addedResourceForeground');

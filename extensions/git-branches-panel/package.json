@@ -2805,11 +2805,6 @@
           "group": "inline@1"
         },
         {
-          "command": "gitBranchesPanel.updateBranchFromSource",
-          "when": "viewItem =~ /^(?:pinned:)?currentBranch(?::ahead)?(?::sourceBehind)?$/",
-          "group": "inline@2"
-        },
-        {
           "command": "gitBranchesPanel.syncBranch",
           "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|protectedBranch(?::ahead)?)$/",
           "group": "inline@2"
@@ -3863,6 +3858,11 @@
           "command": "gitBranchesPanel.removeStaleRemoteTrackingRef",
           "when": "gitBranchesPanel.branchContextMenu.slot12 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:staleRemoteBranch)$/",
           "group": "1_branchCustom@12"
+        },
+        {
+          "command": "gitBranchesPanel.updateBranchFromSource",
+          "when": "((view == gitBranchesPanel && gitBranchesPanel.branchesViewSelectedItemCanUpdateFromSource) || (view == gitBranchesSCM && gitBranchesPanel.scmViewSelectedItemCanUpdateFromSource)) && viewItem =~ /^(?:pinned:)?(?:currentBranch(?::ahead)?|publishableCurrentBranch)$/",
+          "group": "1_branchSource@1"
         },
         {
           "command": "gitBranchesPanel.openBranchOnRemote",

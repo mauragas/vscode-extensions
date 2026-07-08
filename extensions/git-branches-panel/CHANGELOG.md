@@ -4,9 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [2.3.0] - 2026-07-08
 
-- Added branch source tracking so branches created from another ref now remember their source branch and surface it in the tooltip.
-- Added a current-branch-only Update from Source Branch action that merges the recorded source branch into the current branch when the source has new commits.
-- Updated branch context and inline actions so source-update availability is visible only when the current branch is actually behind its recorded source.
+- Added branch source tracking so branches created from another ref now remember their canonical source ref and show both the source branch and source status in the tooltip.
+- Added a current-branch-only **Update from Source Branch** context-menu action that merges the recorded source branch into the current branch when new source commits are available.
+- Revalidated recorded source refs before merging so remote-tracking sources refresh first and missing or already up-to-date sources do not offer a stale update action.
 
 ## [2.2.0] - 2026-07-01
 

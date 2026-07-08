@@ -35,6 +35,10 @@ export interface CreateBranchFromRefOptions {
   sourceRef?: string;
 }
 
+export interface CreateBranchOptions {
+  sourceRef?: string;
+}
+
 export type ResetMode = 'soft' | 'mixed' | 'hard';
 
 export interface RebaseBranchOptions {
@@ -55,7 +59,7 @@ interface BranchSyncTarget {
 }
 
 interface BranchRemoteState {
-  branch: Awaited<ReturnType<typeof getBranches>>[number];
+  branch: BranchInfo;
   syncTarget: BranchSyncTarget;
   remoteBranchExists: boolean;
   syncCounts: {
@@ -97,8 +101,15 @@ export async function checkoutBranch(repoRoot: string, branchName: string): Prom
   await runGit(repoRoot, ['checkout', branchName]);
 }
 
-export async function createBranch(repoRoot: string, branchName: string): Promise<void> {
-  await createBranchFromRef(repoRoot, branchName, 'HEAD', { checkout: true, sourceRef: 'HEAD' });
+export async function createBranch(
+  repoRoot: string,
+  branchName: string,
+  options: CreateBranchOptions = {}
+): Promise<void> {
+  await createBranchFromRef(repoRoot, branchName, 'HEAD', {
+    checkout: true,
+    sourceRef: options.sourceRef,
+  });
 }
 
 export async function createBranchFromRef(
@@ -113,9 +124,8 @@ export async function createBranchFromRef(
     await runGit(repoRoot, ['branch', branchName, startPoint]);
   }
 
-  const resolvedSourceRef = options.sourceRef ?? startPoint;
-  if (resolvedSourceRef) {
-    await writeGitConfig(repoRoot, `branch.${branchName}.createdFromRef`, resolvedSourceRef);
+  if (options.sourceRef) {
+    await writeGitConfig(repoRoot, `branch.${branchName}.createdFromRef`, options.sourceRef);
   }
 }
 
@@ -291,9 +301,9 @@ export async function pushBranch(
 
 export async function mergeBranchIntoCurrent(
   repoRoot: string,
-  branchName: string
+  refName: string
 ): Promise<void> {
-  await runGit(repoRoot, ['merge', '--no-edit', branchName]);
+  await runGit(repoRoot, ['merge', '--no-edit', refName]);
 }
 
 export async function cherryPickRef(
@@ -605,12 +615,11 @@ async function resolveSourceBranchState(
   repoRoot: string,
   branch: BranchInfo,
   sourceRef: string
-): Promise<Pick<BranchInfo, 'sourceAheadCount' | 'sourceBehindCount' | 'sourceRefMissing'>> {
+): Promise<Pick<BranchInfo, 'sourceBehindCount' | 'sourceRefMissing'>> {
   try {
     await runGit(repoRoot, ['rev-parse', '--verify', '--quiet', sourceRef]);
   } catch {
     return {
-      sourceAheadCount: 0,
       sourceBehindCount: 0,
       sourceRefMissing: true,
     };
@@ -618,7 +627,6 @@ async function resolveSourceBranchState(
 
   if (!branch.isCurrent) {
     return {
-      sourceAheadCount: 0,
       sourceBehindCount: 0,
       sourceRefMissing: false,
     };
@@ -626,7 +634,6 @@ async function resolveSourceBranchState(
 
   const counts = await getAheadBehindCounts(repoRoot, branch.name, sourceRef);
   return {
-    sourceAheadCount: counts.aheadCount,
     sourceBehindCount: counts.behindCount,
     sourceRefMissing: false,
   };

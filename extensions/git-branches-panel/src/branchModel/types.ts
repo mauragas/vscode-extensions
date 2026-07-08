@@ -28,7 +28,6 @@ export interface BranchInfo {
   isDeletionProtected?: boolean;
   createdFromRef?: string;
   createdFromDisplayName?: string;
-  sourceAheadCount?: number;
   sourceBehindCount?: number;
   sourceRefMissing?: boolean;
   worktreePath?: string;
