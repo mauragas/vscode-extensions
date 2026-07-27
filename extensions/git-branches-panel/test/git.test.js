@@ -507,7 +507,8 @@ test('stashSilently saves tracked and untracked changes and getStashes lists the
   assert.equal(didStash, true);
   assert.equal(stashes.length, 1);
   assert.equal(stashes[0].scope, 'stash');
-  assert.equal(stashes[0].name, 'stash@{0}');
+  assert.match(stashes[0].name, /(WIP on|On) main/);
+  assert.equal(stashes[0].stashRef, 'stash@{0}');
   assert.match(stashes[0].lastCommit, /(WIP on|On) main/);
   assert.equal(readFileSync(join(repoRoot, 'README.md'), 'utf8'), '# Test repo\nsecond\n');
   assert.equal(hasRef(repoRoot, 'refs/stash'), true);
