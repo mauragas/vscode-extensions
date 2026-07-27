@@ -371,7 +371,21 @@ function getBranchKey(branch: Pick<BranchInfo, 'name' | 'scope'>): string {
   return `${branch.scope ?? 'local'}:${branch.name}`;
 }
 
-function getBranchNodeLabel(branch: Pick<BranchInfo, 'name' | 'scope'>): string {
+function getBranchNodeLabel(branch: BranchInfo): string {
+  if (branch.scope === 'stash') {
+    const stashMessage = branch.lastCommit;
+    if (!stashMessage) {
+      return branch.name || 'Unnamed Stash';
+    }
+
+    const prefixMatch = stashMessage.match(/^(?:WIP on|On) [^:]+:\s*(.*)$/u);
+    if (prefixMatch?.[1]) {
+      return prefixMatch[1];
+    }
+
+    return stashMessage;
+  }
+
   const separatorPattern = branch.scope === 'worktree' ? /[\\/]+/u : /\//u;
   const segments = branch.name.split(separatorPattern).filter(Boolean);
 

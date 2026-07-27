@@ -24,6 +24,7 @@ const {
   createBranchFromRef,
   createWorktree,
   createTag,
+  deleteBranch,
   deleteRemoteTag,
   deleteRemoteBranch,
   deleteTag,
@@ -216,6 +217,107 @@ test('getTags marks the checked-out tag as current', async (t) => {
 
   assert.ok(checkedOutTag);
   assert.equal(checkedOutTag.isCurrent, true);
+});
+
+test('deleteBranch succeeds when the branch never had source metadata', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['branch', 'feature/temporary']);
+
+  await deleteBranch(repoRoot, 'feature/temporary', false);
+
+  assert.equal(hasRef(repoRoot, 'refs/heads/feature/temporary'), false);
+});
+
+test('getBranches preserves source metadata for branches created from another ref', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/demo']);
+
+  await createBranchFromRef(repoRoot, 'feature/child', 'feature/demo', {
+    checkout: false,
+    sourceRef: 'refs/heads/feature/demo',
+  });
+
+  const branches = await getBranches(repoRoot);
+  const childBranch = branches.find((branch) => branch.name === 'feature/child');
+
+  assert.ok(childBranch);
+  assert.equal(childBranch.createdFromRef, 'refs/heads/feature/demo');
+  assert.equal(childBranch.createdFromDisplayName, 'feature/demo');
+});
+
+test('getBranches reports when the current branch is behind its recorded local source branch', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/source']);
+  await createBranchFromRef(repoRoot, 'feature/child', 'feature/source', {
+    checkout: true,
+    sourceRef: 'refs/heads/feature/source',
+  });
+
+  runGit(repoRoot, ['checkout', 'feature/source']);
+  commitFile(repoRoot, 'source.txt', 'source\n', 'Advance source branch');
+  runGit(repoRoot, ['checkout', 'feature/child']);
+
+  const branches = await getBranches(repoRoot);
+  const childBranch = branches.find((branch) => branch.name === 'feature/child');
+
+  assert.ok(childBranch);
+  assert.equal(childBranch.createdFromDisplayName, 'feature/source');
+  assert.equal(childBranch.sourceRefMissing, false);
+  assert.equal(childBranch.sourceBehindCount, 1);
+});
+
+test('getBranches reports when the current branch is behind its recorded remote-tracking source branch', async (t) => {
+  const { repoRoot, remoteRoot } = createRemoteBackedRepository(t);
+  const collaboratorRoot = cloneRepository(t, remoteRoot);
+
+  await createBranchFromRef(repoRoot, 'feature/from-origin', 'origin/main', {
+    checkout: true,
+    sourceRef: 'refs/remotes/origin/main',
+  });
+
+  writeFileSync(join(collaboratorRoot, 'README.md'), '# Test repo\nremote update\n');
+  runGit(collaboratorRoot, ['commit', '-am', 'Advance origin main']);
+  runGit(collaboratorRoot, ['push', 'origin', 'main']);
+
+  await fetchRemoteState(repoRoot);
+
+  const branches = await getBranches(repoRoot);
+  const currentBranch = branches.find((branch) => branch.name === 'feature/from-origin');
+
+  assert.ok(currentBranch);
+  assert.equal(currentBranch.createdFromRef, 'refs/remotes/origin/main');
+  assert.equal(currentBranch.createdFromDisplayName, 'origin/main');
+  assert.equal(currentBranch.sourceRefMissing, false);
+  assert.equal(currentBranch.sourceBehindCount, 1);
+});
+
+test('getBranches returns branch without source info when config entry is missing', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/reflog-test']);
+
+  const branches = await getBranches(repoRoot);
+  const testBranch = branches.find((branch) => branch.name === 'feature/reflog-test');
+
+  assert.ok(testBranch);
+  assert.equal(testBranch.createdFromRef, undefined);
+  assert.equal(testBranch.createdFromDisplayName, undefined);
+});
+
+test('getBranches returns branch without source info when reflog has no checkout entries', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['branch', 'feature/no-checkout']);
+
+  const branches = await getBranches(repoRoot);
+  const testBranch = branches.find((branch) => branch.name === 'feature/no-checkout');
+
+  assert.ok(testBranch);
+  assert.equal(testBranch.createdFromRef, undefined);
+  assert.equal(testBranch.createdFromDisplayName, undefined);
 });
 
 test('deleteTag removes the selected local tag', async (t) => {
@@ -431,7 +533,8 @@ test('stashSilently saves tracked and untracked changes and getStashes lists the
   assert.equal(didStash, true);
   assert.equal(stashes.length, 1);
   assert.equal(stashes[0].scope, 'stash');
-  assert.equal(stashes[0].name, 'stash@{0}');
+  assert.match(stashes[0].name, /(WIP on|On) main/);
+  assert.equal(stashes[0].stashRef, 'stash@{0}');
   assert.match(stashes[0].lastCommit, /(WIP on|On) main/);
   assert.equal(readFileSync(join(repoRoot, 'README.md'), 'utf8'), '# Test repo\nsecond\n');
   assert.equal(hasRef(repoRoot, 'refs/stash'), true);

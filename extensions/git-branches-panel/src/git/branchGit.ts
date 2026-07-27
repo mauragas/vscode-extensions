@@ -2,6 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import type { BranchInfo } from '../branchModel';
 import { isTrackedBranch } from '../branchModel';
 import { listRefs } from './refListing';
 import { fetchRemoteState } from './remoteGit';
@@ -10,8 +11,13 @@ import {
   ensureRemoteExists,
   getAheadBehindCounts,
   readGitConfig,
+  readGitConfigEntries,
   runGit,
+  unsetGitConfig,
+  writeGitConfig,
 } from './shared';
+
+const CREATED_FROM_CONFIG_KEY_SUFFIX = 'gitbranchespanelcreatedfromref';
 
 export interface SyncBranchResult {
   branchName: string;
@@ -28,6 +34,11 @@ export interface SyncBranchOptions {
 
 export interface CreateBranchFromRefOptions {
   checkout?: boolean;
+  sourceRef?: string;
+}
+
+export interface CreateBranchOptions {
+  sourceRef?: string;
 }
 
 export type ResetMode = 'soft' | 'mixed' | 'hard';
@@ -50,7 +61,7 @@ interface BranchSyncTarget {
 }
 
 interface BranchRemoteState {
-  branch: Awaited<ReturnType<typeof getBranches>>[number];
+  branch: BranchInfo;
   syncTarget: BranchSyncTarget;
   remoteBranchExists: boolean;
   syncCounts: {
@@ -59,16 +70,52 @@ interface BranchRemoteState {
   };
 }
 
-export async function getBranches(repoRoot: string) {
-  return listRefs(repoRoot, 'refs/heads', 'local');
+export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
+  const branches = await listRefs(repoRoot, 'refs/heads', 'local');
+  const createdFromEntries = await readGitConfigEntries(
+    repoRoot,
+    `^branch\\..*\\.${CREATED_FROM_CONFIG_KEY_SUFFIX}$`
+  );
+
+  const enrichedBranches: BranchInfo[] = await Promise.all(
+    branches.map(async (branch: BranchInfo) => {
+      if (branch.createdFromRef) {
+        return branch;
+      }
+
+      const configKey = buildCreatedFromConfigKey(branch.name);
+      let createdFromRef = createdFromEntries.get(configKey);
+
+      if (!createdFromRef) {
+        return branch;
+      }
+
+      const sourceState = await resolveSourceBranchState(repoRoot, branch, createdFromRef);
+      return {
+        ...branch,
+        createdFromRef,
+        createdFromDisplayName: formatRefForDisplay(createdFromRef),
+        ...sourceState,
+      };
+    })
+  );
+
+  return enrichedBranches;
 }
 
 export async function checkoutBranch(repoRoot: string, branchName: string): Promise<void> {
   await runGit(repoRoot, ['checkout', branchName]);
 }
 
-export async function createBranch(repoRoot: string, branchName: string): Promise<void> {
-  await createBranchFromRef(repoRoot, branchName, 'HEAD', { checkout: true });
+export async function createBranch(
+  repoRoot: string,
+  branchName: string,
+  options: CreateBranchOptions = {}
+): Promise<void> {
+  await createBranchFromRef(repoRoot, branchName, 'HEAD', {
+    checkout: true,
+    sourceRef: options.sourceRef,
+  });
 }
 
 export async function createBranchFromRef(
@@ -79,10 +126,13 @@ export async function createBranchFromRef(
 ): Promise<void> {
   if (options.checkout ?? false) {
     await runGit(repoRoot, ['checkout', '-b', branchName, startPoint]);
-    return;
+  } else {
+    await runGit(repoRoot, ['branch', branchName, startPoint]);
   }
 
-  await runGit(repoRoot, ['branch', branchName, startPoint]);
+  if (options.sourceRef) {
+    await writeGitConfig(repoRoot, buildCreatedFromConfigKey(branchName), options.sourceRef);
+  }
 }
 
 export async function renameBranch(
@@ -91,6 +141,12 @@ export async function renameBranch(
   newBranchName: string
 ): Promise<void> {
   await runGit(repoRoot, ['branch', '-m', branchName, newBranchName]);
+
+  const createdFromRef = await readGitConfig(repoRoot, buildCreatedFromConfigKey(branchName));
+  if (createdFromRef) {
+    await writeGitConfig(repoRoot, buildCreatedFromConfigKey(newBranchName), createdFromRef);
+    await unsetGitConfig(repoRoot, buildCreatedFromConfigKey(branchName));
+  }
 }
 
 export async function deleteBranch(
@@ -99,6 +155,7 @@ export async function deleteBranch(
   force: boolean
 ): Promise<void> {
   await runGit(repoRoot, ['branch', force ? '-D' : '-d', branchName]);
+  await unsetGitConfig(repoRoot, buildCreatedFromConfigKey(branchName));
 }
 
 export async function syncBranch(
@@ -250,9 +307,9 @@ export async function pushBranch(
 
 export async function mergeBranchIntoCurrent(
   repoRoot: string,
-  branchName: string
+  refName: string
 ): Promise<void> {
-  await runGit(repoRoot, ['merge', '--no-edit', branchName]);
+  await runGit(repoRoot, ['merge', '--no-edit', refName]);
 }
 
 export async function cherryPickRef(
@@ -538,6 +595,58 @@ async function resolveBranchSyncTarget(
 
 function looksLikeBranchAlreadyCheckedOutError(message: string): boolean {
   return /already used by worktree/i.test(message);
+}
+
+function buildCreatedFromConfigKey(branchName: string): string {
+  return `branch.${branchName}.${CREATED_FROM_CONFIG_KEY_SUFFIX}`;
+}
+
+function formatRefForDisplay(refName: string): string {
+  if (!refName) {
+    return refName;
+  }
+
+  if (refName.startsWith('refs/heads/')) {
+    return refName.slice('refs/heads/'.length);
+  }
+
+  if (refName.startsWith('refs/remotes/')) {
+    return refName.slice('refs/remotes/'.length);
+  }
+
+  if (refName.startsWith('refs/tags/')) {
+    return refName.slice('refs/tags/'.length);
+  }
+
+  return refName;
+}
+
+async function resolveSourceBranchState(
+  repoRoot: string,
+  branch: BranchInfo,
+  sourceRef: string
+): Promise<Pick<BranchInfo, 'sourceBehindCount' | 'sourceRefMissing'>> {
+  try {
+    await runGit(repoRoot, ['rev-parse', '--verify', '--quiet', sourceRef]);
+  } catch {
+    return {
+      sourceBehindCount: 0,
+      sourceRefMissing: true,
+    };
+  }
+
+  if (!branch.isCurrent) {
+    return {
+      sourceBehindCount: 0,
+      sourceRefMissing: false,
+    };
+  }
+
+  const counts = await getAheadBehindCounts(repoRoot, branch.name, sourceRef);
+  return {
+    sourceBehindCount: counts.behindCount,
+    sourceRefMissing: false,
+  };
 }
 
 function parseRefComparison(stdout: string): RefComparisonChange[] {

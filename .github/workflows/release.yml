@@ -1,0 +1,63 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build extension
+        run: npm ci && npm run build:git-branches-panel
+
+      - name: Package .vsix
+        working-directory: extensions/git-branches-panel
+        run: npx -y -p @vscode/vsce vsce package
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          CHANGELOG="extensions/git-branches-panel/CHANGELOG.md"
+          IN_VERSION=false
+          NOTES=""
+
+          while IFS= read -r line; do
+            if [[ "$line" =~ ^##\ \[$VERSION\] ]]; then
+              IN_VERSION=true
+              continue
+            fi
+            if $IN_VERSION; then
+              if [[ "$line" =~ ^##\ \[ ]]; then
+                break
+              fi
+              NOTES+="$(echo "$line")"$'\n'
+            fi
+          done < "$CHANGELOG"
+
+          NOTES=$(echo "$NOTES" | sed '/^$/d')
+
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body: ${{ steps.changelog.outputs.notes }}
+          files: extensions/git-branches-panel/git-branches-panel-*.vsix

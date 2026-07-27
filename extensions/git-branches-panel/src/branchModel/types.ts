@@ -19,6 +19,7 @@ export interface BranchInfo {
   lastCommitDate?: string;
   lastCommitTimestamp?: number;
   stashRevision?: string;
+  stashRef?: string;
   upstreamName?: string;
   aheadCount?: number;
   behindCount?: number;
@@ -26,6 +27,10 @@ export interface BranchInfo {
   isPinned?: boolean;
   isSyncing?: boolean;
   isDeletionProtected?: boolean;
+  createdFromRef?: string;
+  createdFromDisplayName?: string;
+  sourceBehindCount?: number;
+  sourceRefMissing?: boolean;
   worktreePath?: string;
   worktreeRef?: string;
   worktreeIsBare?: boolean;

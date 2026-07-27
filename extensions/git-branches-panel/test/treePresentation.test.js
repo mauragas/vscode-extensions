@@ -23,6 +23,9 @@ test('buildBranchTooltipContent describes local, remote, stash, hook, tag, and w
       upstreamName: 'origin/feature/demo',
       aheadCount: 1,
       behindCount: 2,
+      createdFromRef: 'refs/heads/main',
+      createdFromDisplayName: 'main',
+      sourceBehindCount: 1,
     },
   });
   const publishableTooltip = buildBranchTooltipContent({
@@ -120,6 +123,8 @@ test('buildBranchTooltipContent describes local, remote, stash, hook, tag, and w
 
   assert.match(localTooltip, /\*\*feature\/demo\*\*/);
   assert.match(localTooltip, /_Current branch_/);
+  assert.match(localTooltip, /Created from: main/);
+  assert.match(localTooltip, /Source status: 1 commit available/);
   assert.match(localTooltip, /Last commit: 2 hours ago/);
   assert.match(localTooltip, /Upstream: origin\/feature\/demo/);
   assert.match(localTooltip, /Sync state: 2↓ 1↑/);

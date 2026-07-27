@@ -30,7 +30,7 @@ export async function getStashes(repoRoot: string): Promise<BranchInfo[]> {
         record.split(GIT_FIELD_SEPARATOR);
 
       return {
-        name,
+        name: lastCommit || name,
         isCurrent: false,
         scope: 'stash',
         lastCommitDate,
@@ -38,6 +38,7 @@ export async function getStashes(repoRoot: string): Promise<BranchInfo[]> {
           ? Number(lastCommitTimestamp)
           : undefined,
         stashRevision: stashRevision || undefined,
+        stashRef: name || undefined,
         lastCommit,
       } satisfies BranchInfo;
     });
@@ -71,7 +72,7 @@ export async function renameStash(
 
   const stashes = await getStashes(repoRoot);
   const targetStash = stashes.find(
-    (stash) => stash.name === stashIdentifier || stash.stashRevision === stashIdentifier
+    (stash) => stash.name === stashIdentifier || stash.stashRef === stashIdentifier || stash.stashRevision === stashIdentifier
   );
   if (!targetStash?.stashRevision) {
     throw new Error(`Stash '${stashIdentifier}' was not found.`);

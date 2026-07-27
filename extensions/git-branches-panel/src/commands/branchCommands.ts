@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { join } from 'node:path';
 
 import {
+  hasSourceBranchUpdate,
   isPublishableBranch,
   type RemoteTrackingState,
 } from '../branchModel';
@@ -24,6 +25,8 @@ import {
   createBranchFromRef,
   deleteBranch,
   deleteRemoteBranch,
+  fetchRemoteState,
+  getBranches,
   getRemoteDefaultBranch,
   getRemoteDetails,
   getRemoteBranchTrackingState,
@@ -154,6 +157,12 @@ export function registerBranchDomainCommands(
     vscode.commands.registerCommand('gitBranchesPanel.publishCurrentBranch', async (item?: BranchTreeItem) => {
       await handlePublishCurrentBranch(item, commandContext);
     }),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.updateBranchFromSource',
+      async (item?: BranchTreeItem) => {
+        await handleUpdateBranchFromSource(item, commandContext);
+      }
+    ),
     vscode.commands.registerCommand('gitBranchesPanel.syncBranch', async (item: BranchTreeItem) => {
       await handleSyncBranch(item, commandContext);
     }),
@@ -429,6 +438,86 @@ async function handlePublishCurrentBranch(
   await pushBranchByName(repoRoot, currentBranch.name, commandContext);
 }
 
+async function handleUpdateBranchFromSource(
+  item: BranchTreeItem | undefined,
+  commandContext: CommandContext
+): Promise<void> {
+  if (!item?.branchName || !item.repoRoot || !item.branchInfo?.isCurrent) {
+    return;
+  }
+
+  const branchInfo = item.branchInfo;
+  const sourceRef = branchInfo.createdFromRef;
+  const currentBranchName = item.branchName;
+  const repoRoot = item.repoRoot;
+  if (!sourceRef || !currentBranchName || !repoRoot) {
+    return;
+  }
+
+  let latestSourceDisplayName = sourceRef;
+
+  try {
+    const latestBranchInfo = await resolveLatestSourceUpdateBranchInfo(
+      repoRoot,
+      currentBranchName,
+      sourceRef
+    );
+    if (!latestBranchInfo?.createdFromRef) {
+      vscode.window.showInformationMessage(
+        `Branch '${currentBranchName}' does not have a recorded source branch.`
+      );
+      return;
+    }
+
+    const latestSourceRef = latestBranchInfo.createdFromRef;
+    latestSourceDisplayName = latestBranchInfo.createdFromDisplayName ?? latestSourceRef;
+    if (latestBranchInfo.sourceRefMissing) {
+      await commandContext.refresh({ fetchRemoteState: false });
+      vscode.window.showInformationMessage(
+        `Recorded source branch '${latestSourceDisplayName}' no longer exists.`
+      );
+      return;
+    }
+
+    if (!hasSourceBranchUpdate(latestBranchInfo)) {
+      await commandContext.refresh({ fetchRemoteState: false });
+      vscode.window.showInformationMessage(
+        `Branch '${currentBranchName}' is already up to date with '${latestSourceDisplayName}'.`
+      );
+      return;
+    }
+
+    const confirmation = await vscode.window.showWarningMessage(
+      `Merge '${latestSourceDisplayName}' into current branch '${currentBranchName}'?`,
+      { modal: true },
+      'Merge'
+    );
+    if (confirmation !== 'Merge') {
+      return;
+    }
+
+    await commandContext.runWithLoadingIndicator(
+      `Updating '${currentBranchName}' from '${latestSourceDisplayName}'…`,
+      () =>
+        commandContext.provider.withBusyBranch(repoRoot, currentBranchName, async () => {
+          await mergeBranchIntoCurrent(repoRoot, latestSourceRef);
+        })
+    );
+    await commandContext.showSuccessAndRefresh(
+      `Merged '${latestSourceDisplayName}' into '${currentBranchName}'.`,
+      {
+        fetchRemoteState: looksLikeRemoteTrackingSourceRef(latestSourceRef),
+        forceFetchRemoteState: looksLikeRemoteTrackingSourceRef(latestSourceRef),
+      }
+    );
+  } catch (error) {
+    commandContext.showCommandError(
+      `Failed to merge '${latestSourceDisplayName}' into '${currentBranchName}'`,
+      error
+    );
+  }
+}
+
 async function handleSyncBranch(
   item: BranchTreeItem,
   commandContext: CommandContext
@@ -583,7 +672,9 @@ async function handleNewBranch(
   }
 
   try {
-    await createBranch(repoRoot, branchName);
+    await createBranch(repoRoot, branchName, {
+      sourceRef: toStoredLocalSourceRef(commandContext.provider.getCurrentBranch(repoRoot)?.name),
+    });
     await commandContext.showSuccessAndRefresh(`Created and switched to '${branchName}'.`);
     await revealCreatedBranch(commandContext, repoRoot, branchName);
   } catch (error) {
@@ -629,6 +720,7 @@ async function handleCreateBranchFromSelected(
   try {
     await createBranchFromRef(item.repoRoot, branchName, sourceBranchName, {
       checkout: checkoutNewBranch,
+      sourceRef: toStoredSourceRef(item),
     });
     await commandContext.showSuccessAndRefresh(
       checkoutNewBranch
@@ -1173,6 +1265,37 @@ function resolveNewBranchName(name: string, normalize: boolean): string {
   return normalize ? normalizeBranchName(name) : sanitizeNewBranchName(name);
 }
 
+async function resolveLatestSourceUpdateBranchInfo(
+  repoRoot: string,
+  currentBranchName: string,
+  sourceRef: string
+) {
+  if (looksLikeRemoteTrackingSourceRef(sourceRef)) {
+    await fetchRemoteState(repoRoot);
+  }
+
+  const branches = await getBranches(repoRoot);
+  return branches.find((branch) => branch.name === currentBranchName && branch.isCurrent);
+}
+
+function toStoredSourceRef(item: Pick<BranchTreeItem, 'nodeType' | 'branchName'>): string | undefined {
+  if (!item.branchName) {
+    return undefined;
+  }
+
+  return item.nodeType === 'remoteBranch' || item.nodeType === 'staleRemoteBranch'
+    ? `refs/remotes/${item.branchName}`
+    : toStoredLocalSourceRef(item.branchName);
+}
+
+function toStoredLocalSourceRef(branchName: string | undefined): string | undefined {
+  return branchName ? `refs/heads/${branchName}` : undefined;
+}
+
+function looksLikeRemoteTrackingSourceRef(sourceRef: string): boolean {
+  return sourceRef.startsWith('refs/remotes/');
+}
+
 async function revealCreatedBranch(
   commandContext: CommandContext,
   repoRoot: string,
@@ -1211,6 +1334,18 @@ function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
         }
       )
     );
+
+    if (item.branchInfo && hasSourceBranchUpdate(item.branchInfo)) {
+      items.push(
+        createBranchActionItem(
+          'updateBranchFromSource',
+          '$(git-merge) Update from Source Branch',
+          async () => {
+            await vscode.commands.executeCommand('gitBranchesPanel.updateBranchFromSource', item);
+          }
+        )
+      );
+    }
 
     if (!isPublishableBranchItem(item)) {
       items.push(

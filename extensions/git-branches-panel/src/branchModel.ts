@@ -18,8 +18,10 @@ export type {
 
 export {
   buildBranchDescription,
+  formatSourceBranchStatus,
   formatSyncStatus,
   getPublishTargetName,
+  hasSourceBranchUpdate,
   isPublishableBranch,
   isTrackedBranch,
   parseUpstreamTrack,

@@ -1,8 +1,8 @@
 {
   "name": "git-branches-panel",
   "displayName": "Git Branches Panel",
-  "description": "Tree view for branches, tags, stashes, worktrees, hooks, and remotes across one or multiple Git repositories with grouping, search, filtering, compare/history workflows, remote-host integration, worktree maintenance, sync state, and quick actions.",
-  "version": "2.2.0",
+  "description": "Tree view for branches, tags, stashes, worktrees, hooks, and remotes across one or multiple Git repositories with grouping, search, filtering, compare/history workflows, remote host integration, worktree maintenance, sync state, and quick actions.",
+  "version": "2.3.0",
   "publisher": "karolis-mauragas",
   "license": "MIT",
   "repository": {
@@ -259,6 +259,11 @@
         "command": "gitBranchesPanel.createWorktreeFromCurrentBranch",
         "title": "Create New Worktree...",
         "icon": "$(new-folder)"
+      },
+      {
+        "command": "gitBranchesPanel.updateBranchFromSource",
+        "title": "Update from Source Branch",
+        "icon": "$(git-merge)"
       },
       {
         "command": "gitBranchesPanel.syncBranch",
@@ -3853,6 +3858,11 @@
           "command": "gitBranchesPanel.removeStaleRemoteTrackingRef",
           "when": "gitBranchesPanel.branchContextMenu.slot12 == 'deleteOrCleanup' && viewItem =~ /^(?:pinned:)?(?:staleRemoteBranch)$/",
           "group": "1_branchCustom@12"
+        },
+        {
+          "command": "gitBranchesPanel.updateBranchFromSource",
+          "when": "gitBranchesPanel.currentBranchCanUpdateFromSource && viewItem =~ /^(?:pinned:)?(?:currentBranch(?::ahead)?|publishableCurrentBranch)$/",
+          "group": "1_branchSource@1"
         },
         {
           "command": "gitBranchesPanel.openBranchOnRemote",
