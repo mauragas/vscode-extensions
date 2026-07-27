@@ -2,8 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.3.0] - 2026-07-08
+## [2.3.0] - 2026-07-27
 
+- Stash names now display the human-readable stash message (e.g., "Initial commit") instead of internal Git ref identifiers like `@0`, with a readable fallback to `stash@{n}` when no custom message exists
+- Added `stashRef` property to `BranchInfo` type to store the Git stash ref alongside the display name, ensuring all stash commands (apply, pop, drop, rename, compare) use the correct identifier for Git operations
+- Enhanced `getBranchNodeLabel()` to derive readable stash labels by stripping automatic "WIP on X:" prefixes from messages while preserving custom stash messages as-is
 - Added branch source tracking so branches created from another ref now remember their canonical source ref and show both the source branch and source status in the tooltip.
 - Added a current-branch-only **Update from Source Branch** context-menu action that merges the recorded source branch into the current branch when new source commits are available.
 - Revalidated recorded source refs before merging so remote-tracking sources refresh first and missing or already up-to-date sources do not offer a stale update action.
