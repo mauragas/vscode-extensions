@@ -19,6 +19,7 @@ export interface BranchInfo {
   lastCommitDate?: string;
   lastCommitTimestamp?: number;
   stashRevision?: string;
+  stashRef?: string;
   upstreamName?: string;
   aheadCount?: number;
   behindCount?: number;

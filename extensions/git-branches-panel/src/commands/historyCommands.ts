@@ -576,10 +576,10 @@ function resolveHistoryRef(item: BranchTreeItem): ResolvedHistoryRef | undefined
   }
 
   if (item.nodeType === 'stash') {
-    const stashRef = item.branchInfo?.stashRevision ?? item.branchName;
+    const stashIdentifier = item.branchInfo?.stashRef ?? item.branchInfo?.stashRevision ?? item.branchName;
     return {
       label: item.branchName,
-      refName: stashRef,
+      refName: stashIdentifier,
       repoRoot: item.repoRoot,
     };
   }
@@ -593,7 +593,7 @@ function resolveHistoryRef(item: BranchTreeItem): ResolvedHistoryRef | undefined
 
 function resolveHistoryRefFromCandidate(candidate: SearchCandidate): ResolvedHistoryRef {
   const stashRef = candidate.node.info.scope === 'stash'
-    ? candidate.node.info.stashRevision ?? candidate.node.fullName
+    ? candidate.node.info.stashRef ?? candidate.node.info.stashRevision ?? candidate.node.fullName
     : candidate.node.fullName;
 
   return {

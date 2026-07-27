@@ -214,8 +214,13 @@ async function handleApplyStash(
     return;
   }
 
+  const stashIdentifier = item.branchInfo?.stashRef ?? item.branchName;
+  if (!stashIdentifier) {
+    return;
+  }
+
   try {
-    await applyStash(item.repoRoot, item.branchName);
+    await applyStash(item.repoRoot, stashIdentifier);
     await commandContext.showSuccessAndRefresh(`Applied stash '${item.branchName}'.`, {
       fetchRemoteState: false,
     });
@@ -232,8 +237,13 @@ async function handlePopStash(
     return;
   }
 
+  const stashIdentifier = item.branchInfo?.stashRef ?? item.branchName;
+  if (!stashIdentifier) {
+    return;
+  }
+
   try {
-    await popStash(item.repoRoot, item.branchName);
+    await popStash(item.repoRoot, stashIdentifier);
     await commandContext.showSuccessAndRefresh(`Popped stash '${item.branchName}'.`, {
       fetchRemoteState: false,
     });
@@ -262,7 +272,10 @@ async function handleRenameStash(
   }
 
   const renamedMessage = renamedMessageInput.trim();
-  const stashIdentifier = item.branchInfo?.stashRevision ?? item.branchName;
+  const stashIdentifier = getStashIdentifier(item);
+  if (!stashIdentifier) {
+    return;
+  }
 
   try {
     await renameStash(item.repoRoot, stashIdentifier, renamedMessage);
@@ -285,6 +298,11 @@ async function handleCompareStashWithCurrent(
     return;
   }
 
+  const stashReference = getStashIdentifier(item);
+  if (!stashReference) {
+    return;
+  }
+
   const currentBranch = await commandContext.requireCurrentBranch(
     NO_CURRENT_BRANCH_MESSAGE,
     item.repoRoot
@@ -292,8 +310,6 @@ async function handleCompareStashWithCurrent(
   if (!currentBranch) {
     return;
   }
-
-  const stashReference = item.branchInfo?.stashRevision ?? item.branchName;
 
   try {
     const changes = await getDiffFilesBetweenRefs(item.repoRoot, currentBranch.name, stashReference);
@@ -346,6 +362,11 @@ async function handleDropStash(
     return;
   }
 
+  const stashIdentifier = item.branchInfo?.stashRef ?? item.branchName;
+  if (!stashIdentifier) {
+    return;
+  }
+
   const confirmation = await vscode.window.showWarningMessage(
     `Drop stash '${item.branchName}'?`,
     { modal: true },
@@ -356,7 +377,7 @@ async function handleDropStash(
   }
 
   try {
-    await dropStash(item.repoRoot, item.branchName);
+    await dropStash(item.repoRoot, stashIdentifier);
     await commandContext.showSuccessAndRefresh(`Dropped stash '${item.branchName}'.`, {
       fetchRemoteState: false,
     });
@@ -460,6 +481,10 @@ function isStashItem(
   item: BranchTreeItem
 ): item is BranchTreeItem & { branchName: string; repoRoot: string } {
   return Boolean(item.branchName && item.repoRoot && item.nodeType === 'stash');
+}
+
+function getStashIdentifier(item: BranchTreeItem): string | undefined {
+  return item.branchInfo?.stashRef ?? item.branchInfo?.stashRevision ?? item.branchName;
 }
 
 function getEditableStashMessage(stashMessage: string | undefined): string {
