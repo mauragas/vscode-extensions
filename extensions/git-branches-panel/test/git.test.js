@@ -294,7 +294,7 @@ test('getBranches reports when the current branch is behind its recorded remote-
   assert.equal(currentBranch.sourceBehindCount, 1);
 });
 
-test('getBranches discovers source branch from reflog when config entry is missing', async (t) => {
+test('getBranches returns branch without source info when config entry is missing', async (t) => {
   const repoRoot = createTempRepository(t);
 
   runGit(repoRoot, ['checkout', '-b', 'feature/reflog-test']);
@@ -303,8 +303,8 @@ test('getBranches discovers source branch from reflog when config entry is missi
   const testBranch = branches.find((branch) => branch.name === 'feature/reflog-test');
 
   assert.ok(testBranch);
-  assert.equal(testBranch.createdFromRef, 'refs/heads/main');
-  assert.equal(testBranch.createdFromDisplayName, 'main');
+  assert.equal(testBranch.createdFromRef, undefined);
+  assert.equal(testBranch.createdFromDisplayName, undefined);
 });
 
 test('getBranches returns branch without source info when reflog has no checkout entries', async (t) => {
