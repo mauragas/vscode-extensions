@@ -77,14 +77,19 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
     `^branch\\..*\\.${CREATED_FROM_CONFIG_KEY_SUFFIX}$`
   );
 
-  if (createdFromEntries.size === 0) {
-    return branches;
-  }
-
   const enrichedBranches: BranchInfo[] = await Promise.all(
     branches.map(async (branch: BranchInfo) => {
+      if (branch.createdFromRef) {
+        return branch;
+      }
+
       const configKey = buildCreatedFromConfigKey(branch.name);
-      const createdFromRef = createdFromEntries.get(configKey);
+      let createdFromRef = createdFromEntries.get(configKey);
+
+      if (!createdFromRef || createdFromEntries.size === 0) {
+        createdFromRef = await getBranchSourceFromReflog(repoRoot, branch.name);
+      }
+
       if (!createdFromRef) {
         return branch;
       }
@@ -594,6 +599,69 @@ async function resolveBranchSyncTarget(
 
 function looksLikeBranchAlreadyCheckedOutError(message: string): boolean {
   return /already used by worktree/i.test(message);
+}
+
+async function getBranchSourceFromReflog(
+  repoRoot: string,
+  branchName: string
+): Promise<string | undefined> {
+  try {
+    const { stdout } = await runGit(repoRoot, ['reflog', 'show', '--format=%G? || %gd || %gs']);
+    const lines = stdout.split('\n').filter(Boolean);
+
+    for (const line of lines) {
+      const parts = line.split(' || ');
+      if (parts.length < 3) {
+        continue;
+      }
+
+      const message = parts.slice(2).join(' || ').trim();
+
+      if (!message.startsWith('checkout: moving from ')) {
+        continue;
+      }
+
+      const afterMoving = message.slice('checkout: moving from '.length);
+      const toSeparator = afterMoving.indexOf(' to ');
+      if (toSeparator < 0) {
+        continue;
+      }
+
+      const targetName = afterMoving.slice(toSeparator + 4).trim();
+      if (targetName !== branchName) {
+        continue;
+      }
+
+      const sourceName = afterMoving.slice(0, toSeparator).trim();
+      if (!sourceName) {
+        continue;
+      }
+
+      if (sourceName.startsWith('refs/')) {
+        return sourceName;
+      }
+
+      if (sourceName.includes('/')) {
+        try {
+          await runGit(repoRoot, ['rev-parse', '--verify', '--quiet', `refs/remotes/${sourceName}`]);
+          return `refs/remotes/${sourceName}`;
+        } catch {
+          // not a remote, try as local
+        }
+      }
+
+      try {
+        await runGit(repoRoot, ['rev-parse', '--verify', '--quiet', `refs/heads/${sourceName}`]);
+        return `refs/heads/${sourceName}`;
+      } catch {
+        // not a local branch, skip
+      }
+    }
+
+    return undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function buildCreatedFromConfigKey(branchName: string): string {
