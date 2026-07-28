@@ -2,7 +2,7 @@
   "name": "git-branches-panel",
   "displayName": "Git Branches Panel",
   "description": "Tree view for branches, tags, stashes, worktrees, hooks, and remotes across one or multiple Git repositories with grouping, search, filtering, compare/history workflows, remote host integration, worktree maintenance, sync state, and quick actions.",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "publisher": "karolis-mauragas",
   "license": "MIT",
   "repository": {
@@ -3861,7 +3861,7 @@
         },
         {
           "command": "gitBranchesPanel.updateBranchFromSource",
-          "when": "gitBranchesPanel.currentBranchCanUpdateFromSource && viewItem =~ /^(?:pinned:)?(?:currentBranch(?::ahead)?|publishableCurrentBranch)$/",
+          "when": "(gitBranchesPanel.currentBranchCanUpdateFromSource || viewItem =~ /^(?:pinned:)?(?:currentBranch(?:\\:.+)?|publishableCurrentBranch(?:\\:.+)?)$/) && viewItem =~ /^(?:pinned:)?(?:currentBranch(?:\\:.+)?|publishableCurrentBranch(?:\\:.+)?)$/",
           "group": "1_branchSource@1"
         },
         {

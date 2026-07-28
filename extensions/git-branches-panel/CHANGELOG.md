@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.1] - 2026-07-28
+
+- Fixed the source-branch hover/tooltip and right-click context-menu regression so current branches with a recorded source ref and available source commits now consistently show the source status and expose **Update from Source Branch**.
+- Fixed branch green icon display when checking out a tag — local branches at the same commit as the detached HEAD now also show a green icon alongside the tag, so both the branch and tag are visually marked as current.
+- Removed reflog-based source discovery fallback in `getBranches()` which caused O(branches × reflog) Git invocations on every refresh when no source-tracking config entries existed; source tracking now relies solely on explicit config writes at branch creation time.
+- Fixed multi-repository context key for "Update from Source Branch" — the action now correctly reflects only the active repository's current branch instead of using a global context based on any visible repository.
+
 ## [2.3.0] - 2026-07-27
 
 - Stash names now display the human-readable stash message (e.g., "Initial commit") instead of internal Git ref identifiers like `@0`, with a readable fallback to `stash@{n}` when no custom message exists

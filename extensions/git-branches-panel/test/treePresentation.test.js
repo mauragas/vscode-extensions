@@ -150,6 +150,39 @@ test('buildBranchTooltipContent describes local, remote, stash, hook, tag, and w
   assert.match(worktreeTooltip, /Locked: in use elsewhere/);
 });
 
+test('buildBranchTooltipContent and buildTreeItemPresentation surface source-update state for current branches', () => {
+  const sourceUpdateTooltip = buildBranchTooltipContent({
+    kind: 'branch',
+    fullName: 'feature/demo',
+    label: 'demo',
+    path: 'feature/demo',
+    info: {
+      name: 'feature/demo',
+      isCurrent: true,
+      createdFromRef: 'refs/heads/main',
+      createdFromDisplayName: 'main',
+      sourceBehindCount: 2,
+    },
+  });
+  const sourceUpdatePresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'feature/demo',
+    label: 'demo',
+    path: 'feature/demo',
+    info: {
+      name: 'feature/demo',
+      isCurrent: true,
+      createdFromRef: 'refs/heads/main',
+      createdFromDisplayName: 'main',
+      sourceBehindCount: 2,
+    },
+  });
+
+  assert.match(sourceUpdateTooltip, /Created from: main/);
+  assert.match(sourceUpdateTooltip, /Source status: 2 commits available/);
+  assert.equal(sourceUpdatePresentation.contextValue, 'publishableCurrentBranch:sourceUpdate');
+});
+
 test('buildTreeItemPresentation maps sections, folders, and branch types consistently', () => {
   const inactiveRepositoryPresentation = buildTreeItemPresentation({
     kind: 'repository',

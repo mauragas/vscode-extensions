@@ -3,6 +3,7 @@ import {
   formatSourceBranchStatus,
   formatSyncStatus,
   getPublishTargetName,
+  hasSourceBranchUpdate,
   isPublishableBranch,
 } from '../branchModel/descriptions';
 import type {
@@ -444,6 +445,7 @@ function getItemContextValue(nodeType: NodeType, branch: BranchInfo): string {
     }
 
     contextValue = resolveAheadContextValue(contextValue, branch);
+    contextValue = resolveSourceUpdateContextValue(contextValue, branch);
   }
 
   return resolvePinnedContextValue(contextValue, branch.isPinned);
@@ -527,6 +529,22 @@ function resolveProtectedContextValue(contextValue: string): string {
     default:
       return contextValue;
   }
+}
+
+function resolveSourceUpdateContextValue(contextValue: string, branch: BranchInfo): string {
+  if (!hasSourceBranchUpdate(branch)) {
+    return contextValue;
+  }
+
+  if (contextValue === 'currentBranch' || contextValue === 'publishableCurrentBranch') {
+    return `${contextValue}:sourceUpdate`;
+  }
+
+  if (contextValue.startsWith('currentBranch:') || contextValue.startsWith('publishableCurrentBranch:')) {
+    return `${contextValue}:sourceUpdate`;
+  }
+
+  return contextValue;
 }
 
 function hasOutgoingLocalBranchChanges(branch: BranchInfo): boolean {
