@@ -19,7 +19,10 @@ import type {
 } from './types';
 import { getContainerNodeKey } from './containerLookup';
 
-export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresentation {
+export function buildTreeItemPresentation(
+  node: BranchTreeNode,
+  currentBranchInfo?: BranchInfo
+): TreeItemPresentation {
   if (node.kind === 'repository') {
     const containerKey = getContainerNodeKey(node);
 
@@ -108,7 +111,7 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
       : `${node.info.scope ?? 'local'}:branch:${node.fullName}`,
     contextValue: getItemContextValue(nodeType, node.info),
     collapsibleState: 'none',
-    icon: getItemIcon(nodeType, node.info),
+    icon: getItemIcon(nodeType, node.info, currentBranchInfo),
     description,
     tooltip: buildBranchTooltipContent(node),
     branchName: node.fullName,
@@ -556,7 +559,11 @@ function hasOutgoingLocalBranchChanges(branch: BranchInfo): boolean {
   );
 }
 
-function getItemIcon(nodeType: NodeType, branch?: BranchInfo): TreeItemIconDescriptor {
+function getItemIcon(
+  nodeType: NodeType,
+  branch?: BranchInfo,
+  currentBranchInfo?: BranchInfo
+): TreeItemIconDescriptor {
   const localSyncIcon = getLocalSyncIcon(branch);
   if (localSyncIcon) {
     return localSyncIcon;
@@ -574,6 +581,17 @@ function getItemIcon(nodeType: NodeType, branch?: BranchInfo): TreeItemIconDescr
         colorId: 'list.warningForeground',
       };
     case 'remoteBranch':
+      if (
+        currentBranchInfo?.scope === 'local' &&
+        currentBranchInfo.upstreamName === branch?.name &&
+        !currentBranchInfo.upstreamMissing
+      ) {
+        return {
+          id: 'cloud',
+          colorId: 'gitDecoration.addedResourceForeground',
+        };
+      }
+
       return { id: 'cloud' };
     case 'staleRemoteBranch':
       return {

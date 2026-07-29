@@ -410,7 +410,12 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
   }
 
   private nodesToItems(nodes: readonly BranchTreeNode[]): BranchTreeItem[] {
-    return nodes.map((node) => new BranchTreeItem(node));
+    const allRepoRoots = this.getVisibleRepoRoots();
+    return nodes.map((node) => {
+      const repoRoot = node.repoRoot ?? allRepoRoots[0];
+      const currentBranchInfo = this.getCurrentBranch(repoRoot);
+      return new BranchTreeItem(node, currentBranchInfo);
+    });
   }
 
   private async ensureActiveRepoRoot(): Promise<void> {

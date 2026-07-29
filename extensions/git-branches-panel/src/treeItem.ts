@@ -21,8 +21,8 @@ export class BranchTreeItem extends vscode.TreeItem {
   public readonly containerScope?: TreeContainerScope;
   public readonly repoRoot?: string;
 
-  constructor(node: BranchTreeNode) {
-    const presentation = buildTreeItemPresentation(node);
+  constructor(node: BranchTreeNode, currentBranchInfo?: BranchInfo) {
+    const presentation = buildTreeItemPresentation(node, currentBranchInfo);
 
     super(presentation.label, toTreeItemCollapsibleState(presentation.collapsibleState));
 
