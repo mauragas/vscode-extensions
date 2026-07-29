@@ -7,7 +7,9 @@ import { isTrackedBranch } from '../branchModel';
 import { listRefs } from './refListing';
 import { fetchRemoteState } from './remoteGit';
 import {
+  parseRemoteBranchReference,
   doesRemoteBranchExist,
+  doesLocalBranchExist,
   ensureRemoteExists,
   getAheadBehindCounts,
   readGitConfig,
@@ -18,6 +20,18 @@ import {
 } from './shared';
 
 const CREATED_FROM_CONFIG_KEY_SUFFIX = 'gitbranchespanelcreatedfromref';
+const GITHUB_PR_BASE_BRANCH_CONFIG_KEY_SUFFIX = 'github-pr-base-branch';
+const LOCAL_BRANCH_REF_PREFIX = 'refs/heads/';
+const REF_PREFIX = 'refs/';
+const REMOTE_BRANCH_REF_PREFIX = 'refs/remotes/';
+const VSCODE_MERGE_BASE_CONFIG_KEY_SUFFIX = 'vscode-merge-base';
+
+interface BranchSourceMetadataLookup {
+  localBranchNames: ReadonlySet<string>;
+  createdFromEntries: ReadonlyMap<string, string>;
+  githubPrBaseEntries: ReadonlyMap<string, string>;
+  mergeBaseEntries: ReadonlyMap<string, string>;
+}
 
 export interface SyncBranchResult {
   branchName: string;
@@ -72,10 +86,26 @@ interface BranchRemoteState {
 
 export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
   const branches = await listRefs(repoRoot, 'refs/heads', 'local');
+  const localBranchNames = new Set(branches.map((branch) => normalizeLocalBranchConfigName(branch.name)));
   const createdFromEntries = await readGitConfigEntries(
     repoRoot,
     `^branch\\..*\\.${CREATED_FROM_CONFIG_KEY_SUFFIX}$`
   );
+  const githubPrBaseEntries = await readGitConfigEntries(
+    repoRoot,
+    `^branch\\..*\\.${GITHUB_PR_BASE_BRANCH_CONFIG_KEY_SUFFIX}$`
+  );
+  const mergeBaseEntries = await readGitConfigEntries(
+    repoRoot,
+    `^branch\\..*\\.${VSCODE_MERGE_BASE_CONFIG_KEY_SUFFIX}$`
+  );
+
+  const sourceMetadataLookup: BranchSourceMetadataLookup = {
+    localBranchNames,
+    createdFromEntries,
+    githubPrBaseEntries,
+    mergeBaseEntries,
+  };
 
   const enrichedBranches: BranchInfo[] = await Promise.all(
     branches.map(async (branch: BranchInfo) => {
@@ -83,8 +113,7 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
         return branch;
       }
 
-      const configKey = buildCreatedFromConfigKey(branch.name);
-      let createdFromRef = createdFromEntries.get(configKey);
+      const createdFromRef = await resolveCreatedFromRef(repoRoot, branch.name, sourceMetadataLookup);
 
       if (!createdFromRef) {
         return branch;
@@ -105,6 +134,10 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
 
 export async function checkoutBranch(repoRoot: string, branchName: string): Promise<void> {
   await runGit(repoRoot, ['checkout', branchName]);
+  try {
+    await runGit(repoRoot, ['config', '--local', '--unset', 'gitBranchesPanel.checkedOutTag']);
+  } catch {
+  }
 }
 
 export async function createBranch(
@@ -598,7 +631,27 @@ function looksLikeBranchAlreadyCheckedOutError(message: string): boolean {
 }
 
 function buildCreatedFromConfigKey(branchName: string): string {
-  return `branch.${branchName}.${CREATED_FROM_CONFIG_KEY_SUFFIX}`;
+  return buildBranchConfigKey(branchName, CREATED_FROM_CONFIG_KEY_SUFFIX);
+}
+
+function buildBranchConfigKey(branchName: string, keySuffix: string): string {
+  return `branch.${normalizeLocalBranchConfigName(branchName)}.${keySuffix}`;
+}
+
+function buildLocalBranchRef(branchName: string): string {
+  return `${LOCAL_BRANCH_REF_PREFIX}${normalizeLocalBranchConfigName(branchName)}`;
+}
+
+function buildActualLocalBranchRef(branchName: string): string {
+  return branchName.startsWith(LOCAL_BRANCH_REF_PREFIX)
+    ? branchName
+    : `${LOCAL_BRANCH_REF_PREFIX}${branchName}`;
+}
+
+function normalizeLocalBranchConfigName(branchName: string): string {
+  return branchName.startsWith(LOCAL_BRANCH_REF_PREFIX)
+    ? branchName.slice(LOCAL_BRANCH_REF_PREFIX.length)
+    : branchName;
 }
 
 function formatRefForDisplay(refName: string): string {
@@ -635,18 +688,148 @@ async function resolveSourceBranchState(
     };
   }
 
-  if (!branch.isCurrent) {
-    return {
-      sourceBehindCount: 0,
-      sourceRefMissing: false,
-    };
-  }
-
-  const counts = await getAheadBehindCounts(repoRoot, branch.name, sourceRef);
+  const currentBranchRef = await resolveActualLocalBranchRef(repoRoot, branch.name);
+  const counts = await getAheadBehindCounts(repoRoot, currentBranchRef, sourceRef);
   return {
     sourceBehindCount: counts.behindCount,
     sourceRefMissing: false,
   };
+}
+
+async function resolveCreatedFromRef(
+  repoRoot: string,
+  branchName: string,
+  sourceMetadataLookup: BranchSourceMetadataLookup
+): Promise<string | undefined> {
+  const explicitCreatedFromRef = sourceMetadataLookup.createdFromEntries.get(
+    buildCreatedFromConfigKey(branchName)
+  );
+  if (explicitCreatedFromRef) {
+    return explicitCreatedFromRef;
+  }
+
+  const reflogCreatedFromRef = await inferCreatedFromRefFromBranchReflog(
+    repoRoot,
+    branchName,
+    sourceMetadataLookup.localBranchNames
+  );
+  if (reflogCreatedFromRef) {
+    return reflogCreatedFromRef;
+  }
+
+  const githubPrBaseRef = inferCreatedFromRefFromGitHubPrBase(
+    branchName,
+    sourceMetadataLookup.githubPrBaseEntries,
+    sourceMetadataLookup.localBranchNames
+  );
+  if (githubPrBaseRef) {
+    return githubPrBaseRef;
+  }
+
+  return inferCreatedFromRefFromMergeBase(
+    branchName,
+    sourceMetadataLookup.mergeBaseEntries,
+    sourceMetadataLookup.localBranchNames
+  );
+}
+
+async function inferCreatedFromRefFromBranchReflog(
+  repoRoot: string,
+  branchName: string,
+  localBranchNames: ReadonlySet<string>
+): Promise<string | undefined> {
+  try {
+    const branchRef = await resolveActualLocalBranchRef(repoRoot, branchName);
+    const { stdout } = await runGit(repoRoot, [
+      'reflog',
+      'show',
+      '--format=%gs',
+      '-n',
+      '25',
+      branchRef,
+    ]);
+
+    for (const entry of stdout.split(/\r?\n/u).map((line) => line.trim()).filter(Boolean)) {
+      const match = entry.match(/^branch:\s+Created from\s+(.+)$/iu);
+      const createdFromRef = normalizeInferredSourceRef(match?.[1], localBranchNames);
+      if (createdFromRef) {
+        return createdFromRef;
+      }
+    }
+  } catch {
+    // Some refs may not have a reflog entry, especially synthetic test fixtures or pruned histories.
+  }
+
+  return undefined;
+}
+
+async function resolveActualLocalBranchRef(repoRoot: string, branchName: string): Promise<string> {
+  const normalizedBranchName = normalizeLocalBranchConfigName(branchName);
+
+  if (await doesLocalBranchExist(repoRoot, normalizedBranchName)) {
+    return `${LOCAL_BRANCH_REF_PREFIX}${normalizedBranchName}`;
+  }
+
+  if (await doesLocalBranchExist(repoRoot, branchName)) {
+    return `${LOCAL_BRANCH_REF_PREFIX}${branchName}`;
+  }
+
+  return buildActualLocalBranchRef(branchName);
+}
+
+function inferCreatedFromRefFromGitHubPrBase(
+  branchName: string,
+  githubPrBaseEntries: ReadonlyMap<string, string>,
+  localBranchNames: ReadonlySet<string>
+): string | undefined {
+  const githubPrBase = githubPrBaseEntries.get(
+    buildBranchConfigKey(branchName, GITHUB_PR_BASE_BRANCH_CONFIG_KEY_SUFFIX)
+  );
+  if (!githubPrBase) {
+    return undefined;
+  }
+
+  const match = githubPrBase.match(/^[^#]+#[^#]+#(.+)$/u);
+  return normalizeInferredSourceRef(match?.[1], localBranchNames);
+}
+
+function inferCreatedFromRefFromMergeBase(
+  branchName: string,
+  mergeBaseEntries: ReadonlyMap<string, string>,
+  localBranchNames: ReadonlySet<string>
+): string | undefined {
+  const mergeBase = mergeBaseEntries.get(buildBranchConfigKey(branchName, VSCODE_MERGE_BASE_CONFIG_KEY_SUFFIX));
+  return normalizeInferredSourceRef(mergeBase, localBranchNames);
+}
+
+function normalizeInferredSourceRef(
+  refName: string | undefined,
+  localBranchNames: ReadonlySet<string>
+): string | undefined {
+  const normalizedRefName = refName?.trim().replace(/^"+|"+$/gu, '');
+  if (!normalizedRefName || normalizedRefName === 'HEAD') {
+    return undefined;
+  }
+
+  if (normalizedRefName.startsWith(REF_PREFIX)) {
+    return normalizedRefName;
+  }
+
+  if (localBranchNames.has(normalizedRefName)) {
+    return `${LOCAL_BRANCH_REF_PREFIX}${normalizedRefName}`;
+  }
+
+  const remoteBranchReference = parseRemoteBranchReference(normalizedRefName);
+  if (remoteBranchReference) {
+    const localBranchName = normalizeLocalBranchConfigName(remoteBranchReference.branchName);
+    if (localBranchNames.has(localBranchName)) {
+      return `${LOCAL_BRANCH_REF_PREFIX}${localBranchName}`;
+    }
+
+    return `${REMOTE_BRANCH_REF_PREFIX}${remoteBranchReference.fullName}`;
+  }
+
+  return buildLocalBranchRef(normalizedRefName);
 }
 
 function parseRefComparison(stdout: string): RefComparisonChange[] {

@@ -68,7 +68,6 @@ export function hasSourceBranchUpdate(
   branch: Pick<BranchInfo, 'isCurrent' | 'createdFromRef' | 'sourceBehindCount' | 'sourceRefMissing'>
 ): boolean {
   return (
-    branch.isCurrent &&
     Boolean(branch.createdFromRef) &&
     !branch.sourceRefMissing &&
     (branch.sourceBehindCount ?? 0) > 0

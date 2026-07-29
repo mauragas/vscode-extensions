@@ -44,8 +44,18 @@ export async function getTags(repoRoot: string) {
   return listRefs(repoRoot, 'refs/tags', 'tag');
 }
 
+const CHECKED_OUT_TAG_CONFIG_KEY = 'gitBranchesPanel.checkedOutTag';
+
 export async function checkoutTag(repoRoot: string, tagName: string): Promise<void> {
   await runGit(repoRoot, ['checkout', `refs/tags/${tagName}`]);
+  await runGit(repoRoot, ['config', CHECKED_OUT_TAG_CONFIG_KEY, tagName]);
+}
+
+export async function clearCheckedOutTag(repoRoot: string): Promise<void> {
+  try {
+    await runGit(repoRoot, ['config', '--local', '--unset', CHECKED_OUT_TAG_CONFIG_KEY]);
+  } catch {
+  }
 }
 
 export async function createTag(

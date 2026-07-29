@@ -3866,27 +3866,27 @@
         },
         {
           "command": "gitBranchesPanel.openBranchOnRemote",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|remoteBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|remoteBranch|protectedBranch(?::ahead)?|protectedRemoteBranch)$/",
           "group": "1_remoteHosting@1"
         },
         {
           "command": "gitBranchesPanel.openComparePage",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|remoteBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|remoteBranch|protectedBranch(?::ahead)?|protectedRemoteBranch)$/",
           "group": "1_remoteHosting@2"
         },
         {
           "command": "gitBranchesPanel.createPullRequest",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|remoteBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|remoteBranch|protectedBranch(?::ahead)?|protectedRemoteBranch)$/",
           "group": "1_remoteHosting@3"
         },
         {
           "command": "gitBranchesPanel.copyBranchUrl",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|remoteBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|remoteBranch|protectedBranch(?::ahead)?|protectedRemoteBranch)$/",
           "group": "1_remoteHosting@4"
         },
         {
           "command": "gitBranchesPanel.copyCompareUrl",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|remoteBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|remoteBranch|protectedBranch(?::ahead)?|protectedRemoteBranch)$/",
           "group": "1_remoteHosting@5"
         },
         {

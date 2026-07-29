@@ -180,7 +180,27 @@ test('buildBranchTooltipContent and buildTreeItemPresentation surface source-upd
 
   assert.match(sourceUpdateTooltip, /Created from: main/);
   assert.match(sourceUpdateTooltip, /Source status: 2 commits available/);
-  assert.equal(sourceUpdatePresentation.contextValue, 'publishableCurrentBranch:sourceUpdate');
+  assert.equal(sourceUpdatePresentation.contextValue, 'publishableCurrentBranch');
+});
+
+test('buildBranchTooltipContent shows created-from metadata for non-current local branches', () => {
+  const tooltip = buildBranchTooltipContent({
+    kind: 'branch',
+    fullName: 'feature/test4',
+    label: 'test4',
+    path: 'feature/test4',
+    info: {
+      name: 'feature/test4',
+      isCurrent: false,
+      createdFromRef: 'refs/heads/main',
+      createdFromDisplayName: 'main',
+      lastCommitDate: '5 hours ago',
+      upstreamName: 'origin/feature/test4',
+    },
+  });
+
+  assert.match(tooltip, /Created from: main/);
+  assert.match(tooltip, /Upstream: origin\/feature\/test4/);
 });
 
 test('buildTreeItemPresentation maps sections, folders, and branch types consistently', () => {

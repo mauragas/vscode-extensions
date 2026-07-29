@@ -247,6 +247,53 @@ test('getBranches preserves source metadata for branches created from another re
   assert.equal(childBranch.createdFromDisplayName, 'feature/demo');
 });
 
+test('getBranches preserves source metadata for local branches named with a heads/ prefix', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  await createBranchFromRef(repoRoot, 'heads/test2', 'main', {
+    checkout: true,
+    sourceRef: 'refs/heads/main',
+  });
+
+  const branches = await getBranches(repoRoot);
+  const prefixedBranch = branches.find((branch) => branch.name === 'heads/test2');
+
+  assert.ok(prefixedBranch);
+  assert.equal(prefixedBranch.createdFromRef, 'refs/heads/main');
+  assert.equal(prefixedBranch.createdFromDisplayName, 'main');
+});
+
+test('getBranches infers source metadata from branch reflog when explicit config is missing', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'bugfix/test', 'main']);
+  commitFile(repoRoot, 'bugfix.txt', 'bugfix\n', 'Bugfix commit');
+
+  const branches = await getBranches(repoRoot);
+  const bugfixBranch = branches.find((branch) => branch.name === 'bugfix/test');
+
+  assert.ok(bugfixBranch);
+  assert.equal(bugfixBranch.createdFromRef, 'refs/heads/main');
+  assert.equal(bugfixBranch.createdFromDisplayName, 'main');
+});
+
+test('getBranches falls back to PR and merge-base metadata when reflog source is unavailable', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['branch', 'bugfix/test', 'main']);
+  const branchReflogPath = join(repoRoot, '.git', 'logs', 'refs', 'heads', 'bugfix', 'test');
+  rmSync(branchReflogPath, { force: true });
+  runGit(repoRoot, ['config', 'branch.bugfix/test.github-pr-base-branch', 'mauragas#test#main']);
+  runGit(repoRoot, ['config', 'branch.bugfix/test.vscode-merge-base', 'origin/main']);
+
+  const branches = await getBranches(repoRoot);
+  const bugfixBranch = branches.find((branch) => branch.name === 'bugfix/test');
+
+  assert.ok(bugfixBranch);
+  assert.equal(bugfixBranch.createdFromRef, 'refs/heads/main');
+  assert.equal(bugfixBranch.createdFromDisplayName, 'main');
+});
+
 test('getBranches reports when the current branch is behind its recorded local source branch', async (t) => {
   const repoRoot = createTempRepository(t);
 
@@ -294,6 +341,35 @@ test('getBranches reports when the current branch is behind its recorded remote-
   assert.equal(currentBranch.sourceBehindCount, 1);
 });
 
+test('getBranches marks only branches pointing directly at a detached HEAD as current', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'test2']);
+  commitFile(repoRoot, 'test2.txt', 'test2 tip\n', 'Advance test2');
+  runGit(repoRoot, ['tag', 'test3']);
+  runGit(repoRoot, ['checkout', '-b', 'feature/test4']);
+  commitFile(repoRoot, 'feature.txt', 'feature tip\n', 'Advance feature/test4');
+  runGit(repoRoot, ['checkout', 'main']);
+  runGit(repoRoot, ['merge', '--ff-only', 'test2']);
+  commitFile(repoRoot, 'main.txt', 'main tip\n', 'Advance main');
+
+  await checkoutTag(repoRoot, 'test3');
+
+  const branches = await getBranches(repoRoot);
+  const currentBranchNames = branches
+    .filter((branch) => branch.isCurrent)
+    .map((branch) => branch.name)
+    .sort();
+  const tags = await getTags(repoRoot);
+  const currentTagNames = tags
+    .filter((tag) => tag.isCurrent)
+    .map((tag) => tag.name)
+    .sort();
+
+  assert.deepEqual(currentBranchNames, ['test2']);
+  assert.deepEqual(currentTagNames, ['test3']);
+});
+
 test('getBranches returns branch without source info when config entry is missing', async (t) => {
   const repoRoot = createTempRepository(t);
 
@@ -307,10 +383,12 @@ test('getBranches returns branch without source info when config entry is missin
   assert.equal(testBranch.createdFromDisplayName, undefined);
 });
 
-test('getBranches returns branch without source info when reflog has no checkout entries', async (t) => {
+test('getBranches returns branch without source info when no reflog or config hints exist', async (t) => {
   const repoRoot = createTempRepository(t);
 
   runGit(repoRoot, ['branch', 'feature/no-checkout']);
+  const branchReflogPath = join(repoRoot, '.git', 'logs', 'refs', 'heads', 'feature', 'no-checkout');
+  rmSync(branchReflogPath, { force: true });
 
   const branches = await getBranches(repoRoot);
   const testBranch = branches.find((branch) => branch.name === 'feature/no-checkout');

@@ -439,9 +439,22 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     const currentBranch = this.getCurrentBranch();
     const activeRepoRoot = this.activeRepoRoot ?? this.getVisibleRepoRoots()[0];
     const activeCurrentBranch = activeRepoRoot ? this.getCurrentBranch(activeRepoRoot) : undefined;
-    const visibleCurrentBranchCanUpdateFromSource = Boolean(
+
+    let visibleCurrentBranchCanUpdateFromSource = Boolean(
       activeCurrentBranch && hasSourceBranchUpdate(activeCurrentBranch)
     );
+
+    if (!visibleCurrentBranchCanUpdateFromSource) {
+      const visibleRepoRoots = this.getVisibleRepoRoots();
+      for (const repoRoot of visibleRepoRoots) {
+        const branch = this.getCurrentBranch(repoRoot);
+        if (branch && hasSourceBranchUpdate(branch)) {
+          visibleCurrentBranchCanUpdateFromSource = true;
+          break;
+        }
+      }
+    }
+
     const currentBranchNeedsPublish = Boolean(currentBranch && isPublishableBranch(currentBranch));
     const currentBranchBusy = Boolean(currentBranch?.isSyncing);
     void vscode.commands.executeCommand(

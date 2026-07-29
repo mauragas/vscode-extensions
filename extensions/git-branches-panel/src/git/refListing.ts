@@ -7,7 +7,7 @@ import {
 const GIT_RECORD_SEPARATOR = '\u001e';
 const GIT_FIELD_SEPARATOR = '\u001f';
 const GIT_OUTPUT_FORMAT = [
-  '%(refname:short)',
+  '%(refname:lstrip=2)',
   '%(HEAD)',
   '%(committerdate:relative)',
   '%(committerdate:unix)',
@@ -23,7 +23,9 @@ export async function listRefs(
 ): Promise<BranchInfo[]> {
   const currentTagNames = scope === 'tag' ? await getCurrentTagNames(repoRoot) : new Set<string>();
   const detachedHeadSha = scope === 'local' ? await getDetachedHeadSha(repoRoot) : null;
-  const detachedHeadLocalBranches = detachedHeadSha ? await getLocalBranchesAtCommit(repoRoot, detachedHeadSha) : new Set<string>();
+  const detachedHeadLocalBranches = detachedHeadSha
+    ? await getLocalBranchesPointingAtCommit(repoRoot, detachedHeadSha)
+    : new Set<string>();
   const { stdout } = await runGit(repoRoot, [
     'for-each-ref',
     '--sort=-committerdate',
@@ -74,6 +76,20 @@ async function getCurrentTagNames(repoRoot: string): Promise<Set<string>> {
     await runGit(repoRoot, ['symbolic-ref', '-q', 'HEAD']);
     return new Set<string>();
   } catch {
+    try {
+      const { stdout } = await runGit(repoRoot, [
+        'config',
+        '--local',
+        'gitBranchesPanel.checkedOutTag',
+      ]);
+
+      const tagName = stdout.trim();
+      if (tagName) {
+        return new Set([tagName]);
+      }
+    } catch {
+    }
+
     const { stdout } = await runGit(repoRoot, ['tag', '--points-at', 'HEAD']);
 
     return new Set(
@@ -95,13 +111,13 @@ async function getDetachedHeadSha(repoRoot: string): Promise<string | null> {
   }
 }
 
-async function getLocalBranchesAtCommit(repoRoot: string, sha: string): Promise<Set<string>> {
+async function getLocalBranchesPointingAtCommit(repoRoot: string, sha: string): Promise<Set<string>> {
   try {
     const { stdout } = await runGit(repoRoot, [
       'for-each-ref',
-      '--format=%(refname:short)',
+      '--format=%(refname:lstrip=2)',
       'refs/heads',
-      '--contains',
+      '--points-at',
       sha,
     ]);
 
