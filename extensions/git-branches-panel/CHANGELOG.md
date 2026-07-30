@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.3.1] - 2026-07-28
+## [2.4.0] - 2026-07-28
 
 - Fixed the source-branch hover/tooltip and right-click context-menu regression so current branches with a recorded source ref and available source commits now consistently show the source status and expose **Update from Source Branch**.
 - Fixed branch green icon display when checking out a tag — local branches at the same commit as the detached HEAD now also show a green icon alongside the tag, so both the branch and tag are visually marked as current.
