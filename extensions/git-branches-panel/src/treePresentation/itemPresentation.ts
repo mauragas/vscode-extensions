@@ -484,9 +484,6 @@ function buildTreeItemLabel(
   isPinned: boolean | undefined
 ): string {
   const prefixParts: string[] = [];
-  if (isPinned) {
-    prefixParts.push('★');
-  }
   if (nodeType === 'currentBranch' || (nodeType === 'worktree' && isCurrent) || (nodeType === 'tag' && isCurrent)) {
     prefixParts.push('●');
   }
@@ -626,13 +623,13 @@ function getItemIcon(
   branch?: BranchInfo,
   currentBranchInfo?: BranchInfo
 ): TreeItemIconDescriptor {
-  if (branch?.isPinned) {
-    return { resourcePath: 'star.svg' };
-  }
-
   const localSyncIcon = getLocalSyncIcon(branch);
   if (localSyncIcon) {
     return localSyncIcon;
+  }
+
+  if (branch?.isPinned) {
+    return { resourcePath: 'star.svg' };
   }
 
   switch (nodeType) {

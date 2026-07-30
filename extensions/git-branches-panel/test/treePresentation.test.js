@@ -983,15 +983,15 @@ test('buildTreeItemPresentation adds pinned prefixes and busy context values whe
     },
   });
 
-  assert.equal(pinnedBusyBranchPresentation.label, '★ demo');
+  assert.equal(pinnedBusyBranchPresentation.label, 'demo');
   assert.equal(pinnedBusyBranchPresentation.contextValue, 'pinned:busyBranch');
   assert.equal(pinnedBusyBranchPresentation.icon.resourcePath, 'branch-outgoing.svg');
   assert.equal(pinnedBusyBranchPresentation.description, '↑1');
   assert.match(pinnedBusyBranchPresentation.tooltip, /_Pinned item_/);
 
-  assert.equal(pinnedCurrentWorktreePresentation.label, '★ ● git-branches-panel-main-pinned-worktree');
+  assert.equal(pinnedCurrentWorktreePresentation.label, '● git-branches-panel-main-pinned-worktree');
   assert.equal(pinnedCurrentWorktreePresentation.contextValue, 'pinned:currentWorktree');
-  assert.equal(pinnedCurrentWorktreePresentation.icon.id, 'folder');
+  assert.equal(pinnedCurrentWorktreePresentation.icon.resourcePath, 'star.svg');
 });
 
 test('buildTreeItemPresentation exposes protected context values so delete actions can be hidden in menus', () => {
