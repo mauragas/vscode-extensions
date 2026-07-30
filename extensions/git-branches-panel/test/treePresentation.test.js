@@ -645,6 +645,8 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(currentWorktreePresentation.nodeType, 'worktree');
   assert.equal(currentWorktreePresentation.label, '● git-branches-panel-main-worktree');
   assert.equal(currentWorktreePresentation.contextValue, 'currentWorktree');
+  assert.equal(currentWorktreePresentation.icon.id, 'folder');
+  assert.equal(currentWorktreePresentation.icon.colorId, 'gitDecoration.addedResourceForeground');
 
   assert.equal(lockedWorktreePresentation.nodeType, 'worktree');
   assert.equal(lockedWorktreePresentation.contextValue, 'worktree:locked');
@@ -667,6 +669,159 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.match(remoteConfigPresentation.tooltip, /Push: git@github.com:octo\/repo.git/);
   assert.match(remoteConfigPresentation.tooltip, /Provider: GitHub/);
   assert.match(remoteConfigPresentation.tooltip, /Default remote/);
+});
+
+test('buildTreeItemPresentation sets green icon for folder containing current or upstream branch', () => {
+  const emptyFolder = buildTreeItemPresentation({
+    kind: 'folder',
+    label: 'feature',
+    path: 'feature',
+    scope: 'local',
+    children: [],
+  });
+
+  assert.equal(emptyFolder.nodeType, 'folder');
+  assert.equal(emptyFolder.icon.id, 'folder');
+  assert.equal(emptyFolder.icon.colorId, undefined);
+
+  const folderWithCurrentBranch = buildTreeItemPresentation({
+    kind: 'folder',
+    label: 'bugfix',
+    path: 'bugfix',
+    scope: 'local',
+    children: [
+      {
+        kind: 'branch',
+        fullName: 'bugfix/fix-issue',
+        label: 'bugfix/fix-issue',
+        path: 'bugfix/fix-issue',
+        info: {
+          name: 'bugfix/fix-issue',
+          isCurrent: true,
+          upstreamName: 'origin/bugfix/fix-issue',
+        },
+      },
+    ],
+  });
+
+  assert.equal(folderWithCurrentBranch.nodeType, 'folder');
+  assert.equal(folderWithCurrentBranch.icon.id, 'folder');
+  assert.equal(folderWithCurrentBranch.icon.colorId, 'gitDecoration.addedResourceForeground');
+
+  const folderWithoutCurrent = buildTreeItemPresentation({
+    kind: 'folder',
+    label: 'feature',
+    path: 'feature',
+    scope: 'local',
+    children: [
+      {
+        kind: 'branch',
+        fullName: 'feature/demo',
+        label: 'feature/demo',
+        path: 'feature/demo',
+        info: {
+          name: 'feature/demo',
+          isCurrent: false,
+          upstreamName: 'origin/feature/demo',
+        },
+      },
+    ],
+  });
+
+  assert.equal(folderWithoutCurrent.nodeType, 'folder');
+  assert.equal(folderWithoutCurrent.icon.id, 'folder');
+  assert.equal(folderWithoutCurrent.icon.colorId, undefined);
+
+  const nestedFolderWithCurrent = buildTreeItemPresentation({
+    kind: 'folder',
+    label: 'feature',
+    path: 'feature',
+    scope: 'local',
+    children: [
+      {
+        kind: 'folder',
+        label: 'sub',
+        path: 'feature/sub',
+        scope: 'local',
+        children: [
+          {
+            kind: 'branch',
+            fullName: 'feature/sub/inner',
+            label: 'feature/sub/inner',
+            path: 'feature/sub/inner',
+            info: {
+              name: 'feature/sub/inner',
+              isCurrent: true,
+            },
+          },
+        ],
+      },
+    ],
+  });
+
+  assert.equal(nestedFolderWithCurrent.nodeType, 'folder');
+  assert.equal(nestedFolderWithCurrent.icon.id, 'folder');
+  assert.equal(nestedFolderWithCurrent.icon.colorId, 'gitDecoration.addedResourceForeground');
+
+  const remoteFolderWithUpstream = buildTreeItemPresentation({
+    kind: 'folder',
+    label: 'origin',
+    path: 'origin',
+    scope: 'remote',
+    children: [
+      {
+        kind: 'branch',
+        fullName: 'origin/bugfix/fix-issue',
+        label: 'origin/bugfix/fix-issue',
+        path: 'origin/bugfix/fix-issue',
+        info: {
+          name: 'origin/bugfix/fix-issue',
+          isCurrent: false,
+          scope: 'remote',
+          remoteName: 'origin',
+        },
+      },
+    ],
+  }, {
+    name: 'bugfix/fix-issue',
+    isCurrent: true,
+    scope: 'local',
+    upstreamName: 'origin/bugfix/fix-issue',
+  });
+
+  assert.equal(remoteFolderWithUpstream.nodeType, 'folder');
+  assert.equal(remoteFolderWithUpstream.icon.id, 'folder');
+  assert.equal(remoteFolderWithUpstream.icon.colorId, 'gitDecoration.addedResourceForeground');
+
+  const remoteFolderWithoutUpstream = buildTreeItemPresentation({
+    kind: 'folder',
+    label: 'origin',
+    path: 'origin',
+    scope: 'remote',
+    children: [
+      {
+        kind: 'branch',
+        fullName: 'origin/feature/demo',
+        label: 'origin/feature/demo',
+        path: 'origin/feature/demo',
+        info: {
+          name: 'origin/feature/demo',
+          isCurrent: false,
+          scope: 'remote',
+          remoteName: 'origin',
+        },
+      },
+    ],
+  }, {
+    name: 'bugfix/fix-issue',
+    isCurrent: true,
+    scope: 'local',
+    upstreamName: 'origin/bugfix/fix-issue',
+  });
+
+  assert.equal(remoteFolderWithoutUpstream.nodeType, 'folder');
+  assert.equal(remoteFolderWithoutUpstream.icon.id, 'folder');
+  assert.equal(remoteFolderWithoutUpstream.icon.colorId, undefined);
 });
 
 test('buildTreeItemPresentation adjusts Hooks section context for bulk enable and disable actions', () => {

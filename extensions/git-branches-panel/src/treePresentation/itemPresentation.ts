@@ -64,6 +64,7 @@ export function buildTreeItemPresentation(
 
   if (node.kind === 'folder') {
     const containerKey = getContainerNodeKey(node);
+    const folderIcon = getFolderIcon(node, currentBranchInfo);
 
     return {
       nodeType: 'folder',
@@ -71,7 +72,7 @@ export function buildTreeItemPresentation(
       id: containerKey,
       contextValue: getFolderContextValue(node.scope),
       collapsibleState: node.expanded ? 'expanded' : 'collapsed',
-      icon: { id: 'folder' },
+      icon: folderIcon,
       containerKey,
       containerPath: node.path,
       containerScope: node.scope,
@@ -395,6 +396,63 @@ function getFolderContextValue(scope: TreeContainerScope): string {
   return `${scope}-folder`;
 }
 
+function getFolderIcon(
+  folder: Extract<BranchTreeNode, { kind: 'folder' }>,
+  currentBranchInfo?: BranchInfo
+): TreeItemIconDescriptor {
+  if (folderContainsActiveBranch(folder, currentBranchInfo)) {
+    return {
+      id: 'folder',
+      colorId: 'gitDecoration.addedResourceForeground',
+    };
+  }
+
+  return { id: 'folder' };
+}
+
+function folderContainsActiveBranch(
+  folder: Extract<BranchTreeNode, { kind: 'folder' }>,
+  currentBranchInfo?: BranchInfo
+): boolean {
+  const greenBranchName = getGreenBranchName(folder.scope, currentBranchInfo);
+
+  for (const child of folder.children) {
+    if (child.kind === 'branch') {
+      if (
+        (folder.scope === 'local' && child.info.isCurrent) ||
+        (folder.scope === 'remote' && child.info.name === greenBranchName)
+      ) {
+        return true;
+      }
+    } else if (child.kind === 'remote') {
+      if (folder.scope === 'remote' && child.info.name === greenBranchName) {
+        return true;
+      }
+    } else if (child.kind === 'folder') {
+      if (folderContainsActiveBranch(child, currentBranchInfo)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function getGreenBranchName(scope: TreeContainerScope, currentBranchInfo?: BranchInfo): string | undefined {
+  if (scope === 'local') {
+    if (currentBranchInfo?.isCurrent) {
+      return currentBranchInfo.name;
+    }
+    return undefined;
+  }
+
+  if (scope === 'remote' && currentBranchInfo?.scope === 'local' && currentBranchInfo.upstreamName) {
+    return currentBranchInfo.upstreamName;
+  }
+
+  return undefined;
+}
+
 function resolveNodeType(info: BranchInfo): NodeType {
   switch (info.scope) {
     case 'stash':
@@ -627,6 +685,13 @@ function getItemIcon(
         colorId: 'disabledForeground',
       };
     case 'worktree':
+      if (branch?.isCurrent) {
+        return {
+          id: 'folder',
+          colorId: 'gitDecoration.addedResourceForeground',
+        };
+      }
+
       if (branch?.worktreePrunableReason) {
         return {
           id: 'folder',
