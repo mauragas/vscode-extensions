@@ -2976,7 +2976,7 @@
         },
         {
           "command": "gitBranchesPanel.pushTag",
-          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
+          "when": "viewItem == tag || viewItem == pinned:tag",
           "group": "inline@2"
         },
         {
@@ -3941,8 +3941,18 @@
         },
         {
           "command": "gitBranchesPanel.pushTag",
-          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
+          "when": "viewItem == tag || viewItem == pinned:tag",
           "group": "1_tag@1.6"
+        },
+        {
+          "command": "gitBranchesPanel.newBranchFromSelected",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
+          "group": "1_tag@1.7"
+        },
+        {
+          "command": "gitBranchesPanel.newBranchFromSelectedAndCheckout",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
+          "group": "1_tag@1.8"
         },
         {
           "command": "gitBranchesPanel.copyTagName",

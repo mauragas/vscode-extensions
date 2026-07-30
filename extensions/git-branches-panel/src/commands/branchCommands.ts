@@ -733,7 +733,8 @@ async function handleCreateBranchFromSelected(
     item.nodeType !== 'currentBranch' &&
     item.nodeType !== 'remoteBranch' &&
     item.nodeType !== 'staleRemoteBranch' &&
-    item.nodeType !== 'missingUpstreamBranch'
+    item.nodeType !== 'missingUpstreamBranch' &&
+    item.nodeType !== 'tag'
   ) {
     return;
   }
