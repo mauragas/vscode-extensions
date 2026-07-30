@@ -992,6 +992,60 @@ test('buildTreeItemPresentation adds pinned prefixes and busy context values whe
   assert.equal(pinnedCurrentWorktreePresentation.label, '● git-branches-panel-main-pinned-worktree');
   assert.equal(pinnedCurrentWorktreePresentation.contextValue, 'pinned:currentWorktree');
   assert.equal(pinnedCurrentWorktreePresentation.icon.resourcePath, 'star.svg');
+
+  const pinnedTagPresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'v2.0.0',
+    label: 'v2.0.0',
+    path: 'v2.0.0',
+    info: {
+      name: 'v2.0.0',
+      isCurrent: false,
+      scope: 'tag',
+      isPinned: true,
+      lastCommitDate: '2 weeks ago',
+    },
+  });
+
+  assert.equal(pinnedTagPresentation.label, 'v2.0.0');
+  assert.equal(pinnedTagPresentation.contextValue, 'pinned:tag');
+  assert.equal(pinnedTagPresentation.icon.resourcePath, 'star.svg');
+  assert.match(pinnedTagPresentation.tooltip, /_Pinned item_/);
+
+  const unpinnedRemoteTagPresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'refs/tags/v1.0.0',
+    label: 'v1.0.0',
+    path: 'refs/tags/v1.0.0',
+    info: {
+      name: 'v1.0.0',
+      isCurrent: false,
+      scope: 'tag',
+      isRemoteTag: true,
+    },
+  });
+
+  assert.equal(unpinnedRemoteTagPresentation.label, 'v1.0.0');
+  assert.equal(unpinnedRemoteTagPresentation.contextValue, 'tag:remote');
+  assert.equal(unpinnedRemoteTagPresentation.icon.id, 'tag');
+
+  const pinnedRemoteTagPresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'refs/tags/v2.0.0',
+    label: 'v2.0.0',
+    path: 'refs/tags/v2.0.0',
+    info: {
+      name: 'v2.0.0',
+      isCurrent: false,
+      scope: 'tag',
+      isRemoteTag: true,
+      isPinned: true,
+    },
+  });
+
+  assert.equal(pinnedRemoteTagPresentation.label, 'v2.0.0');
+  assert.equal(pinnedRemoteTagPresentation.contextValue, 'pinned:tag:remote');
+  assert.equal(pinnedRemoteTagPresentation.icon.resourcePath, 'star.svg');
 });
 
 test('buildTreeItemPresentation exposes protected context values so delete actions can be hidden in menus', () => {

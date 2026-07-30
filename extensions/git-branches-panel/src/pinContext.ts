@@ -30,6 +30,7 @@ const PINNABLE_NODE_TYPES = new Set<NodeType>([
   'missingUpstreamBranch',
   'remoteBranch',
   'staleRemoteBranch',
+  'tag',
   'stash',
   'worktree',
 ]);

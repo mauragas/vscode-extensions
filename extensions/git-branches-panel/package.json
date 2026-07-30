@@ -2831,12 +2831,12 @@
         },
         {
           "command": "gitBranchesPanel.pinItem",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && viewItem =~ /^(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|remoteBranch|staleRemoteBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch|stash|(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*)$/",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && viewItem =~ /^(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|remoteBranch|staleRemoteBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch|tag(?::remote)?|stash|(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*)$/",
           "group": "inline@4"
         },
         {
           "command": "gitBranchesPanel.unpinItem",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && viewItem =~ /^pinned:(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|remoteBranch|staleRemoteBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch|stash|(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*)$/",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && viewItem =~ /^pinned:(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|remoteBranch|staleRemoteBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch|tag(?::remote)?|stash|(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*)$/",
           "group": "inline@4"
         },
         {
@@ -2971,28 +2971,23 @@
         },
         {
           "command": "gitBranchesPanel.checkoutTag",
-          "when": "(viewItem == tag || viewItem == pinned:tag) && viewItem !~ /:remote$/",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "inline@1"
         },
         {
           "command": "gitBranchesPanel.pushTag",
-          "when": "(viewItem == tag || viewItem == pinned:tag)",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "inline@2"
         },
         {
           "command": "gitBranchesPanel.deleteTag",
-          "when": "(viewItem == tag || viewItem == pinned:tag) && viewItem !~ /:remote$/",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "inline@3"
         },
         {
           "command": "gitBranchesPanel.popStash",
           "when": "viewItem =~ /^(?:pinned:)?(?:stash)$/",
           "group": "inline@1"
-        },
-        {
-          "command": "gitBranchesPanel.pushTag",
-          "when": "(viewItem == tag || viewItem == pinned:tag)",
-          "group": "inline@2"
         },
         {
           "command": "gitBranchesPanel.dropStash",
@@ -3936,57 +3931,57 @@
         },
         {
           "command": "gitBranchesPanel.checkoutTag",
-          "when": "(viewItem == tag || viewItem == pinned:tag) && viewItem !~ /:remote$/",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "1_tag@1"
         },
         {
           "command": "gitBranchesPanel.createWorktreeFromRef",
-          "when": "(viewItem == tag || viewItem == pinned:tag) && viewItem !~ /:remote$/",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "1_tag@1.5"
         },
         {
           "command": "gitBranchesPanel.pushTag",
-          "when": "(viewItem == tag || viewItem == pinned:tag)",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "1_tag@1.6"
         },
         {
           "command": "gitBranchesPanel.copyTagName",
-          "when": "(viewItem == tag || viewItem == pinned:tag) && viewItem !~ /:remote$/",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "1_tag@2"
         },
         {
           "command": "gitBranchesPanel.showRefHistory",
-          "when": "(viewItem == tag || viewItem == pinned:tag) && viewItem !~ /:remote$/",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "1_tag@2.5"
         },
         {
           "command": "gitBranchesPanel.openChangedFilesForRef",
-          "when": "(viewItem == tag || viewItem == pinned:tag) && viewItem !~ /:remote$/",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "1_tag@2.6"
         },
         {
           "command": "gitBranchesPanel.compareTagWithCurrent",
-          "when": "(viewItem == tag || viewItem == pinned:tag) && viewItem !~ /:remote$/",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "1_tag@2.7"
         },
         {
           "command": "gitBranchesPanel.showTagDetails",
-          "when": "(viewItem == tag || viewItem == pinned:tag) && viewItem !~ /:remote$/",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "1_tag@2.8"
         },
         {
           "command": "gitBranchesPanel.copyTagTargetSha",
-          "when": "(viewItem == tag || viewItem == pinned:tag) && viewItem !~ /:remote$/",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "1_tag@2.9"
         },
         {
           "command": "gitBranchesPanel.deleteTag",
-          "when": "(viewItem == tag || viewItem == pinned:tag) && viewItem !~ /:remote$/",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "2_tag@1"
         },
         {
           "command": "gitBranchesPanel.deleteRemoteTag",
-          "when": "(viewItem == tag || viewItem == pinned:tag) && viewItem !~ /:remote$/",
+          "when": "viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "2_tag@1.5"
         },
         {
