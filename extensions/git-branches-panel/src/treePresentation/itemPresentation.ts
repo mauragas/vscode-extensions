@@ -538,6 +538,10 @@ function resolveBaseContextValue(nodeType: NodeType, branch: BranchInfo): string
     return branch.isCurrent ? 'publishableCurrentBranch' : 'publishableBranch';
   }
 
+  if (nodeType === 'tag' && branch.isRemoteTag) {
+    return 'tag:remote';
+  }
+
   return nodeType;
 }
 

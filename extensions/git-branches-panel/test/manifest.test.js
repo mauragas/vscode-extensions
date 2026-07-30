@@ -501,7 +501,7 @@ test('package manifest exposes the 2.3.1 multi-repo, source-update, search, remo
   assert.ok(
     hasViewItemMenu(
       'gitBranchesPanel.pushTag',
-      (item) => item.when === 'viewItem == tag' && item.group === 'inline@2'
+      (item) => item.when === '(viewItem == tag || viewItem == pinned:tag)' && item.group === 'inline@2'
     )
   );
   assert.ok(
@@ -657,7 +657,7 @@ test('package manifest exposes the 2.3.1 multi-repo, source-update, search, remo
   assert.ok(
     hasViewItemMenu(
       'gitBranchesPanel.compareTagWithCurrent',
-      (item) => item.when === 'viewItem == tag' && item.group === '1_tag@2.7'
+      (item) => item.when === '(viewItem == tag || viewItem == pinned:tag) && viewItem !~ /:remote$/' && item.group === '1_tag@2.7'
     )
   );
   assert.ok(
@@ -672,19 +672,19 @@ test('package manifest exposes the 2.3.1 multi-repo, source-update, search, remo
   assert.ok(
     hasViewItemMenu(
       'gitBranchesPanel.showTagDetails',
-      (item) => item.when === 'viewItem == tag' && item.group === '1_tag@2.8'
+      (item) => item.when === '(viewItem == tag || viewItem == pinned:tag) && viewItem !~ /:remote$/' && item.group === '1_tag@2.8'
     )
   );
   assert.ok(
     hasViewItemMenu(
       'gitBranchesPanel.copyTagTargetSha',
-      (item) => item.when === 'viewItem == tag' && item.group === '1_tag@2.9'
+      (item) => item.when === '(viewItem == tag || viewItem == pinned:tag) && viewItem !~ /:remote$/' && item.group === '1_tag@2.9'
     )
   );
   assert.ok(
     hasViewItemMenu(
       'gitBranchesPanel.deleteRemoteTag',
-      (item) => item.when === 'viewItem == tag' && item.group === '2_tag@1.5'
+      (item) => item.when === '(viewItem == tag || viewItem == pinned:tag) && viewItem !~ /:remote$/' && item.group === '2_tag@1.5'
     )
   );
   assert.ok(

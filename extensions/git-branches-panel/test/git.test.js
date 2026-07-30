@@ -219,6 +219,30 @@ test('getTags marks the checked-out tag as current', async (t) => {
   assert.equal(checkedOutTag.isCurrent, true);
 });
 
+test('getTags sets isRemoteTag for tags that exist on remotes', async (t) => {
+  const repoRoot = createTempRepository(t);
+  const bareRepoRoot = mkdtempSync(join(tmpdir(), 'bare-repo-'));
+
+  try {
+    runGit(bareRepoRoot, ['init', '--bare']);
+    runGit(repoRoot, ['remote', 'add', 'origin', bareRepoRoot]);
+    runGit(repoRoot, ['tag', 'remote-tag-1']);
+    runGit(repoRoot, ['tag', 'remote-tag-2']);
+    runGit(repoRoot, ['push', 'origin', 'remote-tag-1']);
+
+    const tags = await getTags(repoRoot);
+    const tag1 = tags.find((tag) => tag.name === 'remote-tag-1');
+    const tag2 = tags.find((tag) => tag.name === 'remote-tag-2');
+
+    assert.ok(tag1);
+    assert.ok(tag2);
+    assert.equal(tag1.isRemoteTag, true, 'remote-tag-1 should have isRemoteTag=true');
+    assert.equal(tag2.isRemoteTag, false, 'remote-tag-2 should have isRemoteTag=false');
+  } finally {
+    rmSync(bareRepoRoot, { recursive: true, force: true });
+  }
+});
+
 test('deleteBranch succeeds when the branch never had source metadata', async (t) => {
   const repoRoot = createTempRepository(t);
 

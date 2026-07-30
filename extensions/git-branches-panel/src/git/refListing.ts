@@ -26,6 +26,7 @@ export async function listRefs(
   const detachedHeadLocalBranches = detachedHeadSha
     ? await getLocalBranchesPointingAtCommit(repoRoot, detachedHeadSha)
     : new Set<string>();
+  const remoteTagNames = scope === 'tag' ? await getRemoteTagNames(repoRoot) : null;
   const { stdout } = await runGit(repoRoot, [
     'for-each-ref',
     '--sort=-committerdate',
@@ -67,6 +68,7 @@ export async function listRefs(
         aheadCount: syncState.aheadCount,
         behindCount: syncState.behindCount,
         upstreamMissing: syncState.upstreamMissing,
+        isRemoteTag: scope === 'tag' && remoteTagNames?.has(name),
       } satisfies BranchInfo;
     });
 }
@@ -129,5 +131,42 @@ async function getLocalBranchesPointingAtCommit(repoRoot: string, sha: string): 
     );
   } catch {
     return new Set<string>();
+  }
+}
+
+async function getRemoteTagNames(repoRoot: string): Promise<Set<string> | null> {
+  const allTagNames = new Set<string>();
+
+  try {
+    const { stdout } = await runGit(repoRoot, ['remote']);
+    const remotes = stdout
+      .split(/\r?\n/u)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (remotes.length === 0) {
+      return new Set<string>();
+    }
+
+    for (const remote of remotes) {
+      try {
+        const { stdout: tagsOutput } = await runGit(repoRoot, ['ls-remote', '--tags', remote]);
+
+        if (tagsOutput.trim()) {
+          for (const line of tagsOutput.split(/\r?\n/u)) {
+            const tagName = line.trim().split('\t')[1]?.replace('refs/tags/', '');
+            if (tagName) {
+              allTagNames.add(tagName);
+            }
+          }
+        }
+      } catch {
+        // Skip remotes that fail
+      }
+    }
+
+    return allTagNames;
+  } catch {
+    return null;
   }
 }
