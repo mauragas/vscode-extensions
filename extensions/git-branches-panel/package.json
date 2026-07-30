@@ -411,6 +411,11 @@
         "icon": "$(copy)"
       },
       {
+        "command": "gitBranchesPanel.mergeTagIntoCurrent",
+        "title": "Merge Tag into Current Branch",
+        "icon": "$(git-merge)"
+      },
+      {
         "command": "gitBranchesPanel.mergeIntoCurrent",
         "title": "Merge into Current Branch",
         "icon": "$(git-merge)"
@@ -3943,6 +3948,11 @@
           "command": "gitBranchesPanel.pushTag",
           "when": "viewItem == tag || viewItem == pinned:tag",
           "group": "1_tag@1.6"
+        },
+        {
+          "command": "gitBranchesPanel.mergeTagIntoCurrent",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
+          "group": "1_tag@1.9"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelected",

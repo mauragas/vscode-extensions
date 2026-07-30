@@ -16,6 +16,7 @@ import {
   getStashes,
   getTagDetails,
   getTags,
+  mergeBranchIntoCurrent,
   pushAllTags,
   pushTag,
   type TagDetails,
@@ -88,6 +89,9 @@ export function registerTagCommands(
     }),
     vscode.commands.registerCommand('gitBranchesPanel.copyTagTargetSha', async (item: BranchTreeItem) => {
       await handleCopyTagTargetSha(item, commandContext);
+    }),
+    vscode.commands.registerCommand('gitBranchesPanel.mergeTagIntoCurrent', async (item: BranchTreeItem) => {
+      await handleMergeTagIntoCurrent(item, commandContext);
     })
   );
 }
@@ -418,6 +422,45 @@ async function handleCopyTagTargetSha(
   } catch (error) {
     commandContext.showCommandError(
       `Failed to copy the target SHA for tag '${item.branchName}'`,
+      error
+    );
+  }
+}
+
+async function handleMergeTagIntoCurrent(
+  item: BranchTreeItem,
+  commandContext: CommandContext
+): Promise<void> {
+  if (!isTagItem(item)) {
+    return;
+  }
+
+  const currentBranch = await commandContext.requireCurrentBranch(
+    NO_CURRENT_BRANCH_MESSAGE,
+    item.repoRoot
+  );
+  if (!currentBranch) {
+    return;
+  }
+
+  const confirmation = await vscode.window.showWarningMessage(
+    `Merge tag '${item.branchName}' into current branch '${currentBranch.name}'?`,
+    { modal: true },
+    'Merge'
+  );
+  if (confirmation !== 'Merge') {
+    return;
+  }
+
+  try {
+    await mergeBranchIntoCurrent(item.repoRoot, item.branchName);
+    await commandContext.showSuccessAndRefresh(
+      `Merged tag '${item.branchName}' into '${currentBranch.name}'.`,
+      { fetchRemoteState: false }
+    );
+  } catch (error) {
+    commandContext.showCommandError(
+      `Failed to merge tag '${item.branchName}' into '${currentBranch.name}'`,
       error
     );
   }
