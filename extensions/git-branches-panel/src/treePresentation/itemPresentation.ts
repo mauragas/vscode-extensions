@@ -626,6 +626,10 @@ function getItemIcon(
   branch?: BranchInfo,
   currentBranchInfo?: BranchInfo
 ): TreeItemIconDescriptor {
+  if (branch?.isPinned) {
+    return { resourcePath: 'star.svg' };
+  }
+
   const localSyncIcon = getLocalSyncIcon(branch);
   if (localSyncIcon) {
     return localSyncIcon;
