@@ -618,6 +618,29 @@ function hasOutgoingLocalBranchChanges(branch: BranchInfo): boolean {
   );
 }
 
+function isCurrentBranch(
+  nodeType: NodeType,
+  branch: BranchInfo,
+  currentBranchInfo?: BranchInfo
+): boolean {
+  switch (nodeType) {
+    case 'currentBranch':
+      return true;
+    case 'remoteBranch':
+      return (
+        currentBranchInfo?.scope === 'local' &&
+        currentBranchInfo.upstreamName === branch.name &&
+        !currentBranchInfo.upstreamMissing
+      );
+    case 'worktree':
+      return branch.isCurrent;
+    case 'tag':
+      return branch.isCurrent;
+    default:
+      return false;
+  }
+}
+
 function getItemIcon(
   nodeType: NodeType,
   branch?: BranchInfo,
@@ -629,6 +652,9 @@ function getItemIcon(
   }
 
   if (branch?.isPinned) {
+    if (isCurrentBranch(nodeType, branch, currentBranchInfo)) {
+      return { resourcePath: 'star-current.svg' };
+    }
     return { resourcePath: 'star.svg' };
   }
 

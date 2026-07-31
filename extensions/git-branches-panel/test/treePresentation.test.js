@@ -991,7 +991,7 @@ test('buildTreeItemPresentation adds pinned prefixes and busy context values whe
 
   assert.equal(pinnedCurrentWorktreePresentation.label, '● git-branches-panel-main-pinned-worktree');
   assert.equal(pinnedCurrentWorktreePresentation.contextValue, 'pinned:currentWorktree');
-  assert.equal(pinnedCurrentWorktreePresentation.icon.resourcePath, 'star.svg');
+  assert.equal(pinnedCurrentWorktreePresentation.icon.resourcePath, 'star-current.svg');
 
   const pinnedTagPresentation = buildTreeItemPresentation({
     kind: 'branch',
