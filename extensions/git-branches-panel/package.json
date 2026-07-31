@@ -4709,6 +4709,11 @@
           "type": "boolean",
           "default": true,
           "description": "Show the Open Extension Settings quick action in the view toolbar."
+        },
+        "gitBranchesPanel.boldFontFamily": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Custom font family for bold tree item labels (current branch, current worktree, current tag, and remote branches tracking the current local branch). Set this to a font that has good support for Unicode Mathematical Alphanumeric Symbols (U+1D400–U+1D433).\n\n**Recommended fonts:** `Noto Sans Math`, `Cantarell`, `DejaVu Sans Mono`, `STIX Two Math`\n\n**How to apply:** Set this in your VS Code `list.fontFamily` setting. Example:\n```\n\"list.fontFamily\": \"'Noto Sans Math', 'Cantarell', monospace\"\n```\nLeaves VS Code's default font when empty."
         }
       }
     }

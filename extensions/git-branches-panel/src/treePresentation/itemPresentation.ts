@@ -100,7 +100,8 @@ export function buildTreeItemPresentation(
     node.label,
     nodeType,
     node.info.isCurrent,
-    node.info.isPinned
+    node.info.isPinned,
+    currentBranchInfo
   );
   const activationCommand = resolveActivationCommand(nodeType, node.info.isCurrent);
 
@@ -481,7 +482,8 @@ function buildTreeItemLabel(
   label: string,
   nodeType: NodeType,
   isCurrent: boolean,
-  isPinned: boolean | undefined
+  isPinned: boolean | undefined,
+  currentBranchInfo?: BranchInfo
 ): string {
   const prefixParts: string[] = [];
   if (nodeType === 'currentBranch' || (nodeType === 'worktree' && isCurrent) || (nodeType === 'tag' && isCurrent)) {
@@ -489,8 +491,41 @@ function buildTreeItemLabel(
   }
 
   const prefix = prefixParts.length > 0 ? `${prefixParts.join(' ')} ` : '';
+  const text = `${prefix}${label}`;
 
-  return `${prefix}${label}`;
+  const isRemoteTrackingCurrent =
+    nodeType === 'remoteBranch' &&
+    currentBranchInfo?.scope === 'local' &&
+    currentBranchInfo.upstreamName === label;
+
+  const shouldStyleBold =
+    nodeType === 'currentBranch' ||
+    isRemoteTrackingCurrent ||
+    (nodeType === 'worktree' && isCurrent) ||
+    (nodeType === 'tag' && isCurrent);
+
+  if (shouldStyleBold) {
+    return toMathematicalBold(text);
+  }
+
+  return text;
+}
+
+const BOLD_LOWER_A = 0x1D41A;
+const BOLD_UPPER_A = 0x1D400;
+
+function toMathematicalBold(text: string): string {
+  let result = '';
+  for (const ch of text) {
+    if (ch >= 'a' && ch <= 'z') {
+      result += String.fromCodePoint(BOLD_LOWER_A + (ch.codePointAt(0)! - 'a'.codePointAt(0)!));
+    } else if (ch >= 'A' && ch <= 'Z') {
+      result += String.fromCodePoint(BOLD_UPPER_A + (ch.codePointAt(0)! - 'A'.codePointAt(0)!));
+    } else {
+      result += ch;
+    }
+  }
+  return result;
 }
 
 function getItemContextValue(nodeType: NodeType, branch: BranchInfo): string {

@@ -586,13 +586,13 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(publishableBranchPresentation.contextValue, 'publishableBranch');
 
   assert.equal(currentBranchWithSyncPresentation.nodeType, 'currentBranch');
-  assert.equal(currentBranchWithSyncPresentation.label, '● main');
+  assert.equal(currentBranchWithSyncPresentation.label, '● 𝐦𝐚𝐢𝐧');
   assert.equal(currentBranchWithSyncPresentation.contextValue, 'currentBranch:ahead');
   assert.equal(currentBranchWithSyncPresentation.icon.resourcePath, 'branch-diverged.svg');
   assert.equal(currentBranchWithSyncPresentation.description, '↓2 ↑1');
 
   assert.equal(currentBranchPresentation.nodeType, 'currentBranch');
-  assert.equal(currentBranchPresentation.label, '● main');
+  assert.equal(currentBranchPresentation.label, '● 𝐦𝐚𝐢𝐧');
   assert.equal(currentBranchPresentation.contextValue, 'publishableCurrentBranch');
   assert.equal(currentBranchPresentation.command, undefined);
   assert.equal(currentBranchPresentation.icon.id, 'git-branch');
@@ -643,7 +643,7 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(worktreePresentation.command, undefined);
 
   assert.equal(currentWorktreePresentation.nodeType, 'worktree');
-  assert.equal(currentWorktreePresentation.label, '● git-branches-panel-main-worktree');
+  assert.equal(currentWorktreePresentation.label, '● 𝐠𝐢𝐭-𝐛𝐫𝐚𝐧𝐜𝐡𝐞𝐬-𝐩𝐚𝐧𝐞𝐥-𝐦𝐚𝐢𝐧-𝐰𝐨𝐫𝐤𝐭𝐫𝐞𝐞');
   assert.equal(currentWorktreePresentation.contextValue, 'currentWorktree');
   assert.equal(currentWorktreePresentation.icon.id, 'folder');
   assert.equal(currentWorktreePresentation.icon.colorId, 'gitDecoration.addedResourceForeground');
@@ -989,7 +989,7 @@ test('buildTreeItemPresentation adds pinned prefixes and busy context values whe
   assert.equal(pinnedBusyBranchPresentation.description, '↑1');
   assert.match(pinnedBusyBranchPresentation.tooltip, /_Pinned item_/);
 
-  assert.equal(pinnedCurrentWorktreePresentation.label, '● git-branches-panel-main-pinned-worktree');
+  assert.equal(pinnedCurrentWorktreePresentation.label, '● 𝐠𝐢𝐭-𝐛𝐫𝐚𝐧𝐜𝐡𝐞𝐬-𝐩𝐚𝐧𝐞𝐥-𝐦𝐚𝐢𝐧-𝐩𝐢𝐧𝐧𝐞𝐝-𝐰𝐨𝐫𝐤𝐭𝐫𝐞𝐞');
   assert.equal(pinnedCurrentWorktreePresentation.contextValue, 'pinned:currentWorktree');
   assert.equal(pinnedCurrentWorktreePresentation.icon.resourcePath, 'star-current.svg');
 
