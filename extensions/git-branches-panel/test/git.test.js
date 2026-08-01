@@ -243,6 +243,34 @@ test('getTags sets isRemoteTag for tags that exist on remotes', async (t) => {
   }
 });
 
+test('getTags refreshes remote-tag state after pushTag and deleteRemoteTag invalidate the cache', async (t) => {
+  const { repoRoot } = createRemoteBackedRepository(t);
+
+  runGit(repoRoot, ['tag', 'v2.2.0']);
+
+  let tags = await getTags(repoRoot);
+  let remoteTag = tags.find((tag) => tag.name === 'v2.2.0');
+
+  assert.ok(remoteTag);
+  assert.equal(remoteTag.isRemoteTag, false);
+
+  await pushTag(repoRoot, 'origin', 'v2.2.0');
+
+  tags = await getTags(repoRoot);
+  remoteTag = tags.find((tag) => tag.name === 'v2.2.0');
+
+  assert.ok(remoteTag);
+  assert.equal(remoteTag.isRemoteTag, true);
+
+  await deleteRemoteTag(repoRoot, 'origin', 'v2.2.0');
+
+  tags = await getTags(repoRoot);
+  remoteTag = tags.find((tag) => tag.name === 'v2.2.0');
+
+  assert.ok(remoteTag);
+  assert.equal(remoteTag.isRemoteTag, false);
+});
+
 test('deleteBranch succeeds when the branch never had source metadata', async (t) => {
   const repoRoot = createTempRepository(t);
 
@@ -287,7 +315,7 @@ test('getBranches preserves source metadata for local branches named with a head
   assert.equal(prefixedBranch.createdFromDisplayName, 'main');
 });
 
-test('getBranches infers source metadata from branch reflog when explicit config is missing', async (t) => {
+test('getBranches does not infer source metadata from branch reflog alone', async (t) => {
   const repoRoot = createTempRepository(t);
 
   runGit(repoRoot, ['checkout', '-b', 'bugfix/test', 'main']);
@@ -297,16 +325,14 @@ test('getBranches infers source metadata from branch reflog when explicit config
   const bugfixBranch = branches.find((branch) => branch.name === 'bugfix/test');
 
   assert.ok(bugfixBranch);
-  assert.equal(bugfixBranch.createdFromRef, 'refs/heads/main');
-  assert.equal(bugfixBranch.createdFromDisplayName, 'main');
+  assert.equal(bugfixBranch.createdFromRef, undefined);
+  assert.equal(bugfixBranch.createdFromDisplayName, undefined);
 });
 
-test('getBranches falls back to PR and merge-base metadata when reflog source is unavailable', async (t) => {
+test('getBranches falls back to compatible Git config metadata when explicit source tracking is missing', async (t) => {
   const repoRoot = createTempRepository(t);
 
   runGit(repoRoot, ['branch', 'bugfix/test', 'main']);
-  const branchReflogPath = join(repoRoot, '.git', 'logs', 'refs', 'heads', 'bugfix', 'test');
-  rmSync(branchReflogPath, { force: true });
   runGit(repoRoot, ['config', 'branch.bugfix/test.github-pr-base-branch', 'mauragas#test#main']);
   runGit(repoRoot, ['config', 'branch.bugfix/test.vscode-merge-base', 'origin/main']);
 
@@ -407,12 +433,10 @@ test('getBranches returns branch without source info when config entry is missin
   assert.equal(testBranch.createdFromDisplayName, undefined);
 });
 
-test('getBranches returns branch without source info when no reflog or config hints exist', async (t) => {
+test('getBranches returns branch without source info when no compatible config hints exist', async (t) => {
   const repoRoot = createTempRepository(t);
 
   runGit(repoRoot, ['branch', 'feature/no-checkout']);
-  const branchReflogPath = join(repoRoot, '.git', 'logs', 'refs', 'heads', 'feature', 'no-checkout');
-  rmSync(branchReflogPath, { force: true });
 
   const branches = await getBranches(repoRoot);
   const testBranch = branches.find((branch) => branch.name === 'feature/no-checkout');

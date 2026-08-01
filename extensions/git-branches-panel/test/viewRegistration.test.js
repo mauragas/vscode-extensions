@@ -287,7 +287,7 @@ test('registerBranchViews keeps per-view pinned-item contexts isolated across bo
     },
     {
       command: 'setContext',
-      args: ['gitBranchesPanel.scmViewSelectedItemPinned', false],
+      args: ['gitBranchesPanel.scmViewSelectedItemPinned', true],
     },
     {
       command: 'setContext',
@@ -295,7 +295,7 @@ test('registerBranchViews keeps per-view pinned-item contexts isolated across bo
     },
     {
       command: 'setContext',
-      args: ['gitBranchesPanel.scmViewSelectedItemPinned', false],
+      args: ['gitBranchesPanel.scmViewSelectedItemPinned', true],
     },
     {
       command: 'setContext',

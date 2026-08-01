@@ -15,6 +15,24 @@ const GIT_OUTPUT_FORMAT = [
   '%(upstream:short)',
   '%(upstream:track,nobracket)',
 ].join(`${GIT_FIELD_SEPARATOR}`) + GIT_RECORD_SEPARATOR;
+const REMOTE_TAG_CACHE_TTL_MS = 30_000;
+
+const remoteTagCache = new Map<string, {
+  expiresAt: number;
+  tagNames: ReadonlySet<string>;
+}>();
+const remoteTagLoads = new Map<string, Promise<Set<string> | null>>();
+
+export function invalidateRemoteTagCache(repoRoot?: string): void {
+  if (repoRoot) {
+    remoteTagCache.delete(repoRoot);
+    remoteTagLoads.delete(repoRoot);
+    return;
+  }
+
+  remoteTagCache.clear();
+  remoteTagLoads.clear();
+}
 
 export async function listRefs(
   repoRoot: string,
@@ -135,6 +153,39 @@ async function getLocalBranchesPointingAtCommit(repoRoot: string, sha: string): 
 }
 
 async function getRemoteTagNames(repoRoot: string): Promise<Set<string> | null> {
+  const cachedEntry = remoteTagCache.get(repoRoot);
+  if (cachedEntry && cachedEntry.expiresAt > Date.now()) {
+    return cachedEntry.tagNames as Set<string>;
+  }
+
+  const pendingLoad = remoteTagLoads.get(repoRoot);
+  if (pendingLoad) {
+    const loadedTagNames = await pendingLoad;
+    return loadedTagNames ?? (cachedEntry?.tagNames as Set<string> | undefined) ?? null;
+  }
+
+  const loadPromise = loadRemoteTagNames(repoRoot)
+    .then((tagNames) => {
+      if (tagNames) {
+        remoteTagCache.set(repoRoot, {
+          expiresAt: Date.now() + REMOTE_TAG_CACHE_TTL_MS,
+          tagNames,
+        });
+      }
+
+      return tagNames;
+    })
+    .finally(() => {
+      remoteTagLoads.delete(repoRoot);
+    });
+
+  remoteTagLoads.set(repoRoot, loadPromise);
+
+  const loadedTagNames = await loadPromise;
+  return loadedTagNames ?? (cachedEntry?.tagNames as Set<string> | undefined) ?? null;
+}
+
+async function loadRemoteTagNames(repoRoot: string): Promise<Set<string> | null> {
   const allTagNames = new Set<string>();
 
   try {
@@ -150,7 +201,7 @@ async function getRemoteTagNames(repoRoot: string): Promise<Set<string> | null> 
 
     for (const remote of remotes) {
       try {
-        const { stdout: tagsOutput } = await runGit(repoRoot, ['ls-remote', '--tags', remote]);
+        const { stdout: tagsOutput } = await runGit(repoRoot, ['ls-remote', '--tags', '--refs', remote]);
 
         if (tagsOutput.trim()) {
           for (const line of tagsOutput.split(/\r?\n/u)) {

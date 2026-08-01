@@ -1339,14 +1339,16 @@ test('updateBranchFromSource explains when the current branch has no recorded so
   assert.match(vscodeState.infoMessages[0], /does not have a recorded source branch/i);
 });
 
-test('updateBranchFromSource explains when the selected branch is not current', async () => {
+test('updateBranchFromSource explains when it cannot switch to the selected branch first', async () => {
   const vscodeState = createVscodeState();
 
   createBranchCommandsModule({
     vscodeState,
     validateSpy: [],
     gitMock: {
-      async checkoutBranch() {},
+      async checkoutBranch() {
+        throw new Error('checkout failed');
+      },
       async checkoutRemoteBranch() {},
       async createBranch() {},
       async createBranchFromRef() {},

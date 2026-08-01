@@ -1,4 +1,4 @@
-import { listRefs } from './refListing';
+import { invalidateRemoteTagCache, listRefs } from './refListing';
 import { ensureRemoteExists, runGit } from './shared';
 
 const TAG_FIELD_SEPARATOR = '\u001f';
@@ -96,6 +96,7 @@ export async function deleteTag(repoRoot: string, tagName: string): Promise<void
 export async function pushAllTags(repoRoot: string, remoteName: string): Promise<void> {
   await ensureRemoteExists(repoRoot, remoteName);
   await runGit(repoRoot, ['push', remoteName, '--tags']);
+  invalidateRemoteTagCache(repoRoot);
 }
 
 export async function pushTag(
@@ -105,6 +106,7 @@ export async function pushTag(
 ): Promise<void> {
   await ensureRemoteExists(repoRoot, remoteName);
   await runGit(repoRoot, ['push', remoteName, `refs/tags/${tagName}`]);
+  invalidateRemoteTagCache(repoRoot);
 }
 
 export async function deleteRemoteTag(
@@ -114,6 +116,7 @@ export async function deleteRemoteTag(
 ): Promise<void> {
   await ensureRemoteExists(repoRoot, remoteName);
   await runGit(repoRoot, ['push', remoteName, `:refs/tags/${tagName}`]);
+  invalidateRemoteTagCache(repoRoot);
 }
 
 export async function getTagDetails(

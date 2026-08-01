@@ -113,7 +113,7 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
         return branch;
       }
 
-      const createdFromRef = await resolveCreatedFromRef(repoRoot, branch.name, sourceMetadataLookup);
+      const createdFromRef = resolveCreatedFromRef(branch.name, sourceMetadataLookup);
 
       if (!createdFromRef) {
         return branch;
@@ -696,25 +696,15 @@ async function resolveSourceBranchState(
   };
 }
 
-async function resolveCreatedFromRef(
-  repoRoot: string,
+function resolveCreatedFromRef(
   branchName: string,
   sourceMetadataLookup: BranchSourceMetadataLookup
-): Promise<string | undefined> {
+): string | undefined {
   const explicitCreatedFromRef = sourceMetadataLookup.createdFromEntries.get(
     buildCreatedFromConfigKey(branchName)
   );
   if (explicitCreatedFromRef) {
     return explicitCreatedFromRef;
-  }
-
-  const reflogCreatedFromRef = await inferCreatedFromRefFromBranchReflog(
-    repoRoot,
-    branchName,
-    sourceMetadataLookup.localBranchNames
-  );
-  if (reflogCreatedFromRef) {
-    return reflogCreatedFromRef;
   }
 
   const githubPrBaseRef = inferCreatedFromRefFromGitHubPrBase(
@@ -731,36 +721,6 @@ async function resolveCreatedFromRef(
     sourceMetadataLookup.mergeBaseEntries,
     sourceMetadataLookup.localBranchNames
   );
-}
-
-async function inferCreatedFromRefFromBranchReflog(
-  repoRoot: string,
-  branchName: string,
-  localBranchNames: ReadonlySet<string>
-): Promise<string | undefined> {
-  try {
-    const branchRef = await resolveActualLocalBranchRef(repoRoot, branchName);
-    const { stdout } = await runGit(repoRoot, [
-      'reflog',
-      'show',
-      '--format=%gs',
-      '-n',
-      '25',
-      branchRef,
-    ]);
-
-    for (const entry of stdout.split(/\r?\n/u).map((line) => line.trim()).filter(Boolean)) {
-      const match = entry.match(/^branch:\s+Created from\s+(.+)$/iu);
-      const createdFromRef = normalizeInferredSourceRef(match?.[1], localBranchNames);
-      if (createdFromRef) {
-        return createdFromRef;
-      }
-    }
-  } catch {
-    // Some refs may not have a reflog entry, especially synthetic test fixtures or pruned histories.
-  }
-
-  return undefined;
 }
 
 async function resolveActualLocalBranchRef(repoRoot: string, branchName: string): Promise<string> {

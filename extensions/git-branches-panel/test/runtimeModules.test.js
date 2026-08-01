@@ -150,7 +150,11 @@ function createDataLoader(state) {
         await state.onRefresh(options);
       }
     },
-    getCurrentBranch() {
+    getCurrentBranch(repoRoot) {
+      if (repoRoot && state.currentBranchesByRepo?.has(repoRoot)) {
+        return state.currentBranchesByRepo.get(repoRoot);
+      }
+
       return state.currentBranch;
     },
     getTreeData() {
@@ -518,6 +522,104 @@ test('BranchTreeProvider marks busy current branches in context', async () => {
       (call) =>
         call.command === 'setContext' &&
         call.args[0] === 'gitBranchesPanel.currentBranchBusy' &&
+        call.args[1] === true
+    )
+  );
+});
+
+test('BranchTreeProvider scopes currentBranchCanUpdateFromSource to the active repository', async () => {
+  const commandCalls = [];
+  const state = {
+    repoRoots: ['/repo-a', '/repo-b'],
+    treeData: [
+      {
+        kind: 'repository',
+        label: 'repo-a',
+        path: 'repo:/repo-a',
+        repoRoot: '/repo-a',
+        children: [],
+      },
+      {
+        kind: 'repository',
+        label: 'repo-b',
+        path: 'repo:/repo-b',
+        repoRoot: '/repo-b',
+        children: [],
+      },
+    ],
+    currentBranchesByRepo: new Map([
+      [
+        '/repo-a',
+        {
+          name: 'feature/no-update',
+          isCurrent: true,
+          scope: 'local',
+          createdFromRef: 'refs/heads/main',
+          sourceBehindCount: 0,
+        },
+      ],
+      [
+        '/repo-b',
+        {
+          name: 'feature/update-available',
+          isCurrent: true,
+          scope: 'local',
+          createdFromRef: 'refs/heads/main',
+          sourceBehindCount: 2,
+        },
+      ],
+    ]),
+    loadedSections: new Set(),
+  };
+  const dataLoader = createDataLoader(state);
+  const { BranchTreeProvider } = loadFresh('../out/treeProvider.js', {
+    vscode: createVscodeMock(commandCalls),
+    './git': {
+      fetchRemoteState() {},
+      getBranches() {},
+      getHooks() {},
+      getRemoteBranches() {},
+      getRepoRoot() {},
+      getStashes() {},
+      getWorktrees() {},
+      getTags() {},
+    },
+    './gitApi': {
+      getWorkspaceRepositories: async () => [],
+      resolveRepoRootForUri: async () => undefined,
+    },
+    './treeDataLoader': {
+      BranchDataLoader: class BranchDataLoader {},
+      getBranchSectionKey: () => undefined,
+    },
+    './treeItem': createTreeItemMock(),
+    './treePresentation': {
+      findContainerNode,
+      findDescendantBranches,
+    },
+  });
+
+  const provider = new BranchTreeProvider({ subscriptions: [] }, dataLoader);
+
+  await provider.refresh({ fetchRemoteState: false });
+
+  assert.ok(
+    commandCalls.some(
+      (call) =>
+        call.command === 'setContext' &&
+        call.args[0] === 'gitBranchesPanel.currentBranchCanUpdateFromSource' &&
+        call.args[1] === false
+    )
+  );
+
+  commandCalls.length = 0;
+  assert.equal(await provider.setActiveRepository('/repo-b'), true);
+
+  assert.ok(
+    commandCalls.some(
+      (call) =>
+        call.command === 'setContext' &&
+        call.args[0] === 'gitBranchesPanel.currentBranchCanUpdateFromSource' &&
         call.args[1] === true
     )
   );
