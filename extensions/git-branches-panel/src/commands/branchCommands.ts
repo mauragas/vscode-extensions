@@ -2,8 +2,6 @@ import * as vscode from 'vscode';
 import { join } from 'node:path';
 
 import {
-  canUpdateFromSourceBranch,
-  hasSourceBranchUpdate,
   isPublishableBranch,
   type RemoteTrackingState,
 } from '../branchModel';
@@ -32,7 +30,9 @@ import {
   getRemoteDetails,
   getRemoteBranchTrackingState,
   getDiffFilesBetweenRefs,
+  getSourceBranchState,
   mergeBranchIntoCurrent,
+  mergeRefIntoBranch,
   parseCustomRemoteHostingProviders,
   pullBranchChanges,
   pushBranch as pushBranchToRemote,
@@ -460,26 +460,6 @@ async function handleUpdateBranchFromSource(
     return;
   }
 
-  const currentBranchInfo = await commandContext.requireCurrentBranch(
-    'Could not determine the current branch.',
-    repoRoot
-  );
-  if (
-    !branchesReferToSameLocalBranch(
-      currentBranchInfo?.name,
-      targetBranchName
-    )
-  ) {
-    try {
-      await checkoutBranch(repoRoot, targetBranchName);
-    } catch {
-      vscode.window.showInformationMessage(
-        `Switch to '${targetBranchName}' before updating it from its recorded source branch.`
-      );
-      return;
-    }
-  }
-
   const branchInfo = item.branchInfo;
   const sourceRef = branchInfo?.createdFromRef;
   if (!sourceRef) {
@@ -513,8 +493,16 @@ async function handleUpdateBranchFromSource(
       return;
     }
 
+    const resolvedTargetBranchName = latestBranchInfo.name;
+
     latestSourceDisplayName = latestBranchInfo.createdFromDisplayName ?? latestSourceRef;
-    if (latestBranchInfo.sourceRefMissing) {
+    const latestSourceState = await getSourceBranchState(
+      repoRoot,
+      resolvedTargetBranchName,
+      latestSourceRef
+    );
+
+    if (latestSourceState.sourceRefMissing) {
       await commandContext.refresh({ fetchRemoteState: false });
       vscode.window.showInformationMessage(
         `Recorded source branch '${latestSourceDisplayName}' no longer exists.`
@@ -522,7 +510,7 @@ async function handleUpdateBranchFromSource(
       return;
     }
 
-    if (!hasSourceBranchUpdate(latestBranchInfo)) {
+    if ((latestSourceState.sourceBehindCount ?? 0) <= 0) {
       await commandContext.refresh({ fetchRemoteState: false });
       vscode.window.showInformationMessage(
         `Branch '${targetBranchName}' is already up to date with '${latestSourceDisplayName}'.`
@@ -531,7 +519,7 @@ async function handleUpdateBranchFromSource(
     }
 
     const confirmation = await vscode.window.showWarningMessage(
-      `Merge '${latestSourceDisplayName}' into current branch '${targetBranchName}'?`,
+      `Merge '${latestSourceDisplayName}' into branch '${targetBranchName}'?`,
       { modal: true },
       'Merge'
     );
@@ -542,8 +530,8 @@ async function handleUpdateBranchFromSource(
     await commandContext.runWithLoadingIndicator(
       `Updating '${targetBranchName}' from '${latestSourceDisplayName}'…`,
       () =>
-        commandContext.provider.withBusyBranch(repoRoot, targetBranchName, async () => {
-          await mergeBranchIntoCurrent(repoRoot, latestSourceRef);
+        commandContext.provider.withBusyBranch(repoRoot, resolvedTargetBranchName, async () => {
+          await mergeRefIntoBranch(repoRoot, resolvedTargetBranchName, latestSourceRef);
         })
     );
     await commandContext.showSuccessAndRefresh(
@@ -1311,7 +1299,7 @@ function resolveNewBranchName(name: string, normalize: boolean): string {
 
 async function resolveLatestSourceUpdateBranchInfo(
   repoRoot: string,
-  currentBranchName: string,
+  branchName: string,
   sourceRef: string
 ) {
   if (looksLikeRemoteTrackingSourceRef(sourceRef)) {
@@ -1319,10 +1307,10 @@ async function resolveLatestSourceUpdateBranchInfo(
   }
 
   const branches = await getBranches(repoRoot);
-  const branchNameCandidates = getLocalBranchIdentityCandidates(currentBranchName);
+  const branchNameCandidates = getLocalBranchIdentityCandidates(branchName);
 
   return branches.find(
-    (branch) => branch.isCurrent && branchNameCandidates.includes(branch.name)
+    (branch) => branchNameCandidates.includes(branch.name)
   );
 }
 
@@ -1334,20 +1322,6 @@ function getLocalBranchIdentityCandidates(branchName: string): string[] {
   }
 
   return [...candidates].filter(Boolean);
-}
-
-function branchesReferToSameLocalBranch(
-  leftBranchName: string | undefined,
-  rightBranchName: string | undefined
-): boolean {
-  if (!leftBranchName || !rightBranchName) {
-    return false;
-  }
-
-  const rightBranchCandidates = new Set(getLocalBranchIdentityCandidates(rightBranchName));
-  return getLocalBranchIdentityCandidates(leftBranchName).some((candidate) =>
-    rightBranchCandidates.has(candidate)
-  );
 }
 
 function toStoredSourceRef(item: Pick<BranchTreeItem, 'nodeType' | 'branchName'>): string | undefined {
@@ -1411,7 +1385,11 @@ function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
       )
     );
 
-    if (item.branchInfo && canUpdateFromSourceBranch(item.branchInfo)) {
+    if (
+      item.nodeType === 'branch' ||
+      item.nodeType === 'currentBranch' ||
+      item.nodeType === 'missingUpstreamBranch'
+    ) {
       items.push(
         createBranchActionItem(
           'updateBranchFromSource',

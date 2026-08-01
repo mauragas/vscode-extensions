@@ -381,6 +381,30 @@ export async function mergeBranchIntoCurrent(
   await runGit(repoRoot, ['merge', '--no-edit', refName]);
 }
 
+export async function mergeRefIntoBranch(
+  repoRoot: string,
+  branchName: string,
+  refName: string
+): Promise<void> {
+  const branches = await getBranches(repoRoot);
+  const normalizedBranchName = normalizeLocalBranchConfigName(branchName);
+  const branch = branches.find(
+    (candidate) => candidate.name === normalizedBranchName || candidate.name === branchName
+  );
+  if (!branch) {
+    throw new Error(`Branch '${branchName}' was not found.`);
+  }
+
+  if (branch.isCurrent) {
+    await mergeBranchIntoCurrent(repoRoot, refName);
+    return;
+  }
+
+  await withTemporaryBranchWorktree(repoRoot, branch.name, async (worktreePath) => {
+    await runGit(worktreePath, ['merge', '--no-edit', refName]);
+  });
+}
+
 export async function cherryPickRef(
   repoRoot: string,
   refName: string
@@ -713,7 +737,10 @@ function formatRefForDisplay(refName: string): string {
 async function resolveSourceBranchState(
   repoRoot: string,
   branch: BranchInfo,
-  sourceRef: string
+  sourceRef: string,
+  options: {
+    includeNonCurrentComparison?: boolean;
+  } = {}
 ): Promise<Pick<BranchInfo, 'sourceBehindCount' | 'sourceRefMissing'>> {
   try {
     await runGit(repoRoot, ['rev-parse', '--verify', '--quiet', sourceRef]);
@@ -724,7 +751,7 @@ async function resolveSourceBranchState(
     };
   }
 
-  if (!branch.isCurrent) {
+  if (!branch.isCurrent && !(options.includeNonCurrentComparison ?? false)) {
     return {
       sourceBehindCount: 0,
       sourceRefMissing: false,
@@ -737,6 +764,24 @@ async function resolveSourceBranchState(
     sourceBehindCount: counts.behindCount,
     sourceRefMissing: false,
   };
+}
+
+export async function getSourceBranchState(
+  repoRoot: string,
+  branchName: string,
+  sourceRef: string
+): Promise<Pick<BranchInfo, 'sourceBehindCount' | 'sourceRefMissing'>> {
+  return resolveSourceBranchState(
+    repoRoot,
+    {
+      name: branchName,
+      isCurrent: false,
+    },
+    sourceRef,
+    {
+      includeNonCurrentComparison: true,
+    }
+  );
 }
 
 async function resolveConfiguredCreatedFromRef(
