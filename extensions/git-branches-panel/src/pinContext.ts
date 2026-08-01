@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 
+import { hasSourceBranchUpdate } from './branchModel';
 import type { BranchTreeItem, NodeType } from './treeItem';
 
 export type BranchViewId = 'gitBranchesPanel' | 'gitBranchesSCM';
@@ -11,7 +12,17 @@ export const SELECTED_ITEM_PINNED_CONTEXTS: Readonly<Record<BranchViewId, string
   gitBranchesSCM: 'gitBranchesPanel.scmViewSelectedItemPinned',
 };
 
+export const SELECTED_ITEM_SOURCE_UPDATE_CONTEXTS: Readonly<Record<BranchViewId, string>> = {
+  gitBranchesPanel: 'gitBranchesPanel.branchesViewSelectedItemCanUpdateFromSource',
+  gitBranchesSCM: 'gitBranchesPanel.scmViewSelectedItemCanUpdateFromSource',
+};
+
 type PinnableBranchTreeItem = BranchTreeItem & {
+  branchInfo: NonNullable<BranchTreeItem['branchInfo']>;
+  repoRoot: NonNullable<BranchTreeItem['repoRoot']>;
+};
+
+type SourceUpdatableBranchTreeItem = BranchTreeItem & {
   branchInfo: NonNullable<BranchTreeItem['branchInfo']>;
   repoRoot: NonNullable<BranchTreeItem['repoRoot']>;
 };
@@ -35,6 +46,12 @@ const PINNABLE_NODE_TYPES = new Set<NodeType>([
   'worktree',
 ]);
 
+const SOURCE_UPDATABLE_NODE_TYPES = new Set<NodeType>([
+  'branch',
+  'currentBranch',
+  'missingUpstreamBranch',
+]);
+
 const selectedItemStates = new Map<BranchViewId, SelectedPinnableItemState | undefined>();
 
 export function isPinnableItem(
@@ -42,6 +59,17 @@ export function isPinnableItem(
 ): item is PinnableBranchTreeItem {
   return Boolean(
     item?.repoRoot && item.branchInfo && PINNABLE_NODE_TYPES.has(item.nodeType)
+  );
+}
+
+export function isSourceUpdatableItem(
+  item: BranchTreeItem | undefined
+): item is SourceUpdatableBranchTreeItem {
+  return Boolean(
+    item?.repoRoot &&
+      item.branchInfo &&
+      SOURCE_UPDATABLE_NODE_TYPES.has(item.nodeType) &&
+      hasSourceBranchUpdate(item.branchInfo)
   );
 }
 
@@ -66,6 +94,24 @@ export async function updateSelectedItemPinnedContext(
   await setSelectedItemPinnedContextValue(viewId, Boolean(selectedItemState?.isPinned));
 }
 
+export async function setSelectedItemCanUpdateFromSourceContextValue(
+  viewId: BranchViewId,
+  canUpdateFromSource: boolean
+): Promise<void> {
+  await vscode.commands.executeCommand(
+    'setContext',
+    SELECTED_ITEM_SOURCE_UPDATE_CONTEXTS[viewId],
+    canUpdateFromSource
+  );
+}
+
+export async function updateSelectedItemCanUpdateFromSourceContext(
+  viewId: BranchViewId,
+  item: BranchTreeItem | undefined
+): Promise<void> {
+  await setSelectedItemCanUpdateFromSourceContextValue(viewId, isSourceUpdatableItem(item));
+}
+
 export async function syncSelectedItemPinnedContexts(
   treeViews: ReadonlyArray<{
     readonly viewId: BranchViewId;
@@ -75,6 +121,19 @@ export async function syncSelectedItemPinnedContexts(
   await Promise.all(
     treeViews.map(({ viewId, treeView }) =>
       updateSelectedItemPinnedContext(viewId, treeView.selection[0])
+    )
+  );
+}
+
+export async function syncSelectedItemCanUpdateFromSourceContexts(
+  treeViews: ReadonlyArray<{
+    readonly viewId: BranchViewId;
+    readonly treeView: vscode.TreeView<BranchTreeItem>;
+  }>
+): Promise<void> {
+  await Promise.all(
+    treeViews.map(({ viewId, treeView }) =>
+      updateSelectedItemCanUpdateFromSourceContext(viewId, treeView.selection[0])
     )
   );
 }

@@ -118,6 +118,18 @@ export async function doesLocalBranchExist(
   }
 }
 
+export async function doesTagExist(
+  repoRoot: string,
+  tagName: string
+): Promise<boolean> {
+  try {
+    await runGit(repoRoot, ['show-ref', '--verify', '--quiet', `refs/tags/${tagName}`]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function readGitConfig(
   repoRoot: string,
   key: string

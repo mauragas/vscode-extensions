@@ -344,6 +344,47 @@ test('getBranches falls back to compatible Git config metadata when explicit sou
   assert.equal(bugfixBranch.createdFromDisplayName, 'main');
 });
 
+test('getBranches normalizes legacy tag-created source metadata that was stored as refs/heads/<tag>', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['branch', 'feature/from-tag', 'v1.0.0']);
+  runGit(
+    repoRoot,
+    ['config', 'branch.feature/from-tag.gitbranchespanelcreatedfromref', 'refs/heads/v1.0.0']
+  );
+
+  const branches = await getBranches(repoRoot);
+  const tagBranch = branches.find((branch) => branch.name === 'feature/from-tag');
+
+  assert.ok(tagBranch);
+  assert.equal(tagBranch.createdFromRef, 'refs/tags/v1.0.0');
+  assert.equal(tagBranch.createdFromDisplayName, 'v1.0.0');
+  assert.equal(tagBranch.sourceRefMissing, false);
+});
+
+test('getBranches falls back to compatible Git config hints when the recorded source ref no longer exists', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['branch', 'feature/fallback-source', 'main']);
+  runGit(
+    repoRoot,
+    ['config', 'branch.feature/fallback-source.gitbranchespanelcreatedfromref', 'refs/heads/missing-source']
+  );
+  runGit(
+    repoRoot,
+    ['config', 'branch.feature/fallback-source.github-pr-base-branch', 'mauragas#vscode-extensions#main']
+  );
+  runGit(repoRoot, ['config', 'branch.feature/fallback-source.vscode-merge-base', 'origin/main']);
+
+  const branches = await getBranches(repoRoot);
+  const fallbackBranch = branches.find((branch) => branch.name === 'feature/fallback-source');
+
+  assert.ok(fallbackBranch);
+  assert.equal(fallbackBranch.createdFromRef, 'refs/heads/main');
+  assert.equal(fallbackBranch.createdFromDisplayName, 'main');
+  assert.equal(fallbackBranch.sourceRefMissing, false);
+});
+
 test('getBranches reports when the current branch is behind its recorded local source branch', async (t) => {
   const repoRoot = createTempRepository(t);
 

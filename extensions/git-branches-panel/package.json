@@ -3861,7 +3861,7 @@
         },
         {
           "command": "gitBranchesPanel.updateBranchFromSource",
-          "when": "gitBranchesPanel.currentBranchCanUpdateFromSource && viewItem =~ /^(?:pinned:)?(?:currentBranch(?:\\:.+)?|publishableCurrentBranch(?:\\:.+)?)$/",
+          "when": "((gitBranchesPanel.currentBranchCanUpdateFromSource && viewItem =~ /^(?:pinned:)?(?:currentBranch(?:\\:.+)?|publishableCurrentBranch(?:\\:.+)?)$/) || (((view == gitBranchesPanel && gitBranchesPanel.branchesViewSelectedItemCanUpdateFromSource) || (view == gitBranchesSCM && gitBranchesPanel.scmViewSelectedItemCanUpdateFromSource)) && viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?:\\:.+)?|publishableBranch|publishableCurrentBranch(?:\\:.+)?|missingUpstreamBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedMissingUpstreamBranch)$/))",
           "group": "1_branchSource@1"
         },
         {

@@ -268,7 +268,11 @@ test('registerBranchViews keeps per-view pinned-item contexts isolated across bo
   listeners[0]();
   treeViews[0].fireSelection([]);
 
-  assert.deepEqual(vscodeState.executedCommands, [
+  assert.deepEqual(
+    vscodeState.executedCommands.filter(
+      ({ args }) => typeof args?.[0] === 'string' && args[0].includes('SelectedItemPinned')
+    ),
+    [
     {
       command: 'setContext',
       args: ['gitBranchesPanel.branchesViewSelectedItemPinned', false],
@@ -301,7 +305,95 @@ test('registerBranchViews keeps per-view pinned-item contexts isolated across bo
       command: 'setContext',
       args: ['gitBranchesPanel.branchesViewSelectedItemPinned', false],
     },
-  ]);
+  ]
+  );
+});
+
+test('registerBranchViews keeps per-view source-update contexts isolated across both tree views', () => {
+  const treeViews = [];
+  const listeners = [];
+  const vscodeState = createVscodeState();
+  const { registerBranchViews } = loadFresh('../out/viewRegistration.js', {
+    vscode: createVscodeMock(false, treeViews, vscodeState),
+  }, ['../out/pinContext.js']);
+
+  const provider = {
+    getCurrentBranch: () => undefined,
+    getActiveRepositoryLabel: () => undefined,
+    getFilterSummary: () => '',
+    hasActiveFilter: () => false,
+    hasVisibleResults: () => true,
+    registerTreeViews: () => {},
+    setActiveRepositoryFromItem: async () => {},
+    syncActiveRepositoryToEditorIfEnabled: async () => {},
+    onDidChangeTreeData: (listener) => {
+      listeners.push(listener);
+      return { dispose() {} };
+    },
+  };
+
+  registerBranchViews({ subscriptions: [] }, provider);
+
+  const sourceUpdateBranch = {
+    nodeType: 'branch',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'feature/demo',
+      isCurrent: false,
+      createdFromRef: 'refs/heads/main',
+      sourceBehindCount: 2,
+      sourceRefMissing: false,
+    },
+  };
+  const regularBranch = {
+    nodeType: 'branch',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'feature/regular',
+      isCurrent: false,
+    },
+  };
+
+  treeViews[0].fireSelection([sourceUpdateBranch]);
+  treeViews[1].fireSelection([regularBranch]);
+  listeners[0]();
+  treeViews[0].fireSelection([]);
+
+  assert.deepEqual(
+    vscodeState.executedCommands.filter(
+      ({ args }) => typeof args?.[0] === 'string' && args[0].includes('CanUpdateFromSource')
+    ),
+    [
+      {
+        command: 'setContext',
+        args: ['gitBranchesPanel.branchesViewSelectedItemCanUpdateFromSource', false],
+      },
+      {
+        command: 'setContext',
+        args: ['gitBranchesPanel.scmViewSelectedItemCanUpdateFromSource', false],
+      },
+      {
+        command: 'setContext',
+        args: ['gitBranchesPanel.branchesViewSelectedItemCanUpdateFromSource', true],
+      },
+      {
+        command: 'setContext',
+        args: ['gitBranchesPanel.scmViewSelectedItemCanUpdateFromSource', false],
+      },
+      {
+        command: 'setContext',
+        args: ['gitBranchesPanel.branchesViewSelectedItemCanUpdateFromSource', true],
+      },
+      {
+        command: 'setContext',
+        args: ['gitBranchesPanel.scmViewSelectedItemCanUpdateFromSource', false],
+      },
+      {
+        command: 'setContext',
+        args: ['gitBranchesPanel.branchesViewSelectedItemCanUpdateFromSource', false],
+      },
+    ]
+  );
 });
 
 test('registerBranchViews shows filter status and a no-results hint when filtering hides every ref', () => {

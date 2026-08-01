@@ -705,6 +705,69 @@ test('newBranchFromSelectedAndCheckout creates and checks out a branch from a re
   ]);
 });
 
+test('newBranchFromSelected stores tag refs as refs/tags source metadata', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.inputBoxResponse = ' feature/from-tag ';
+  const createBranchFromRefCalls = [];
+
+  createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    sanitizeSpy: [],
+    sanitizeImpl() {
+      return 'feature/from-tag';
+    },
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef(repoRoot, branchName, startPoint, options) {
+        createBranchFromRefCalls.push({ repoRoot, branchName, startPoint, options });
+      },
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.newBranchFromSelected']({
+    nodeType: 'tag',
+    branchName: '2.3.0',
+    repoRoot: '/repo',
+  });
+
+  assert.deepEqual(createBranchFromRefCalls, [
+    {
+      repoRoot: '/repo',
+      branchName: 'feature/from-tag',
+      startPoint: '2.3.0',
+      options: { checkout: false, sourceRef: 'refs/tags/2.3.0' },
+    },
+  ]);
+});
+
 test('newBranch stops when sanitization removes every valid branch-name character', async () => {
   const vscodeState = createVscodeState();
   vscodeState.inputBoxResponse = ' ??? ';

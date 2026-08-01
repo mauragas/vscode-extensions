@@ -1335,6 +1335,10 @@ function toStoredSourceRef(item: Pick<BranchTreeItem, 'nodeType' | 'branchName'>
     return undefined;
   }
 
+  if (item.nodeType === 'tag') {
+    return `refs/tags/${item.branchName}`;
+  }
+
   return item.nodeType === 'remoteBranch' || item.nodeType === 'staleRemoteBranch'
     ? `refs/remotes/${item.branchName}`
     : toStoredLocalSourceRef(item.branchName);
