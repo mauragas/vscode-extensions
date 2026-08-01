@@ -391,7 +391,7 @@ test('getBranches reports when the current branch is behind its recorded remote-
   assert.equal(currentBranch.sourceBehindCount, 1);
 });
 
-test('getBranches marks only branches pointing directly at a detached HEAD as current', async (t) => {
+test('getBranches does not mark local branches as current when a tag is checked out in detached HEAD', async (t) => {
   const repoRoot = createTempRepository(t);
 
   runGit(repoRoot, ['checkout', '-b', 'test2']);
@@ -416,7 +416,7 @@ test('getBranches marks only branches pointing directly at a detached HEAD as cu
     .map((tag) => tag.name)
     .sort();
 
-  assert.deepEqual(currentBranchNames, ['test2']);
+  assert.deepEqual(currentBranchNames, []);
   assert.deepEqual(currentTagNames, ['test3']);
 });
 

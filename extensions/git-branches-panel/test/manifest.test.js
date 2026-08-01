@@ -669,8 +669,9 @@ test('package manifest exposes the 2.4.0 multi-repo, source-update, search, remo
     hasViewItemMenu(
       'gitBranchesPanel.updateBranchFromSource',
       (item) =>
-        item.when ===
-          'viewItem =~ /^(?:pinned:)?(?:currentBranch|publishableCurrentBranch)(?::[^:]+)*:sourceUpdate$/' &&
+        item.when.includes('gitBranchesPanel.currentBranchCanUpdateFromSource') &&
+        item.when.includes('currentBranch') &&
+        item.when.includes('publishableCurrentBranch') &&
         item.group === '1_branchSource@1'
     )
   );

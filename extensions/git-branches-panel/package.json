@@ -3861,7 +3861,7 @@
         },
         {
           "command": "gitBranchesPanel.updateBranchFromSource",
-          "when": "viewItem =~ /^(?:pinned:)?(?:currentBranch|publishableCurrentBranch)(?::[^:]+)*:sourceUpdate$/",
+          "when": "gitBranchesPanel.currentBranchCanUpdateFromSource && viewItem =~ /^(?:pinned:)?(?:currentBranch(?:\\:.+)?|publishableCurrentBranch(?:\\:.+)?)$/",
           "group": "1_branchSource@1"
         },
         {

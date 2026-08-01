@@ -180,7 +180,7 @@ test('buildBranchTooltipContent and buildTreeItemPresentation surface source-upd
 
   assert.match(sourceUpdateTooltip, /Created from: main/);
   assert.match(sourceUpdateTooltip, /Source status: 2 commits available/);
-  assert.equal(sourceUpdatePresentation.contextValue, 'publishableCurrentBranch:sourceUpdate');
+  assert.equal(sourceUpdatePresentation.contextValue, 'publishableCurrentBranch');
 });
 
 test('buildBranchTooltipContent shows created-from metadata for non-current local branches', () => {

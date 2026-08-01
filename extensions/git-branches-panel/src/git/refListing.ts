@@ -40,10 +40,6 @@ export async function listRefs(
   scope: 'local' | 'remote' | 'tag'
 ): Promise<BranchInfo[]> {
   const currentTagNames = scope === 'tag' ? await getCurrentTagNames(repoRoot) : new Set<string>();
-  const detachedHeadSha = scope === 'local' ? await getDetachedHeadSha(repoRoot) : null;
-  const detachedHeadLocalBranches = detachedHeadSha
-    ? await getLocalBranchesPointingAtCommit(repoRoot, detachedHeadSha)
-    : new Set<string>();
   const remoteTagNames = scope === 'tag' ? await getRemoteTagNames(repoRoot) : null;
   const { stdout } = await runGit(repoRoot, [
     'for-each-ref',
@@ -74,7 +70,7 @@ export async function listRefs(
         isCurrent:
           scope === 'tag'
             ? currentTagNames.has(name)
-            : scope === 'local' && (headMarker === '*' || detachedHeadLocalBranches.has(name)),
+            : scope === 'local' && headMarker === '*',
         scope,
         remoteName: remoteBranchRef?.remoteName,
         lastCommitDate,
@@ -118,37 +114,6 @@ async function getCurrentTagNames(repoRoot: string): Promise<Set<string>> {
         .map((tagName) => tagName.trim())
         .filter(Boolean)
     );
-  }
-}
-
-async function getDetachedHeadSha(repoRoot: string): Promise<string | null> {
-  try {
-    await runGit(repoRoot, ['symbolic-ref', '-q', 'HEAD']);
-    return null;
-  } catch {
-    const { stdout } = await runGit(repoRoot, ['rev-parse', 'HEAD']);
-    return stdout.trim() || null;
-  }
-}
-
-async function getLocalBranchesPointingAtCommit(repoRoot: string, sha: string): Promise<Set<string>> {
-  try {
-    const { stdout } = await runGit(repoRoot, [
-      'for-each-ref',
-      '--format=%(refname:lstrip=2)',
-      'refs/heads',
-      '--points-at',
-      sha,
-    ]);
-
-    return new Set(
-      stdout
-        .split(/\r?\n/u)
-        .map((line) => line.trim())
-        .filter(Boolean)
-    );
-  } catch {
-    return new Set<string>();
   }
 }
 
