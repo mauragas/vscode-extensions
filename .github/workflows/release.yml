@@ -2,8 +2,12 @@ name: release
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
 
 jobs:
   release:
@@ -13,30 +17,68 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Build extension
-        run: npm ci && npm run build:git-branches-panel
+      - name: Resolve release version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./extensions/git-branches-panel/package.json').version")
+
+          if [[ -z "$VERSION" ]]; then
+            echo "Extension version is empty." >&2
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+          if git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null; then
+            TAG_SHA=$(git rev-list -n 1 "$VERSION")
+            HEAD_SHA=$(git rev-parse HEAD)
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            if [[ "$TAG_SHA" == "$HEAD_SHA" ]]; then
+              echo "tagged_head=true" >> "$GITHUB_OUTPUT"
+              echo "should_release=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "tagged_head=false" >> "$GITHUB_OUTPUT"
+              echo "should_release=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "tagged_head=false" >> "$GITHUB_OUTPUT"
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip already released version
+        if: steps.version.outputs.should_release != 'true'
+        run: |
+          echo "Version ${{ steps.version.outputs.version }} already has a tag on an earlier commit; skipping release."
 
       - name: Package .vsix
-        working-directory: extensions/git-branches-panel
-        run: npx -y -p @vscode/vsce vsce package
+        if: steps.version.outputs.should_release == 'true'
+        run: |
+          npm ci
+          npm --prefix ./extensions/git-branches-panel run package
 
       - name: Extract changelog for this version
+        if: steps.version.outputs.should_release == 'true'
         id: changelog
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          VERSION="${TAG#v}"
           CHANGELOG="extensions/git-branches-panel/CHANGELOG.md"
           IN_VERSION=false
+          FOUND_VERSION=false
           NOTES=""
 
           while IFS= read -r line; do
             if [[ "$line" =~ ^##\ \[$VERSION\] ]]; then
+              FOUND_VERSION=true
               IN_VERSION=true
               continue
             fi
@@ -44,20 +86,36 @@ jobs:
               if [[ "$line" =~ ^##\ \[ ]]; then
                 break
               fi
-              NOTES+="$(echo "$line")"$'\n'
+              NOTES+="$line"$'\n'
             fi
           done < "$CHANGELOG"
 
-          NOTES=$(echo "$NOTES" | sed '/^$/d')
+          if ! $FOUND_VERSION; then
+            echo "Missing changelog section for version $VERSION in $CHANGELOG" >&2
+            exit 1
+          fi
 
-          echo "notes<<EOF" >> $GITHUB_OUTPUT
-          echo "$NOTES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          NOTES=$(printf '%s' "$NOTES" | sed '/^$/d')
+
+          echo "notes<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$NOTES" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Create Git tag
+        if: steps.version.outputs.exists != 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$VERSION" -m "Release $VERSION"
+          git push origin "$VERSION"
 
       - name: Create GitHub Release
+        if: steps.version.outputs.should_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: ${{ github.ref_name }}
+          tag_name: ${{ steps.version.outputs.version }}
+          name: ${{ steps.version.outputs.version }}
           body: ${{ steps.changelog.outputs.notes }}
           files: extensions/git-branches-panel/git-branches-panel-*.vsix
