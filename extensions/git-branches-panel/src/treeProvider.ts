@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import {
+  canUpdateFromSourceBranch,
   type BranchInfo,
   type BranchSortOrder,
   type TagSortOrder,
@@ -410,7 +411,12 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
   }
 
   private nodesToItems(nodes: readonly BranchTreeNode[]): BranchTreeItem[] {
-    return nodes.map((node) => new BranchTreeItem(node));
+    const allRepoRoots = this.getVisibleRepoRoots();
+    return nodes.map((node) => {
+      const repoRoot = node.repoRoot ?? allRepoRoots[0];
+      const currentBranchInfo = this.getCurrentBranch(repoRoot);
+      return new BranchTreeItem(node, currentBranchInfo);
+    });
   }
 
   private async ensureActiveRepoRoot(): Promise<void> {
@@ -439,9 +445,11 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     const currentBranch = this.getCurrentBranch();
     const activeRepoRoot = this.activeRepoRoot ?? this.getVisibleRepoRoots()[0];
     const activeCurrentBranch = activeRepoRoot ? this.getCurrentBranch(activeRepoRoot) : undefined;
+
     const visibleCurrentBranchCanUpdateFromSource = Boolean(
-      activeCurrentBranch && hasSourceBranchUpdate(activeCurrentBranch)
+      activeCurrentBranch && canUpdateFromSourceBranch(activeCurrentBranch)
     );
+
     const currentBranchNeedsPublish = Boolean(currentBranch && isPublishableBranch(currentBranch));
     const currentBranchBusy = Boolean(currentBranch?.isSyncing);
     void vscode.commands.executeCommand(

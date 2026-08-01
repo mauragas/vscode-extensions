@@ -39,7 +39,7 @@ section opens first, while Remote, Stash, Worktree, Hooks, and Tags stay collaps
 - ⚡ **Faster first paint** — the tree loads Local branches first so the view opens quickly in larger repositories
 - 📦 **Lazy-loaded sections** — Remote, Stash, Worktree, and Tags are loaded only when you expand them
 - 🧭 **Focused default expansion** — Local starts expanded while other sections and nested folders start collapsed
-- ✅ **Current branch first** — highlighted with a `●` prefix and a green icon
+- ✅ **Current branch first** — highlighted with a `▶` prefix and a green icon
 - 🪄 **Optional current branch banner** — keep or hide the top `Current branch: ...` summary from settings, now off by default for a quieter tree
 - 🧭 **Customizable branch right-click menu** — reorder or hide the primary branch actions from settings while **More Branch Actions...** always stays available as the full fallback picker and now includes the advanced rebase/reset/squash/force-push flows directly
 - 🎛️ **Configurable toolbar quick actions** — reorder or hide per-mode toolbar buttons with `toolbar.singleRepository.quickActions` and `toolbar.multiRepository.quickActions`, while the older `toolbar.show*` booleans remain as compatibility fallbacks

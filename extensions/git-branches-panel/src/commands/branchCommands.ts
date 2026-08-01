@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import { join } from 'node:path';
 
 import {
-  hasSourceBranchUpdate,
   isPublishableBranch,
   type RemoteTrackingState,
 } from '../branchModel';
@@ -31,7 +30,9 @@ import {
   getRemoteDetails,
   getRemoteBranchTrackingState,
   getDiffFilesBetweenRefs,
+  getSourceBranchState,
   mergeBranchIntoCurrent,
+  mergeRefIntoBranch,
   parseCustomRemoteHostingProviders,
   pullBranchChanges,
   pushBranch as pushBranchToRemote,
@@ -83,6 +84,7 @@ const REMOTE_HOSTING_PREFERRED_REMOTE_SETTING = 'remoteHosting.preferredRemote';
 const REMOTE_HOSTING_COMPARE_BASE_SETTING = 'remoteHosting.compareBase';
 const REMOTE_HOSTING_CUSTOM_PROVIDERS_SETTING = 'remoteHosting.customProviders';
 const DISCARD_CHANGES_AND_SWITCH_ACTION = 'Discard local changes and switch';
+const LOCAL_BRANCH_REF_PREFIX = 'refs/heads/';
 
 type RemoteBranchTrackingState = RemoteTrackingState;
 type RemoteBranchDeleteFailureKind =
@@ -442,15 +444,28 @@ async function handleUpdateBranchFromSource(
   item: BranchTreeItem | undefined,
   commandContext: CommandContext
 ): Promise<void> {
-  if (!item?.branchName || !item.repoRoot || !item.branchInfo?.isCurrent) {
+  if (!item?.branchName || !item.repoRoot) {
+    vscode.window.showInformationMessage(
+      'Choose a local branch you want to update from its recorded source branch.'
+    );
+    return;
+  }
+
+  const targetBranchName = item.branchName;
+  const repoRoot = item.repoRoot;
+  if (!targetBranchName || !repoRoot) {
+    vscode.window.showInformationMessage(
+      'Choose a local branch you want to update from its recorded source branch.'
+    );
     return;
   }
 
   const branchInfo = item.branchInfo;
-  const sourceRef = branchInfo.createdFromRef;
-  const currentBranchName = item.branchName;
-  const repoRoot = item.repoRoot;
-  if (!sourceRef || !currentBranchName || !repoRoot) {
+  const sourceRef = branchInfo?.createdFromRef;
+  if (!sourceRef) {
+    vscode.window.showInformationMessage(
+      `Branch '${targetBranchName}' does not have a recorded source branch.`
+    );
     return;
   }
 
@@ -459,19 +474,35 @@ async function handleUpdateBranchFromSource(
   try {
     const latestBranchInfo = await resolveLatestSourceUpdateBranchInfo(
       repoRoot,
-      currentBranchName,
+      targetBranchName,
       sourceRef
     );
-    if (!latestBranchInfo?.createdFromRef) {
+    if (!latestBranchInfo) {
+      await commandContext.refresh({ fetchRemoteState: false });
       vscode.window.showInformationMessage(
-        `Branch '${currentBranchName}' does not have a recorded source branch.`
+        `Could not resolve the active local branch for '${targetBranchName}'. Refresh branches and try again.`
       );
       return;
     }
 
     const latestSourceRef = latestBranchInfo.createdFromRef;
+    if (!latestSourceRef) {
+      vscode.window.showInformationMessage(
+        `Branch '${targetBranchName}' does not have a recorded source branch.`
+      );
+      return;
+    }
+
+    const resolvedTargetBranchName = latestBranchInfo.name;
+
     latestSourceDisplayName = latestBranchInfo.createdFromDisplayName ?? latestSourceRef;
-    if (latestBranchInfo.sourceRefMissing) {
+    const latestSourceState = await getSourceBranchState(
+      repoRoot,
+      resolvedTargetBranchName,
+      latestSourceRef
+    );
+
+    if (latestSourceState.sourceRefMissing) {
       await commandContext.refresh({ fetchRemoteState: false });
       vscode.window.showInformationMessage(
         `Recorded source branch '${latestSourceDisplayName}' no longer exists.`
@@ -479,16 +510,16 @@ async function handleUpdateBranchFromSource(
       return;
     }
 
-    if (!hasSourceBranchUpdate(latestBranchInfo)) {
+    if ((latestSourceState.sourceBehindCount ?? 0) <= 0) {
       await commandContext.refresh({ fetchRemoteState: false });
       vscode.window.showInformationMessage(
-        `Branch '${currentBranchName}' is already up to date with '${latestSourceDisplayName}'.`
+        `Branch '${targetBranchName}' is already up to date with '${latestSourceDisplayName}'.`
       );
       return;
     }
 
     const confirmation = await vscode.window.showWarningMessage(
-      `Merge '${latestSourceDisplayName}' into current branch '${currentBranchName}'?`,
+      `Merge '${latestSourceDisplayName}' into branch '${targetBranchName}'?`,
       { modal: true },
       'Merge'
     );
@@ -497,14 +528,14 @@ async function handleUpdateBranchFromSource(
     }
 
     await commandContext.runWithLoadingIndicator(
-      `Updating '${currentBranchName}' from '${latestSourceDisplayName}'…`,
+      `Updating '${targetBranchName}' from '${latestSourceDisplayName}'…`,
       () =>
-        commandContext.provider.withBusyBranch(repoRoot, currentBranchName, async () => {
-          await mergeBranchIntoCurrent(repoRoot, latestSourceRef);
+        commandContext.provider.withBusyBranch(repoRoot, resolvedTargetBranchName, async () => {
+          await mergeRefIntoBranch(repoRoot, resolvedTargetBranchName, latestSourceRef);
         })
     );
     await commandContext.showSuccessAndRefresh(
-      `Merged '${latestSourceDisplayName}' into '${currentBranchName}'.`,
+      `Merged '${latestSourceDisplayName}' into '${targetBranchName}'.`,
       {
         fetchRemoteState: looksLikeRemoteTrackingSourceRef(latestSourceRef),
         forceFetchRemoteState: looksLikeRemoteTrackingSourceRef(latestSourceRef),
@@ -512,7 +543,7 @@ async function handleUpdateBranchFromSource(
     );
   } catch (error) {
     commandContext.showCommandError(
-      `Failed to merge '${latestSourceDisplayName}' into '${currentBranchName}'`,
+      `Failed to merge '${latestSourceDisplayName}' into '${targetBranchName}'`,
       error
     );
   }
@@ -696,7 +727,8 @@ async function handleCreateBranchFromSelected(
     item.nodeType !== 'currentBranch' &&
     item.nodeType !== 'remoteBranch' &&
     item.nodeType !== 'staleRemoteBranch' &&
-    item.nodeType !== 'missingUpstreamBranch'
+    item.nodeType !== 'missingUpstreamBranch' &&
+    item.nodeType !== 'tag'
   ) {
     return;
   }
@@ -1267,7 +1299,7 @@ function resolveNewBranchName(name: string, normalize: boolean): string {
 
 async function resolveLatestSourceUpdateBranchInfo(
   repoRoot: string,
-  currentBranchName: string,
+  branchName: string,
   sourceRef: string
 ) {
   if (looksLikeRemoteTrackingSourceRef(sourceRef)) {
@@ -1275,12 +1307,30 @@ async function resolveLatestSourceUpdateBranchInfo(
   }
 
   const branches = await getBranches(repoRoot);
-  return branches.find((branch) => branch.name === currentBranchName && branch.isCurrent);
+  const branchNameCandidates = getLocalBranchIdentityCandidates(branchName);
+
+  return branches.find(
+    (branch) => branchNameCandidates.includes(branch.name)
+  );
+}
+
+function getLocalBranchIdentityCandidates(branchName: string): string[] {
+  const candidates = new Set<string>([branchName]);
+
+  if (branchName.startsWith(LOCAL_BRANCH_REF_PREFIX)) {
+    candidates.add(branchName.slice(LOCAL_BRANCH_REF_PREFIX.length));
+  }
+
+  return [...candidates].filter(Boolean);
 }
 
 function toStoredSourceRef(item: Pick<BranchTreeItem, 'nodeType' | 'branchName'>): string | undefined {
   if (!item.branchName) {
     return undefined;
+  }
+
+  if (item.nodeType === 'tag') {
+    return `refs/tags/${item.branchName}`;
   }
 
   return item.nodeType === 'remoteBranch' || item.nodeType === 'staleRemoteBranch'
@@ -1335,7 +1385,11 @@ function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
       )
     );
 
-    if (item.branchInfo && hasSourceBranchUpdate(item.branchInfo)) {
+    if (
+      item.nodeType === 'branch' ||
+      item.nodeType === 'currentBranch' ||
+      item.nodeType === 'missingUpstreamBranch'
+    ) {
       items.push(
         createBranchActionItem(
           'updateBranchFromSource',
@@ -1429,7 +1483,7 @@ function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
     })
   );
 
-  if (supportsRemoteHostingActions(item)) {
+  if (canShowRemoteHostingContextMenu(item)) {
     items.push(
       createBranchActionItem('openBranchOnRemote', '$(globe) Open Branch on Remote', async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.openBranchOnRemote', item);
@@ -1592,6 +1646,18 @@ function supportsRemoteHostingActions(item: BranchTreeItem): boolean {
     item.nodeType === 'currentBranch' ||
     item.nodeType === 'remoteBranch'
   );
+}
+
+function canShowRemoteHostingContextMenu(item: BranchTreeItem): boolean {
+  if (item.nodeType === 'remoteBranch') {
+    return true;
+  }
+
+  if ((item.nodeType === 'branch' || item.nodeType === 'currentBranch') && item.branchInfo?.upstreamName) {
+    return true;
+  }
+
+  return false;
 }
 
 function canCompareWithUpstream(item: BranchTreeItem): boolean {

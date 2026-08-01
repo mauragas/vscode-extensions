@@ -52,8 +52,8 @@ function getInlineViewItemContextCommands() {
   )];
 }
 
-test('package manifest exposes the 2.3.0 multi-repo, source-update, search, remote-host, history, remote-management, worktree, tag, and advanced-branch contributions', () => {
-  assert.equal(packageJson.version, '2.3.0');
+test('package manifest exposes the 2.4.0 multi-repo, source-update, search, remote-host, history, remote-management, worktree, tag, and advanced-branch contributions', () => {
+  assert.equal(packageJson.version, '2.4.0');
 
   const expectedCommands = [
     ['gitBranchesPanel.selectRepository', 'Select Active Repository'],
@@ -98,6 +98,7 @@ test('package manifest exposes the 2.3.0 multi-repo, source-update, search, remo
     ['gitBranchesPanel.copyWorktreeRef', 'Copy Worktree Ref'],
     ['gitBranchesPanel.openWorktreeInTerminal', 'Open Worktree in Terminal'],
     ['gitBranchesPanel.pushTag', 'Push Tag'],
+    ['gitBranchesPanel.mergeTagIntoCurrent', 'Merge Tag into Current Branch'],
     ['gitBranchesPanel.deleteRemoteTag', 'Delete Remote Tag'],
     ['gitBranchesPanel.compareTagWithCurrent', 'Compare Tag with Current Branch'],
     ['gitBranchesPanel.showTagDetails', 'Show Tag Details'],
@@ -131,6 +132,7 @@ test('package manifest exposes the 2.3.0 multi-repo, source-update, search, remo
   assert.equal(getCommand('gitBranchesPanel.unlockWorktree').icon, '$(unlock)');
   assert.equal(getCommand('gitBranchesPanel.openWorktreeInTerminal').icon, '$(terminal)');
   assert.equal(getCommand('gitBranchesPanel.pushTag').icon, '$(cloud-upload)');
+  assert.equal(getCommand('gitBranchesPanel.mergeTagIntoCurrent').icon, '$(git-merge)');
   assert.equal(getCommand('gitBranchesPanel.showAdvancedBranchOperations').icon, '$(tools)');
   assert.equal(getCommand('gitBranchesPanel.resetCurrentToSelected').icon, '$(discard)');
   assert.equal(getCommand('gitBranchesPanel.forcePushWithLease').icon, '$(cloud-upload)');
@@ -501,7 +503,7 @@ test('package manifest exposes the 2.3.0 multi-repo, source-update, search, remo
   assert.ok(
     hasViewItemMenu(
       'gitBranchesPanel.pushTag',
-      (item) => item.when === 'viewItem == tag' && item.group === 'inline@2'
+      (item) => item.when === 'viewItem == tag || viewItem == pinned:tag' && item.group === 'inline@2'
     )
   );
   assert.ok(
@@ -657,34 +659,54 @@ test('package manifest exposes the 2.3.0 multi-repo, source-update, search, remo
   assert.ok(
     hasViewItemMenu(
       'gitBranchesPanel.compareTagWithCurrent',
-      (item) => item.when === 'viewItem == tag' && item.group === '1_tag@2.7'
+      (item) =>
+        item.when ===
+          'viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote' &&
+        item.group === '1_tag@2.7'
     )
   );
   assert.ok(
     hasViewItemMenu(
       'gitBranchesPanel.updateBranchFromSource',
       (item) =>
-        item.when.includes('gitBranchesPanel.currentBranchCanUpdateFromSource') &&
-        item.when.includes('publishableCurrentBranch') &&
+        item.when.includes('viewItem =~') &&
+        item.when.includes('branch(?:\\:.+)?') &&
+        item.when.includes('currentBranch') &&
+        item.when.includes('busyBranch') &&
         item.group === '1_branchSource@1'
     )
   );
   assert.ok(
     hasViewItemMenu(
       'gitBranchesPanel.showTagDetails',
-      (item) => item.when === 'viewItem == tag' && item.group === '1_tag@2.8'
+      (item) =>
+        item.when ===
+          'viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote' &&
+        item.group === '1_tag@2.8'
     )
   );
   assert.ok(
     hasViewItemMenu(
       'gitBranchesPanel.copyTagTargetSha',
-      (item) => item.when === 'viewItem == tag' && item.group === '1_tag@2.9'
+      (item) =>
+        item.when ===
+          'viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote' &&
+        item.group === '1_tag@2.9'
     )
   );
   assert.ok(
     hasViewItemMenu(
       'gitBranchesPanel.deleteRemoteTag',
-      (item) => item.when === 'viewItem == tag' && item.group === '2_tag@1.5'
+      (item) => item.when === 'viewItem == tag:remote || viewItem == pinned:tag:remote' && item.group === '2_tag@1.5'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.mergeTagIntoCurrent',
+      (item) =>
+        item.when ===
+          'viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote' &&
+        item.group === '1_tag@1.9'
     )
   );
   assert.ok(

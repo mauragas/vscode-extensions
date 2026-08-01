@@ -17,6 +17,7 @@ const test = require('node:test');
 const {
   applyStash,
   addRemote,
+  checkoutBranch,
   cleanRepository,
   cherryPickRef,
   checkoutRemoteBranch,
@@ -219,6 +220,70 @@ test('getTags marks the checked-out tag as current', async (t) => {
   assert.equal(checkedOutTag.isCurrent, true);
 });
 
+test('checkoutBranch clears checked-out tag metadata when leaving detached tag state', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  await checkoutTag(repoRoot, 'v1.0.0');
+  await checkoutBranch(repoRoot, 'main');
+
+  const tags = await getTags(repoRoot);
+  const currentTagNames = tags.filter((tag) => tag.isCurrent).map((tag) => tag.name);
+
+  assert.deepEqual(currentTagNames, []);
+});
+
+test('getTags sets isRemoteTag for tags that exist on remotes', async (t) => {
+  const repoRoot = createTempRepository(t);
+  const bareRepoRoot = mkdtempSync(join(tmpdir(), 'bare-repo-'));
+
+  try {
+    runGit(bareRepoRoot, ['init', '--bare']);
+    runGit(repoRoot, ['remote', 'add', 'origin', bareRepoRoot]);
+    runGit(repoRoot, ['tag', 'remote-tag-1']);
+    runGit(repoRoot, ['tag', 'remote-tag-2']);
+    runGit(repoRoot, ['push', 'origin', 'remote-tag-1']);
+
+    const tags = await getTags(repoRoot);
+    const tag1 = tags.find((tag) => tag.name === 'remote-tag-1');
+    const tag2 = tags.find((tag) => tag.name === 'remote-tag-2');
+
+    assert.ok(tag1);
+    assert.ok(tag2);
+    assert.equal(tag1.isRemoteTag, true, 'remote-tag-1 should have isRemoteTag=true');
+    assert.equal(tag2.isRemoteTag, false, 'remote-tag-2 should have isRemoteTag=false');
+  } finally {
+    rmSync(bareRepoRoot, { recursive: true, force: true });
+  }
+});
+
+test('getTags refreshes remote-tag state after pushTag and deleteRemoteTag invalidate the cache', async (t) => {
+  const { repoRoot } = createRemoteBackedRepository(t);
+
+  runGit(repoRoot, ['tag', 'v2.2.0']);
+
+  let tags = await getTags(repoRoot);
+  let remoteTag = tags.find((tag) => tag.name === 'v2.2.0');
+
+  assert.ok(remoteTag);
+  assert.equal(remoteTag.isRemoteTag, false);
+
+  await pushTag(repoRoot, 'origin', 'v2.2.0');
+
+  tags = await getTags(repoRoot);
+  remoteTag = tags.find((tag) => tag.name === 'v2.2.0');
+
+  assert.ok(remoteTag);
+  assert.equal(remoteTag.isRemoteTag, true);
+
+  await deleteRemoteTag(repoRoot, 'origin', 'v2.2.0');
+
+  tags = await getTags(repoRoot);
+  remoteTag = tags.find((tag) => tag.name === 'v2.2.0');
+
+  assert.ok(remoteTag);
+  assert.equal(remoteTag.isRemoteTag, false);
+});
+
 test('deleteBranch succeeds when the branch never had source metadata', async (t) => {
   const repoRoot = createTempRepository(t);
 
@@ -247,6 +312,203 @@ test('getBranches preserves source metadata for branches created from another re
   assert.equal(childBranch.createdFromDisplayName, 'feature/demo');
 });
 
+test('getBranches preserves source metadata for local branches named with a heads/ prefix', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  await createBranchFromRef(repoRoot, 'heads/test2', 'main', {
+    checkout: true,
+    sourceRef: 'refs/heads/main',
+  });
+
+  const branches = await getBranches(repoRoot);
+  const prefixedBranch = branches.find((branch) => branch.name === 'heads/test2');
+
+  assert.ok(prefixedBranch);
+  assert.equal(prefixedBranch.createdFromRef, 'refs/heads/main');
+  assert.equal(prefixedBranch.createdFromDisplayName, 'main');
+});
+
+test('getBranches does not infer source metadata from branch reflog alone', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'bugfix/test', 'main']);
+  commitFile(repoRoot, 'bugfix.txt', 'bugfix\n', 'Bugfix commit');
+
+  const branches = await getBranches(repoRoot);
+  const bugfixBranch = branches.find((branch) => branch.name === 'bugfix/test');
+
+  assert.ok(bugfixBranch);
+  assert.equal(bugfixBranch.createdFromRef, undefined);
+  assert.equal(bugfixBranch.createdFromDisplayName, undefined);
+});
+
+test('getBranches falls back to compatible Git config metadata when explicit source tracking is missing', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['branch', 'bugfix/test', 'main']);
+  runGit(repoRoot, ['config', 'branch.bugfix/test.github-pr-base-branch', 'mauragas#test#main']);
+  runGit(repoRoot, ['config', 'branch.bugfix/test.vscode-merge-base', 'origin/main']);
+
+  const branches = await getBranches(repoRoot);
+  const bugfixBranch = branches.find((branch) => branch.name === 'bugfix/test');
+
+  assert.ok(bugfixBranch);
+  assert.equal(bugfixBranch.createdFromRef, 'refs/heads/main');
+  assert.equal(bugfixBranch.createdFromDisplayName, 'main');
+});
+
+test('getBranches normalizes legacy tag-created source metadata that was stored as refs/heads/<tag>', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['branch', 'feature/from-tag', 'v1.0.0']);
+  runGit(
+    repoRoot,
+    ['config', 'branch.feature/from-tag.gitbranchespanelcreatedfromref', 'refs/heads/v1.0.0']
+  );
+
+  const branches = await getBranches(repoRoot);
+  const tagBranch = branches.find((branch) => branch.name === 'feature/from-tag');
+
+  assert.ok(tagBranch);
+  assert.equal(tagBranch.createdFromRef, 'refs/tags/v1.0.0');
+  assert.equal(tagBranch.createdFromDisplayName, 'v1.0.0');
+  assert.equal(tagBranch.sourceRefMissing, false);
+});
+
+test('getBranches falls back to compatible Git config hints when the recorded source ref no longer exists', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['branch', 'feature/fallback-source', 'main']);
+  runGit(
+    repoRoot,
+    ['config', 'branch.feature/fallback-source.gitbranchespanelcreatedfromref', 'refs/heads/missing-source']
+  );
+  runGit(
+    repoRoot,
+    ['config', 'branch.feature/fallback-source.github-pr-base-branch', 'mauragas#vscode-extensions#main']
+  );
+  runGit(repoRoot, ['config', 'branch.feature/fallback-source.vscode-merge-base', 'origin/main']);
+
+  const branches = await getBranches(repoRoot);
+  const fallbackBranch = branches.find((branch) => branch.name === 'feature/fallback-source');
+
+  assert.ok(fallbackBranch);
+  assert.equal(fallbackBranch.createdFromRef, 'refs/heads/main');
+  assert.equal(fallbackBranch.createdFromDisplayName, 'main');
+  assert.equal(fallbackBranch.sourceRefMissing, false);
+});
+
+test('getBranches prefers a unique same-tip source anchor over a generic merge-base fallback', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  await createBranchFromRef(repoRoot, 'bugfix/source-anchor', 'main', {
+    checkout: true,
+    sourceRef: 'refs/heads/main',
+  });
+  commitFile(repoRoot, 'bugfix.txt', 'bugfix\n', 'Advance bugfix source');
+  runGit(repoRoot, ['checkout', 'main']);
+
+  runGit(repoRoot, ['branch', 'test/create-from-bugfix', 'bugfix/source-anchor']);
+  runGit(
+    repoRoot,
+    [
+      'config',
+      'branch.test/create-from-bugfix.github-pr-base-branch',
+      'mauragas#vscode-extensions#bugfix/source-anchor',
+    ]
+  );
+  runGit(
+    repoRoot,
+    ['config', 'branch.test/create-from-bugfix.vscode-merge-base', 'origin/bugfix/source-anchor']
+  );
+
+  runGit(repoRoot, ['branch', 'test/create-from-bugfix-2', 'test/create-from-bugfix']);
+  runGit(
+    repoRoot,
+    ['config', 'branch.test/create-from-bugfix-2.vscode-merge-base', 'origin/main']
+  );
+
+  const branches = await getBranches(repoRoot);
+  const secondChildBranch = branches.find((branch) => branch.name === 'test/create-from-bugfix-2');
+
+  assert.ok(secondChildBranch);
+  assert.equal(secondChildBranch.createdFromRef, 'refs/heads/bugfix/source-anchor');
+  assert.equal(secondChildBranch.createdFromDisplayName, 'bugfix/source-anchor');
+});
+
+test('getBranches inherits a unique stronger same-tip peer source when the source branch has advanced', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'bugfix/source-anchor']);
+  commitFile(repoRoot, 'bugfix.txt', 'bugfix\n', 'Advance bugfix source');
+
+  runGit(repoRoot, ['branch', 'test/create-from-bugfix']);
+  runGit(
+    repoRoot,
+    [
+      'config',
+      'branch.test/create-from-bugfix.github-pr-base-branch',
+      'mauragas#vscode-extensions#bugfix/source-anchor',
+    ]
+  );
+  runGit(
+    repoRoot,
+    ['config', 'branch.test/create-from-bugfix.vscode-merge-base', 'origin/bugfix/source-anchor']
+  );
+
+  commitFile(repoRoot, 'bugfix-2.txt', 'bugfix 2\n', 'Advance bugfix source again');
+
+  runGit(repoRoot, ['branch', 'test/create-from-bugfix-2', 'test/create-from-bugfix']);
+  runGit(
+    repoRoot,
+    ['config', 'branch.test/create-from-bugfix-2.vscode-merge-base', 'origin/main']
+  );
+
+  const branches = await getBranches(repoRoot);
+  const secondChildBranch = branches.find((branch) => branch.name === 'test/create-from-bugfix-2');
+
+  assert.ok(secondChildBranch);
+  assert.equal(secondChildBranch.createdFromRef, 'refs/heads/bugfix/source-anchor');
+  assert.equal(secondChildBranch.createdFromDisplayName, 'bugfix/source-anchor');
+});
+
+test('getBranches inherits a unique stronger containing-branch source when the sibling branch has advanced away', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'bugfix/source-anchor']);
+  commitFile(repoRoot, 'bugfix.txt', 'bugfix\n', 'Advance bugfix source');
+
+  runGit(repoRoot, ['branch', 'test/create-from-bugfix']);
+  runGit(
+    repoRoot,
+    [
+      'config',
+      'branch.test/create-from-bugfix.github-pr-base-branch',
+      'mauragas#vscode-extensions#bugfix/source-anchor',
+    ]
+  );
+  runGit(
+    repoRoot,
+    ['config', 'branch.test/create-from-bugfix.vscode-merge-base', 'origin/bugfix/source-anchor']
+  );
+
+  runGit(repoRoot, ['branch', 'test/create-from-bugfix-2', 'test/create-from-bugfix']);
+  runGit(
+    repoRoot,
+    ['config', 'branch.test/create-from-bugfix-2.vscode-merge-base', 'origin/main']
+  );
+
+  runGit(repoRoot, ['checkout', 'test/create-from-bugfix']);
+  commitFile(repoRoot, 'child.txt', 'child branch advanced\n', 'Advance child branch');
+
+  const branches = await getBranches(repoRoot);
+  const secondChildBranch = branches.find((branch) => branch.name === 'test/create-from-bugfix-2');
+
+  assert.ok(secondChildBranch);
+  assert.equal(secondChildBranch.createdFromRef, 'refs/heads/bugfix/source-anchor');
+  assert.equal(secondChildBranch.createdFromDisplayName, 'bugfix/source-anchor');
+});
+
 test('getBranches reports when the current branch is behind its recorded local source branch', async (t) => {
   const repoRoot = createTempRepository(t);
 
@@ -267,6 +529,25 @@ test('getBranches reports when the current branch is behind its recorded local s
   assert.equal(childBranch.createdFromDisplayName, 'feature/source');
   assert.equal(childBranch.sourceRefMissing, false);
   assert.equal(childBranch.sourceBehindCount, 1);
+});
+
+test('getBranches does not compute sourceBehindCount for non-current branches with recorded sources', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/source']);
+  await createBranchFromRef(repoRoot, 'feature/child', 'feature/source', {
+    checkout: false,
+    sourceRef: 'refs/heads/feature/source',
+  });
+  commitFile(repoRoot, 'source.txt', 'source\n', 'Advance source branch');
+
+  const branches = await getBranches(repoRoot);
+  const childBranch = branches.find((branch) => branch.name === 'feature/child');
+
+  assert.ok(childBranch);
+  assert.equal(childBranch.createdFromDisplayName, 'feature/source');
+  assert.equal(childBranch.sourceRefMissing, false);
+  assert.equal(childBranch.sourceBehindCount, 0);
 });
 
 test('getBranches reports when the current branch is behind its recorded remote-tracking source branch', async (t) => {
@@ -294,6 +575,35 @@ test('getBranches reports when the current branch is behind its recorded remote-
   assert.equal(currentBranch.sourceBehindCount, 1);
 });
 
+test('getBranches does not mark local branches as current when a tag is checked out in detached HEAD', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'test2']);
+  commitFile(repoRoot, 'test2.txt', 'test2 tip\n', 'Advance test2');
+  runGit(repoRoot, ['tag', 'test3']);
+  runGit(repoRoot, ['checkout', '-b', 'feature/test4']);
+  commitFile(repoRoot, 'feature.txt', 'feature tip\n', 'Advance feature/test4');
+  runGit(repoRoot, ['checkout', 'main']);
+  runGit(repoRoot, ['merge', '--ff-only', 'test2']);
+  commitFile(repoRoot, 'main.txt', 'main tip\n', 'Advance main');
+
+  await checkoutTag(repoRoot, 'test3');
+
+  const branches = await getBranches(repoRoot);
+  const currentBranchNames = branches
+    .filter((branch) => branch.isCurrent)
+    .map((branch) => branch.name)
+    .sort();
+  const tags = await getTags(repoRoot);
+  const currentTagNames = tags
+    .filter((tag) => tag.isCurrent)
+    .map((tag) => tag.name)
+    .sort();
+
+  assert.deepEqual(currentBranchNames, []);
+  assert.deepEqual(currentTagNames, ['test3']);
+});
+
 test('getBranches returns branch without source info when config entry is missing', async (t) => {
   const repoRoot = createTempRepository(t);
 
@@ -307,7 +617,7 @@ test('getBranches returns branch without source info when config entry is missin
   assert.equal(testBranch.createdFromDisplayName, undefined);
 });
 
-test('getBranches returns branch without source info when reflog has no checkout entries', async (t) => {
+test('getBranches returns branch without source info when no compatible config hints exist', async (t) => {
   const repoRoot = createTempRepository(t);
 
   runGit(repoRoot, ['branch', 'feature/no-checkout']);

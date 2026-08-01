@@ -639,3 +639,72 @@ test('copyTagTargetSha loads tag details and writes the peeled target SHA to the
   assert.deepEqual(vscodeState.clipboardWrites, ['2222222']);
   assert.match(vscodeState.infoMessages.at(-1), /Copied target SHA for tag 'v2.0.0'/);
 });
+
+test('mergeTagIntoCurrent uses a clean display name for UI while merging the full ref', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Merge');
+  const mergeCalls = [];
+
+  const { commandContext } = createTagCommandsModule({
+    vscodeState,
+    gitMock: {
+      async checkoutTag() {},
+      async createTag() {},
+      async deleteRemoteTag() {},
+      async deleteTag() {},
+      async getBranches() {
+        return [];
+      },
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async getRemoteBranches() {
+        return [];
+      },
+      async getRemotes() {
+        return ['origin'];
+      },
+      async getStashes() {
+        return [];
+      },
+      async getTagDetails() {
+        return {};
+      },
+      async getTags() {
+        return [];
+      },
+      async mergeBranchIntoCurrent(repoRoot, refName) {
+        mergeCalls.push({ repoRoot, refName });
+      },
+      async pushAllTags() {},
+      async pushTag() {},
+    },
+  });
+  commandContext.state.currentBranch = {
+    name: 'main',
+    isCurrent: true,
+  };
+
+  await vscodeState.registeredCommands['gitBranchesPanel.mergeTagIntoCurrent']({
+    nodeType: 'tag',
+    branchName: 'refs/tags/v2.0.0',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'v2.0.0',
+      isCurrent: false,
+      scope: 'tag',
+    },
+  });
+
+  assert.match(
+    vscodeState.warningMessages[0].message,
+    /Merge tag 'v2.0.0' into current branch 'main'\?/
+  );
+  assert.deepEqual(mergeCalls, [{ repoRoot: '/repo', refName: 'refs/tags/v2.0.0' }]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: "Merged tag 'v2.0.0' into 'main'.",
+      options: { fetchRemoteState: false },
+    },
+  ]);
+});

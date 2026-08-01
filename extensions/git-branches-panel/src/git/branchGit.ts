@@ -6,8 +6,12 @@ import type { BranchInfo } from '../branchModel';
 import { isTrackedBranch } from '../branchModel';
 import { listRefs } from './refListing';
 import { fetchRemoteState } from './remoteGit';
+import { clearCheckedOutTag } from './tagGit';
 import {
+  parseRemoteBranchReference,
   doesRemoteBranchExist,
+  doesLocalBranchExist,
+  doesTagExist,
   ensureRemoteExists,
   getAheadBehindCounts,
   readGitConfig,
@@ -18,6 +22,27 @@ import {
 } from './shared';
 
 const CREATED_FROM_CONFIG_KEY_SUFFIX = 'gitbranchespanelcreatedfromref';
+const GITHUB_PR_BASE_BRANCH_CONFIG_KEY_SUFFIX = 'github-pr-base-branch';
+const LOCAL_BRANCH_REF_PREFIX = 'refs/heads/';
+const LOCAL_BRANCH_TIP_SHA_FIELD_SEPARATOR = '\u001f';
+const LOCAL_BRANCH_TIP_SHA_RECORD_SEPARATOR = '\u001e';
+const REF_PREFIX = 'refs/';
+const REMOTE_BRANCH_REF_PREFIX = 'refs/remotes/';
+const VSCODE_MERGE_BASE_CONFIG_KEY_SUFFIX = 'vscode-merge-base';
+
+type CreatedFromResolutionKind = 'explicit' | 'githubPrBase' | 'mergeBase' | 'sameTipAnchor';
+
+interface CreatedFromResolution {
+  sourceRef: string;
+  kind: CreatedFromResolutionKind;
+}
+
+interface BranchSourceMetadataLookup {
+  localBranchNames: ReadonlySet<string>;
+  createdFromEntries: ReadonlyMap<string, string>;
+  githubPrBaseEntries: ReadonlyMap<string, string>;
+  mergeBaseEntries: ReadonlyMap<string, string>;
+}
 
 export interface SyncBranchResult {
   branchName: string;
@@ -72,9 +97,56 @@ interface BranchRemoteState {
 
 export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
   const branches = await listRefs(repoRoot, 'refs/heads', 'local');
+  const localBranchTipShas = await getLocalBranchTipShas(repoRoot);
+  const localBranchesContainingTipCache = new Map<string, Promise<Set<string>>>();
+  const localBranchNames = new Set(branches.map((branch) => normalizeLocalBranchConfigName(branch.name)));
   const createdFromEntries = await readGitConfigEntries(
     repoRoot,
     `^branch\\..*\\.${CREATED_FROM_CONFIG_KEY_SUFFIX}$`
+  );
+  const githubPrBaseEntries = await readGitConfigEntries(
+    repoRoot,
+    `^branch\\..*\\.${GITHUB_PR_BASE_BRANCH_CONFIG_KEY_SUFFIX}$`
+  );
+  const mergeBaseEntries = await readGitConfigEntries(
+    repoRoot,
+    `^branch\\..*\\.${VSCODE_MERGE_BASE_CONFIG_KEY_SUFFIX}$`
+  );
+
+  const sourceMetadataLookup: BranchSourceMetadataLookup = {
+    localBranchNames,
+    createdFromEntries,
+    githubPrBaseEntries,
+    mergeBaseEntries,
+  };
+
+  const configuredCreatedFromByBranch = new Map<string, CreatedFromResolution | undefined>(
+    await Promise.all(
+      branches.map(async (branch) => [
+        branch.name,
+        await resolveConfiguredCreatedFromRef(repoRoot, branch.name, sourceMetadataLookup),
+      ] as const)
+    )
+  );
+
+  const resolvedCreatedFromByBranch = new Map<string, CreatedFromResolution | undefined>(
+    await Promise.all(branches.map(async (branch) => {
+      const configuredCreatedFrom = configuredCreatedFromByBranch.get(branch.name);
+      if (!shouldPreferSameTipSourceAnchor(configuredCreatedFrom)) {
+        return [branch.name, configuredCreatedFrom] as const;
+      }
+
+      return [
+        branch.name,
+        await resolvePreferredLocalSourceAnchor(
+          repoRoot,
+          branch.name,
+          localBranchTipShas,
+          configuredCreatedFromByBranch,
+          localBranchesContainingTipCache
+        ) ?? configuredCreatedFrom,
+      ] as const;
+    }))
   );
 
   const enrichedBranches: BranchInfo[] = await Promise.all(
@@ -83,8 +155,7 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
         return branch;
       }
 
-      const configKey = buildCreatedFromConfigKey(branch.name);
-      let createdFromRef = createdFromEntries.get(configKey);
+      const createdFromRef = resolvedCreatedFromByBranch.get(branch.name)?.sourceRef;
 
       if (!createdFromRef) {
         return branch;
@@ -105,6 +176,7 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
 
 export async function checkoutBranch(repoRoot: string, branchName: string): Promise<void> {
   await runGit(repoRoot, ['checkout', branchName]);
+  await clearCheckedOutTag(repoRoot);
 }
 
 export async function createBranch(
@@ -310,6 +382,30 @@ export async function mergeBranchIntoCurrent(
   refName: string
 ): Promise<void> {
   await runGit(repoRoot, ['merge', '--no-edit', refName]);
+}
+
+export async function mergeRefIntoBranch(
+  repoRoot: string,
+  branchName: string,
+  refName: string
+): Promise<void> {
+  const branches = await getBranches(repoRoot);
+  const normalizedBranchName = normalizeLocalBranchConfigName(branchName);
+  const branch = branches.find(
+    (candidate) => candidate.name === normalizedBranchName || candidate.name === branchName
+  );
+  if (!branch) {
+    throw new Error(`Branch '${branchName}' was not found.`);
+  }
+
+  if (branch.isCurrent) {
+    await mergeBranchIntoCurrent(repoRoot, refName);
+    return;
+  }
+
+  await withTemporaryBranchWorktree(repoRoot, branch.name, async (worktreePath) => {
+    await runGit(worktreePath, ['merge', '--no-edit', refName]);
+  });
 }
 
 export async function cherryPickRef(
@@ -598,7 +694,27 @@ function looksLikeBranchAlreadyCheckedOutError(message: string): boolean {
 }
 
 function buildCreatedFromConfigKey(branchName: string): string {
-  return `branch.${branchName}.${CREATED_FROM_CONFIG_KEY_SUFFIX}`;
+  return buildBranchConfigKey(branchName, CREATED_FROM_CONFIG_KEY_SUFFIX);
+}
+
+function buildBranchConfigKey(branchName: string, keySuffix: string): string {
+  return `branch.${normalizeLocalBranchConfigName(branchName)}.${keySuffix}`;
+}
+
+function buildLocalBranchRef(branchName: string): string {
+  return `${LOCAL_BRANCH_REF_PREFIX}${normalizeLocalBranchConfigName(branchName)}`;
+}
+
+function buildActualLocalBranchRef(branchName: string): string {
+  return branchName.startsWith(LOCAL_BRANCH_REF_PREFIX)
+    ? branchName
+    : `${LOCAL_BRANCH_REF_PREFIX}${branchName}`;
+}
+
+function normalizeLocalBranchConfigName(branchName: string): string {
+  return branchName.startsWith(LOCAL_BRANCH_REF_PREFIX)
+    ? branchName.slice(LOCAL_BRANCH_REF_PREFIX.length)
+    : branchName;
 }
 
 function formatRefForDisplay(refName: string): string {
@@ -624,7 +740,10 @@ function formatRefForDisplay(refName: string): string {
 async function resolveSourceBranchState(
   repoRoot: string,
   branch: BranchInfo,
-  sourceRef: string
+  sourceRef: string,
+  options: {
+    includeNonCurrentComparison?: boolean;
+  } = {}
 ): Promise<Pick<BranchInfo, 'sourceBehindCount' | 'sourceRefMissing'>> {
   try {
     await runGit(repoRoot, ['rev-parse', '--verify', '--quiet', sourceRef]);
@@ -635,18 +754,438 @@ async function resolveSourceBranchState(
     };
   }
 
-  if (!branch.isCurrent) {
+  if (!branch.isCurrent && !(options.includeNonCurrentComparison ?? false)) {
     return {
       sourceBehindCount: 0,
       sourceRefMissing: false,
     };
   }
 
-  const counts = await getAheadBehindCounts(repoRoot, branch.name, sourceRef);
+  const currentBranchRef = await resolveActualLocalBranchRef(repoRoot, branch.name);
+  const counts = await getAheadBehindCounts(repoRoot, currentBranchRef, sourceRef);
   return {
     sourceBehindCount: counts.behindCount,
     sourceRefMissing: false,
   };
+}
+
+export async function getSourceBranchState(
+  repoRoot: string,
+  branchName: string,
+  sourceRef: string
+): Promise<Pick<BranchInfo, 'sourceBehindCount' | 'sourceRefMissing'>> {
+  return resolveSourceBranchState(
+    repoRoot,
+    {
+      name: branchName,
+      isCurrent: false,
+    },
+    sourceRef,
+    {
+      includeNonCurrentComparison: true,
+    }
+  );
+}
+
+async function resolveConfiguredCreatedFromRef(
+  repoRoot: string,
+  branchName: string,
+  sourceMetadataLookup: BranchSourceMetadataLookup
+): Promise<CreatedFromResolution | undefined> {
+  const explicitCreatedFromRef = sourceMetadataLookup.createdFromEntries.get(
+    buildCreatedFromConfigKey(branchName)
+  );
+  if (explicitCreatedFromRef) {
+    const normalizedExplicitSourceRef = await normalizeExplicitSourceRef(
+      repoRoot,
+      explicitCreatedFromRef,
+      sourceMetadataLookup.localBranchNames
+    );
+    if (await doesSourceRefExist(repoRoot, normalizedExplicitSourceRef)) {
+      return {
+        sourceRef: normalizedExplicitSourceRef,
+        kind: 'explicit',
+      };
+    }
+
+    const fallbackSourceRef = await resolveCompatibleConfigCreatedFromRef(
+      repoRoot,
+      branchName,
+      sourceMetadataLookup
+    );
+    return fallbackSourceRef ?? {
+      sourceRef: normalizedExplicitSourceRef,
+      kind: 'explicit',
+    };
+  }
+
+  return resolveCompatibleConfigCreatedFromRef(repoRoot, branchName, sourceMetadataLookup);
+}
+
+async function resolveCompatibleConfigCreatedFromRef(
+  repoRoot: string,
+  branchName: string,
+  sourceMetadataLookup: BranchSourceMetadataLookup
+): Promise<CreatedFromResolution | undefined> {
+  const githubPrBaseRef = inferCreatedFromRefFromGitHubPrBase(
+    branchName,
+    sourceMetadataLookup.githubPrBaseEntries,
+    sourceMetadataLookup.localBranchNames
+  );
+  if (githubPrBaseRef && (await doesSourceRefExist(repoRoot, githubPrBaseRef))) {
+    return {
+      sourceRef: githubPrBaseRef,
+      kind: 'githubPrBase',
+    };
+  }
+
+  const mergeBaseRef = inferCreatedFromRefFromMergeBase(
+    branchName,
+    sourceMetadataLookup.mergeBaseEntries,
+    sourceMetadataLookup.localBranchNames
+  );
+  if (mergeBaseRef && (await doesSourceRefExist(repoRoot, mergeBaseRef))) {
+    return {
+      sourceRef: mergeBaseRef,
+      kind: 'mergeBase',
+    };
+  }
+
+  return undefined;
+}
+
+function shouldPreferSameTipSourceAnchor(
+  createdFromResolution: CreatedFromResolution | undefined
+): boolean {
+  return !createdFromResolution || createdFromResolution.kind === 'mergeBase';
+}
+
+async function resolvePreferredLocalSourceAnchor(
+  repoRoot: string,
+  branchName: string,
+  localBranchTipShas: ReadonlyMap<string, string>,
+  configuredCreatedFromByBranch: ReadonlyMap<string, CreatedFromResolution | undefined>,
+  localBranchesContainingTipCache: Map<string, Promise<Set<string>>>
+): Promise<CreatedFromResolution | undefined> {
+  return (
+    resolveSameTipSourceAnchor(branchName, localBranchTipShas, configuredCreatedFromByBranch) ??
+    resolveContainingBranchSourceAnchor(
+      repoRoot,
+      branchName,
+      localBranchTipShas,
+      configuredCreatedFromByBranch,
+      localBranchesContainingTipCache
+    )
+  );
+}
+
+function resolveSameTipSourceAnchor(
+  branchName: string,
+  localBranchTipShas: ReadonlyMap<string, string>,
+  configuredCreatedFromByBranch: ReadonlyMap<string, CreatedFromResolution | undefined>
+): CreatedFromResolution | undefined {
+  const tipSha = localBranchTipShas.get(branchName);
+  if (!tipSha) {
+    return undefined;
+  }
+
+  const sameTipBranchNames = [...localBranchTipShas.entries()]
+    .filter(([, candidateTipSha]) => candidateTipSha === tipSha)
+    .map(([candidateBranchName]) => candidateBranchName);
+
+  if (sameTipBranchNames.length < 2) {
+    return undefined;
+  }
+
+  const sameTipBranchNameSet = new Set(sameTipBranchNames);
+  const sameTipSourceBranches = new Set<string>();
+  const sameTipSourceTargets = new Set<string>();
+
+  for (const candidateBranchName of sameTipBranchNames) {
+    const sourceBranchName = getSameTipLocalSourceBranchName(
+      configuredCreatedFromByBranch.get(candidateBranchName)?.sourceRef,
+      sameTipBranchNameSet
+    );
+    if (!sourceBranchName || sourceBranchName === candidateBranchName) {
+      continue;
+    }
+
+    sameTipSourceBranches.add(candidateBranchName);
+    sameTipSourceTargets.add(sourceBranchName);
+  }
+
+  const sourceAnchorBranchNames = [...sameTipSourceTargets].filter(
+    (candidateBranchName) => !sameTipSourceBranches.has(candidateBranchName)
+  );
+
+  if (sourceAnchorBranchNames.length !== 1) {
+    return resolveUniqueSameTipPeerSourceRef(branchName, sameTipBranchNames, configuredCreatedFromByBranch);
+  }
+
+  const [sourceAnchorBranchName] = sourceAnchorBranchNames;
+  if (!sourceAnchorBranchName || sourceAnchorBranchName === branchName) {
+    return resolveUniqueSameTipPeerSourceRef(branchName, sameTipBranchNames, configuredCreatedFromByBranch);
+  }
+
+  return {
+    sourceRef: buildLocalBranchRef(sourceAnchorBranchName),
+    kind: 'sameTipAnchor',
+  };
+}
+
+function resolveUniqueSameTipPeerSourceRef(
+  branchName: string,
+  sameTipBranchNames: readonly string[],
+  configuredCreatedFromByBranch: ReadonlyMap<string, CreatedFromResolution | undefined>
+): CreatedFromResolution | undefined {
+  const uniquePeerSourceRefs = new Set<string>();
+
+  for (const candidateBranchName of sameTipBranchNames) {
+    if (candidateBranchName === branchName) {
+      continue;
+    }
+
+    const createdFromResolution = configuredCreatedFromByBranch.get(candidateBranchName);
+    if (!createdFromResolution || createdFromResolution.kind === 'mergeBase') {
+      continue;
+    }
+
+    uniquePeerSourceRefs.add(createdFromResolution.sourceRef);
+  }
+
+  if (uniquePeerSourceRefs.size !== 1) {
+    return undefined;
+  }
+
+  const [sourceRef] = [...uniquePeerSourceRefs];
+  if (!sourceRef) {
+    return undefined;
+  }
+
+  return {
+    sourceRef,
+    kind: 'sameTipAnchor',
+  };
+}
+
+async function resolveContainingBranchSourceAnchor(
+  repoRoot: string,
+  branchName: string,
+  localBranchTipShas: ReadonlyMap<string, string>,
+  configuredCreatedFromByBranch: ReadonlyMap<string, CreatedFromResolution | undefined>,
+  localBranchesContainingTipCache: Map<string, Promise<Set<string>>>
+): Promise<CreatedFromResolution | undefined> {
+  const tipSha = localBranchTipShas.get(branchName);
+  if (!tipSha) {
+    return undefined;
+  }
+
+  const containingBranchNames = await getLocalBranchesContainingTip(
+    repoRoot,
+    tipSha,
+    localBranchesContainingTipCache
+  );
+  if (containingBranchNames.size < 2) {
+    return undefined;
+  }
+
+  const candidateSourceRefs = new Set<string>();
+
+  for (const candidateBranchName of containingBranchNames) {
+    if (candidateBranchName === branchName) {
+      continue;
+    }
+
+    const createdFromResolution = configuredCreatedFromByBranch.get(candidateBranchName);
+    if (!createdFromResolution || createdFromResolution.kind === 'mergeBase') {
+      continue;
+    }
+
+    const sourceRef = createdFromResolution.sourceRef;
+    if (!sourceRef.startsWith(LOCAL_BRANCH_REF_PREFIX)) {
+      continue;
+    }
+
+    const sourceBranchName = normalizeLocalBranchConfigName(sourceRef);
+    if (containingBranchNames.has(sourceBranchName)) {
+      candidateSourceRefs.add(sourceRef);
+    }
+  }
+
+  if (candidateSourceRefs.size !== 1) {
+    return undefined;
+  }
+
+  const [sourceRef] = [...candidateSourceRefs];
+  if (!sourceRef) {
+    return undefined;
+  }
+
+  return {
+    sourceRef,
+    kind: 'sameTipAnchor',
+  };
+}
+
+async function getLocalBranchesContainingTip(
+  repoRoot: string,
+  tipSha: string,
+  cache: Map<string, Promise<Set<string>>>
+): Promise<Set<string>> {
+  const cached = cache.get(tipSha);
+  if (cached) {
+    return cached;
+  }
+
+  const loadPromise = runGit(repoRoot, [
+    'for-each-ref',
+    '--format=%(refname:lstrip=2)',
+    '--contains',
+    tipSha,
+    'refs/heads',
+  ]).then(({ stdout }) =>
+    new Set(
+      stdout
+        .split(/\r?\n/u)
+        .map((line) => line.trim())
+        .filter(Boolean)
+    )
+  );
+
+  cache.set(tipSha, loadPromise);
+  return loadPromise;
+}
+
+function getSameTipLocalSourceBranchName(
+  sourceRef: string | undefined,
+  sameTipBranchNameSet: ReadonlySet<string>
+): string | undefined {
+  if (!sourceRef?.startsWith(LOCAL_BRANCH_REF_PREFIX)) {
+    return undefined;
+  }
+
+  const sourceBranchName = normalizeLocalBranchConfigName(sourceRef);
+  return sameTipBranchNameSet.has(sourceBranchName) ? sourceBranchName : undefined;
+}
+
+async function normalizeExplicitSourceRef(
+  repoRoot: string,
+  refName: string,
+  localBranchNames: ReadonlySet<string>
+): Promise<string> {
+  const normalizedRefName = refName.trim().replace(/^"+|"+$/gu, '');
+  if (!normalizedRefName.startsWith(LOCAL_BRANCH_REF_PREFIX)) {
+    return normalizedRefName;
+  }
+
+  const localBranchName = normalizeLocalBranchConfigName(normalizedRefName);
+  if (localBranchNames.has(localBranchName) || (await doesLocalBranchExist(repoRoot, localBranchName))) {
+    return normalizedRefName;
+  }
+
+  if (await doesTagExist(repoRoot, localBranchName)) {
+    return `refs/tags/${localBranchName}`;
+  }
+
+  return normalizedRefName;
+}
+
+async function doesSourceRefExist(repoRoot: string, refName: string): Promise<boolean> {
+  try {
+    await runGit(repoRoot, ['rev-parse', '--verify', '--quiet', refName]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function resolveActualLocalBranchRef(repoRoot: string, branchName: string): Promise<string> {
+  const normalizedBranchName = normalizeLocalBranchConfigName(branchName);
+
+  if (await doesLocalBranchExist(repoRoot, normalizedBranchName)) {
+    return `${LOCAL_BRANCH_REF_PREFIX}${normalizedBranchName}`;
+  }
+
+  if (await doesLocalBranchExist(repoRoot, branchName)) {
+    return `${LOCAL_BRANCH_REF_PREFIX}${branchName}`;
+  }
+
+  return buildActualLocalBranchRef(branchName);
+}
+
+function inferCreatedFromRefFromGitHubPrBase(
+  branchName: string,
+  githubPrBaseEntries: ReadonlyMap<string, string>,
+  localBranchNames: ReadonlySet<string>
+): string | undefined {
+  const githubPrBase = githubPrBaseEntries.get(
+    buildBranchConfigKey(branchName, GITHUB_PR_BASE_BRANCH_CONFIG_KEY_SUFFIX)
+  );
+  if (!githubPrBase) {
+    return undefined;
+  }
+
+  const match = githubPrBase.match(/^[^#]+#[^#]+#(.+)$/u);
+  return normalizeInferredSourceRef(match?.[1], localBranchNames);
+}
+
+function inferCreatedFromRefFromMergeBase(
+  branchName: string,
+  mergeBaseEntries: ReadonlyMap<string, string>,
+  localBranchNames: ReadonlySet<string>
+): string | undefined {
+  const mergeBase = mergeBaseEntries.get(buildBranchConfigKey(branchName, VSCODE_MERGE_BASE_CONFIG_KEY_SUFFIX));
+  return normalizeInferredSourceRef(mergeBase, localBranchNames);
+}
+
+function normalizeInferredSourceRef(
+  refName: string | undefined,
+  localBranchNames: ReadonlySet<string>
+): string | undefined {
+  const normalizedRefName = refName?.trim().replace(/^"+|"+$/gu, '');
+  if (!normalizedRefName || normalizedRefName === 'HEAD') {
+    return undefined;
+  }
+
+  if (normalizedRefName.startsWith(REF_PREFIX)) {
+    return normalizedRefName;
+  }
+
+  if (localBranchNames.has(normalizedRefName)) {
+    return `${LOCAL_BRANCH_REF_PREFIX}${normalizedRefName}`;
+  }
+
+  const remoteBranchReference = parseRemoteBranchReference(normalizedRefName);
+  if (remoteBranchReference) {
+    const localBranchName = normalizeLocalBranchConfigName(remoteBranchReference.branchName);
+    if (localBranchNames.has(localBranchName)) {
+      return `${LOCAL_BRANCH_REF_PREFIX}${localBranchName}`;
+    }
+
+    return `${REMOTE_BRANCH_REF_PREFIX}${remoteBranchReference.fullName}`;
+  }
+
+  return buildLocalBranchRef(normalizedRefName);
+}
+
+async function getLocalBranchTipShas(repoRoot: string): Promise<Map<string, string>> {
+  const { stdout } = await runGit(repoRoot, [
+    'for-each-ref',
+    `--format=%(refname:lstrip=2)${LOCAL_BRANCH_TIP_SHA_FIELD_SEPARATOR}%(objectname)${LOCAL_BRANCH_TIP_SHA_RECORD_SEPARATOR}`,
+    'refs/heads',
+  ]);
+
+  return new Map(
+    stdout
+      .split(LOCAL_BRANCH_TIP_SHA_RECORD_SEPARATOR)
+      .map((record) => record.trim())
+      .filter(Boolean)
+      .map((record) => {
+        const [branchName = '', tipSha = ''] = record.split(LOCAL_BRANCH_TIP_SHA_FIELD_SEPARATOR);
+        return [branchName, tipSha] as const;
+      })
+      .filter(([branchName, tipSha]) => Boolean(branchName) && Boolean(tipSha))
+  );
 }
 
 function parseRefComparison(stdout: string): RefComparisonChange[] {

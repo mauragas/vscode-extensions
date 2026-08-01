@@ -64,15 +64,16 @@ export function getPublishTargetName(
   return branch.upstreamName ?? `origin/${branch.name}`;
 }
 
+export function canUpdateFromSourceBranch(
+  branch: Pick<BranchInfo, 'createdFromRef' | 'sourceRefMissing'>
+): boolean {
+  return Boolean(branch.createdFromRef) && !branch.sourceRefMissing;
+}
+
 export function hasSourceBranchUpdate(
   branch: Pick<BranchInfo, 'isCurrent' | 'createdFromRef' | 'sourceBehindCount' | 'sourceRefMissing'>
 ): boolean {
-  return (
-    branch.isCurrent &&
-    Boolean(branch.createdFromRef) &&
-    !branch.sourceRefMissing &&
-    (branch.sourceBehindCount ?? 0) > 0
-  );
+  return canUpdateFromSourceBranch(branch) && (branch.sourceBehindCount ?? 0) > 0;
 }
 
 export function formatSourceBranchStatus(

@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.4.0] - 2026-08-01
+
+- Fixed the source-branch hover/tooltip and right-click context-menu regression so current branches with a recorded source ref and available source commits now consistently show the source status and expose **Update from Source Branch** without hiding the rest of the normal branch actions.
+- **Update from Source Branch** now also appears on right-click for selected local branches that have a recorded source ref with pending source commits, not just on the currently checked-out branch.
+- Refined detached-tag UX so checking out a tag marks only the tag as current; local branches that merely point at the same commit are no longer shown as active.
+- Fixed source-ref storage for branches created from tags so they now record `refs/tags/<tag>` instead of a mistaken `refs/heads/<tag>`, and normalize legacy configs written by the older behavior.
+- When a recorded source ref no longer exists locally, the extension now falls back to compatible Git config hints such as `github-pr-base-branch` and `vscode-merge-base` when they resolve to a valid ref.
+- Removed the per-branch reflog source-discovery fallback in `getBranches()`, eliminating the O(branches × reflog) refresh cost while still honoring explicit source-tracking config and compatible Git config hints.
+- Cached remote-tag detection between refreshes and invalidate it after tag or remote mutations, avoiding repeated `git ls-remote --tags` scans when multiple repositories are open.
+- Fixed the multi-repository source-update context so **Update from Source Branch** follows the active repository for global context and only appears on current-branch rows whose context actually carries `:sourceUpdate`.
+- Auto-refresh now unreferences its periodic timer so background refresh scheduling does not keep the extension host or test process alive on shutdown.
+- Current branch/tag/worktree labels now use the normal tree font with a `▶` marker instead of mathematical bold Unicode glyphs so active refs stay cleaner and easier to spot.
+
 ## [2.3.0] - 2026-07-27
 
 - Stash names now display the human-readable stash message (e.g., "Initial commit") instead of internal Git ref identifiers like `@0`, with a readable fallback to `stash@{n}` when no custom message exists

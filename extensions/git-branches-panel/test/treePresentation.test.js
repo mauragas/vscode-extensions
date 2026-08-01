@@ -150,6 +150,89 @@ test('buildBranchTooltipContent describes local, remote, stash, hook, tag, and w
   assert.match(worktreeTooltip, /Locked: in use elsewhere/);
 });
 
+test('buildBranchTooltipContent and buildTreeItemPresentation surface source-update state for current branches', () => {
+  const sourceUpdateTooltip = buildBranchTooltipContent({
+    kind: 'branch',
+    fullName: 'feature/demo',
+    label: 'demo',
+    path: 'feature/demo',
+    info: {
+      name: 'feature/demo',
+      isCurrent: true,
+      createdFromRef: 'refs/heads/main',
+      createdFromDisplayName: 'main',
+      sourceBehindCount: 2,
+    },
+  });
+  const sourceUpdatePresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'feature/demo',
+    label: 'demo',
+    path: 'feature/demo',
+    info: {
+      name: 'feature/demo',
+      isCurrent: true,
+      createdFromRef: 'refs/heads/main',
+      createdFromDisplayName: 'main',
+      sourceBehindCount: 2,
+    },
+  });
+
+  assert.match(sourceUpdateTooltip, /Created from: main/);
+  assert.match(sourceUpdateTooltip, /Source status: 2 commits available/);
+  assert.equal(sourceUpdatePresentation.contextValue, 'publishableCurrentBranch');
+});
+
+test('buildBranchTooltipContent shows created-from metadata for non-current local branches', () => {
+  const tooltip = buildBranchTooltipContent({
+    kind: 'branch',
+    fullName: 'feature/test4',
+    label: 'test4',
+    path: 'feature/test4',
+    info: {
+      name: 'feature/test4',
+      isCurrent: false,
+      createdFromRef: 'refs/heads/main',
+      createdFromDisplayName: 'main',
+      lastCommitDate: '5 hours ago',
+      upstreamName: 'origin/feature/test4',
+    },
+  });
+
+  assert.match(tooltip, /Created from: main/);
+  assert.match(tooltip, /Upstream: origin\/feature\/test4/);
+});
+
+test('buildTreeItemPresentation treats the current branch upstream as the remote current branch', () => {
+  const remoteTrackingCurrentPresentation = buildTreeItemPresentation(
+    {
+      kind: 'branch',
+      fullName: 'origin/feature/demo',
+      label: 'demo',
+      path: 'origin/feature/demo',
+      info: {
+        name: 'origin/feature/demo',
+        isCurrent: false,
+        scope: 'remote',
+        remoteName: 'origin',
+      },
+    },
+    {
+      name: 'feature/demo',
+      isCurrent: true,
+      scope: 'local',
+      upstreamName: 'origin/feature/demo',
+    }
+  );
+
+  assert.equal(remoteTrackingCurrentPresentation.label, 'demo');
+  assert.equal(remoteTrackingCurrentPresentation.icon.id, 'cloud');
+  assert.equal(
+    remoteTrackingCurrentPresentation.icon.colorId,
+    'gitDecoration.addedResourceForeground'
+  );
+});
+
 test('buildTreeItemPresentation maps sections, folders, and branch types consistently', () => {
   const inactiveRepositoryPresentation = buildTreeItemPresentation({
     kind: 'repository',
@@ -533,13 +616,13 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(publishableBranchPresentation.contextValue, 'publishableBranch');
 
   assert.equal(currentBranchWithSyncPresentation.nodeType, 'currentBranch');
-  assert.equal(currentBranchWithSyncPresentation.label, '● main');
+  assert.equal(currentBranchWithSyncPresentation.label, '▶ main');
   assert.equal(currentBranchWithSyncPresentation.contextValue, 'currentBranch:ahead');
   assert.equal(currentBranchWithSyncPresentation.icon.resourcePath, 'branch-diverged.svg');
   assert.equal(currentBranchWithSyncPresentation.description, '↓2 ↑1');
 
   assert.equal(currentBranchPresentation.nodeType, 'currentBranch');
-  assert.equal(currentBranchPresentation.label, '● main');
+  assert.equal(currentBranchPresentation.label, '▶ main');
   assert.equal(currentBranchPresentation.contextValue, 'publishableCurrentBranch');
   assert.equal(currentBranchPresentation.command, undefined);
   assert.equal(currentBranchPresentation.icon.id, 'git-branch');
@@ -561,6 +644,7 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(tagPresentation.command, undefined);
 
   assert.equal(currentTagPresentation.nodeType, 'tag');
+  assert.equal(currentTagPresentation.label, '▶ release/v1.0.0');
   assert.equal(currentTagPresentation.icon.id, 'tag');
   assert.equal(currentTagPresentation.icon.colorId, 'gitDecoration.addedResourceForeground');
   assert.equal(currentTagPresentation.command, undefined);
@@ -590,8 +674,10 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.equal(worktreePresentation.command, undefined);
 
   assert.equal(currentWorktreePresentation.nodeType, 'worktree');
-  assert.equal(currentWorktreePresentation.label, '● git-branches-panel-main-worktree');
+  assert.equal(currentWorktreePresentation.label, '▶ git-branches-panel-main-worktree');
   assert.equal(currentWorktreePresentation.contextValue, 'currentWorktree');
+  assert.equal(currentWorktreePresentation.icon.id, 'folder');
+  assert.equal(currentWorktreePresentation.icon.colorId, 'gitDecoration.addedResourceForeground');
 
   assert.equal(lockedWorktreePresentation.nodeType, 'worktree');
   assert.equal(lockedWorktreePresentation.contextValue, 'worktree:locked');
@@ -614,6 +700,159 @@ test('buildTreeItemPresentation maps sections, folders, and branch types consist
   assert.match(remoteConfigPresentation.tooltip, /Push: git@github.com:octo\/repo.git/);
   assert.match(remoteConfigPresentation.tooltip, /Provider: GitHub/);
   assert.match(remoteConfigPresentation.tooltip, /Default remote/);
+});
+
+test('buildTreeItemPresentation sets green icon for folder containing current or upstream branch', () => {
+  const emptyFolder = buildTreeItemPresentation({
+    kind: 'folder',
+    label: 'feature',
+    path: 'feature',
+    scope: 'local',
+    children: [],
+  });
+
+  assert.equal(emptyFolder.nodeType, 'folder');
+  assert.equal(emptyFolder.icon.id, 'folder');
+  assert.equal(emptyFolder.icon.colorId, undefined);
+
+  const folderWithCurrentBranch = buildTreeItemPresentation({
+    kind: 'folder',
+    label: 'bugfix',
+    path: 'bugfix',
+    scope: 'local',
+    children: [
+      {
+        kind: 'branch',
+        fullName: 'bugfix/fix-issue',
+        label: 'bugfix/fix-issue',
+        path: 'bugfix/fix-issue',
+        info: {
+          name: 'bugfix/fix-issue',
+          isCurrent: true,
+          upstreamName: 'origin/bugfix/fix-issue',
+        },
+      },
+    ],
+  });
+
+  assert.equal(folderWithCurrentBranch.nodeType, 'folder');
+  assert.equal(folderWithCurrentBranch.icon.id, 'folder');
+  assert.equal(folderWithCurrentBranch.icon.colorId, 'gitDecoration.addedResourceForeground');
+
+  const folderWithoutCurrent = buildTreeItemPresentation({
+    kind: 'folder',
+    label: 'feature',
+    path: 'feature',
+    scope: 'local',
+    children: [
+      {
+        kind: 'branch',
+        fullName: 'feature/demo',
+        label: 'feature/demo',
+        path: 'feature/demo',
+        info: {
+          name: 'feature/demo',
+          isCurrent: false,
+          upstreamName: 'origin/feature/demo',
+        },
+      },
+    ],
+  });
+
+  assert.equal(folderWithoutCurrent.nodeType, 'folder');
+  assert.equal(folderWithoutCurrent.icon.id, 'folder');
+  assert.equal(folderWithoutCurrent.icon.colorId, undefined);
+
+  const nestedFolderWithCurrent = buildTreeItemPresentation({
+    kind: 'folder',
+    label: 'feature',
+    path: 'feature',
+    scope: 'local',
+    children: [
+      {
+        kind: 'folder',
+        label: 'sub',
+        path: 'feature/sub',
+        scope: 'local',
+        children: [
+          {
+            kind: 'branch',
+            fullName: 'feature/sub/inner',
+            label: 'feature/sub/inner',
+            path: 'feature/sub/inner',
+            info: {
+              name: 'feature/sub/inner',
+              isCurrent: true,
+            },
+          },
+        ],
+      },
+    ],
+  });
+
+  assert.equal(nestedFolderWithCurrent.nodeType, 'folder');
+  assert.equal(nestedFolderWithCurrent.icon.id, 'folder');
+  assert.equal(nestedFolderWithCurrent.icon.colorId, 'gitDecoration.addedResourceForeground');
+
+  const remoteFolderWithUpstream = buildTreeItemPresentation({
+    kind: 'folder',
+    label: 'origin',
+    path: 'origin',
+    scope: 'remote',
+    children: [
+      {
+        kind: 'branch',
+        fullName: 'origin/bugfix/fix-issue',
+        label: 'origin/bugfix/fix-issue',
+        path: 'origin/bugfix/fix-issue',
+        info: {
+          name: 'origin/bugfix/fix-issue',
+          isCurrent: false,
+          scope: 'remote',
+          remoteName: 'origin',
+        },
+      },
+    ],
+  }, {
+    name: 'bugfix/fix-issue',
+    isCurrent: true,
+    scope: 'local',
+    upstreamName: 'origin/bugfix/fix-issue',
+  });
+
+  assert.equal(remoteFolderWithUpstream.nodeType, 'folder');
+  assert.equal(remoteFolderWithUpstream.icon.id, 'folder');
+  assert.equal(remoteFolderWithUpstream.icon.colorId, 'gitDecoration.addedResourceForeground');
+
+  const remoteFolderWithoutUpstream = buildTreeItemPresentation({
+    kind: 'folder',
+    label: 'origin',
+    path: 'origin',
+    scope: 'remote',
+    children: [
+      {
+        kind: 'branch',
+        fullName: 'origin/feature/demo',
+        label: 'origin/feature/demo',
+        path: 'origin/feature/demo',
+        info: {
+          name: 'origin/feature/demo',
+          isCurrent: false,
+          scope: 'remote',
+          remoteName: 'origin',
+        },
+      },
+    ],
+  }, {
+    name: 'bugfix/fix-issue',
+    isCurrent: true,
+    scope: 'local',
+    upstreamName: 'origin/bugfix/fix-issue',
+  });
+
+  assert.equal(remoteFolderWithoutUpstream.nodeType, 'folder');
+  assert.equal(remoteFolderWithoutUpstream.icon.id, 'folder');
+  assert.equal(remoteFolderWithoutUpstream.icon.colorId, undefined);
 });
 
 test('buildTreeItemPresentation adjusts Hooks section context for bulk enable and disable actions', () => {
@@ -775,15 +1014,69 @@ test('buildTreeItemPresentation adds pinned prefixes and busy context values whe
     },
   });
 
-  assert.equal(pinnedBusyBranchPresentation.label, '★ demo');
+  assert.equal(pinnedBusyBranchPresentation.label, 'demo');
   assert.equal(pinnedBusyBranchPresentation.contextValue, 'pinned:busyBranch');
   assert.equal(pinnedBusyBranchPresentation.icon.resourcePath, 'branch-outgoing.svg');
   assert.equal(pinnedBusyBranchPresentation.description, '↑1');
   assert.match(pinnedBusyBranchPresentation.tooltip, /_Pinned item_/);
 
-  assert.equal(pinnedCurrentWorktreePresentation.label, '★ ● git-branches-panel-main-pinned-worktree');
+  assert.equal(pinnedCurrentWorktreePresentation.label, '▶ git-branches-panel-main-pinned-worktree');
   assert.equal(pinnedCurrentWorktreePresentation.contextValue, 'pinned:currentWorktree');
-  assert.equal(pinnedCurrentWorktreePresentation.icon.id, 'folder');
+  assert.equal(pinnedCurrentWorktreePresentation.icon.resourcePath, 'star-current.svg');
+
+  const pinnedTagPresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'v2.0.0',
+    label: 'v2.0.0',
+    path: 'v2.0.0',
+    info: {
+      name: 'v2.0.0',
+      isCurrent: false,
+      scope: 'tag',
+      isPinned: true,
+      lastCommitDate: '2 weeks ago',
+    },
+  });
+
+  assert.equal(pinnedTagPresentation.label, 'v2.0.0');
+  assert.equal(pinnedTagPresentation.contextValue, 'pinned:tag');
+  assert.equal(pinnedTagPresentation.icon.resourcePath, 'star.svg');
+  assert.match(pinnedTagPresentation.tooltip, /_Pinned item_/);
+
+  const unpinnedRemoteTagPresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'refs/tags/v1.0.0',
+    label: 'v1.0.0',
+    path: 'refs/tags/v1.0.0',
+    info: {
+      name: 'v1.0.0',
+      isCurrent: false,
+      scope: 'tag',
+      isRemoteTag: true,
+    },
+  });
+
+  assert.equal(unpinnedRemoteTagPresentation.label, 'v1.0.0');
+  assert.equal(unpinnedRemoteTagPresentation.contextValue, 'tag:remote');
+  assert.equal(unpinnedRemoteTagPresentation.icon.id, 'tag');
+
+  const pinnedRemoteTagPresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'refs/tags/v2.0.0',
+    label: 'v2.0.0',
+    path: 'refs/tags/v2.0.0',
+    info: {
+      name: 'v2.0.0',
+      isCurrent: false,
+      scope: 'tag',
+      isRemoteTag: true,
+      isPinned: true,
+    },
+  });
+
+  assert.equal(pinnedRemoteTagPresentation.label, 'v2.0.0');
+  assert.equal(pinnedRemoteTagPresentation.contextValue, 'pinned:tag:remote');
+  assert.equal(pinnedRemoteTagPresentation.icon.resourcePath, 'star.svg');
 });
 
 test('buildTreeItemPresentation exposes protected context values so delete actions can be hidden in menus', () => {

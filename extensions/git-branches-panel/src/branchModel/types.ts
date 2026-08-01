@@ -43,6 +43,7 @@ export interface BranchInfo {
   hookEnabled?: boolean;
   hookActive?: boolean;
   hookOverridden?: boolean;
+  isRemoteTag?: boolean;
 }
 
 export interface BranchSyncState {

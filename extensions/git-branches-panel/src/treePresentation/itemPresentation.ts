@@ -3,6 +3,7 @@ import {
   formatSourceBranchStatus,
   formatSyncStatus,
   getPublishTargetName,
+  hasSourceBranchUpdate,
   isPublishableBranch,
 } from '../branchModel/descriptions';
 import type {
@@ -18,7 +19,10 @@ import type {
 } from './types';
 import { getContainerNodeKey } from './containerLookup';
 
-export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresentation {
+export function buildTreeItemPresentation(
+  node: BranchTreeNode,
+  currentBranchInfo?: BranchInfo
+): TreeItemPresentation {
   if (node.kind === 'repository') {
     const containerKey = getContainerNodeKey(node);
 
@@ -60,6 +64,7 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
 
   if (node.kind === 'folder') {
     const containerKey = getContainerNodeKey(node);
+    const folderIcon = getFolderIcon(node, currentBranchInfo);
 
     return {
       nodeType: 'folder',
@@ -67,7 +72,7 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
       id: containerKey,
       contextValue: getFolderContextValue(node.scope),
       collapsibleState: node.expanded ? 'expanded' : 'collapsed',
-      icon: { id: 'folder' },
+      icon: folderIcon,
       containerKey,
       containerPath: node.path,
       containerScope: node.scope,
@@ -94,8 +99,7 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
   const prioritizedLabel = buildTreeItemLabel(
     node.label,
     nodeType,
-    node.info.isCurrent,
-    node.info.isPinned
+    node.info.isCurrent
   );
   const activationCommand = resolveActivationCommand(nodeType, node.info.isCurrent);
 
@@ -107,7 +111,7 @@ export function buildTreeItemPresentation(node: BranchTreeNode): TreeItemPresent
       : `${node.info.scope ?? 'local'}:branch:${node.fullName}`,
     contextValue: getItemContextValue(nodeType, node.info),
     collapsibleState: 'none',
-    icon: getItemIcon(nodeType, node.info),
+    icon: getItemIcon(nodeType, node.info, currentBranchInfo),
     description,
     tooltip: buildBranchTooltipContent(node),
     branchName: node.fullName,
@@ -391,6 +395,63 @@ function getFolderContextValue(scope: TreeContainerScope): string {
   return `${scope}-folder`;
 }
 
+function getFolderIcon(
+  folder: Extract<BranchTreeNode, { kind: 'folder' }>,
+  currentBranchInfo?: BranchInfo
+): TreeItemIconDescriptor {
+  if (folderContainsActiveBranch(folder, currentBranchInfo)) {
+    return {
+      id: 'folder',
+      colorId: 'gitDecoration.addedResourceForeground',
+    };
+  }
+
+  return { id: 'folder' };
+}
+
+function folderContainsActiveBranch(
+  folder: Extract<BranchTreeNode, { kind: 'folder' }>,
+  currentBranchInfo?: BranchInfo
+): boolean {
+  const greenBranchName = getGreenBranchName(folder.scope, currentBranchInfo);
+
+  for (const child of folder.children) {
+    if (child.kind === 'branch') {
+      if (
+        (folder.scope === 'local' && child.info.isCurrent) ||
+        (folder.scope === 'remote' && child.info.name === greenBranchName)
+      ) {
+        return true;
+      }
+    } else if (child.kind === 'remote') {
+      if (folder.scope === 'remote' && child.info.name === greenBranchName) {
+        return true;
+      }
+    } else if (child.kind === 'folder') {
+      if (folderContainsActiveBranch(child, currentBranchInfo)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function getGreenBranchName(scope: TreeContainerScope, currentBranchInfo?: BranchInfo): string | undefined {
+  if (scope === 'local') {
+    if (currentBranchInfo?.isCurrent) {
+      return currentBranchInfo.name;
+    }
+    return undefined;
+  }
+
+  if (scope === 'remote' && currentBranchInfo?.scope === 'local' && currentBranchInfo.upstreamName) {
+    return currentBranchInfo.upstreamName;
+  }
+
+  return undefined;
+}
+
 function resolveNodeType(info: BranchInfo): NodeType {
   switch (info.scope) {
     case 'stash':
@@ -418,20 +479,12 @@ function shouldShowSyncStatus(nodeType: NodeType): boolean {
 function buildTreeItemLabel(
   label: string,
   nodeType: NodeType,
-  isCurrent: boolean,
-  isPinned: boolean | undefined
+  isCurrent: boolean
 ): string {
-  const prefixParts: string[] = [];
-  if (isPinned) {
-    prefixParts.push('★');
-  }
-  if (nodeType === 'currentBranch' || (nodeType === 'worktree' && isCurrent) || (nodeType === 'tag' && isCurrent)) {
-    prefixParts.push('●');
-  }
+  const isActiveRef =
+    nodeType === 'currentBranch' || (nodeType === 'worktree' && isCurrent) || (nodeType === 'tag' && isCurrent);
 
-  const prefix = prefixParts.length > 0 ? `${prefixParts.join(' ')} ` : '';
-
-  return `${prefix}${label}`;
+  return isActiveRef ? `▶ ${label}` : label;
 }
 
 function getItemContextValue(nodeType: NodeType, branch: BranchInfo): string {
@@ -473,6 +526,10 @@ function resolveBaseContextValue(nodeType: NodeType, branch: BranchInfo): string
 
   if ((nodeType === 'branch' || nodeType === 'currentBranch') && isPublishableBranch(branch)) {
     return branch.isCurrent ? 'publishableCurrentBranch' : 'publishableBranch';
+  }
+
+  if (nodeType === 'tag' && branch.isRemoteTag) {
+    return 'tag:remote';
   }
 
   return nodeType;
@@ -538,10 +595,44 @@ function hasOutgoingLocalBranchChanges(branch: BranchInfo): boolean {
   );
 }
 
-function getItemIcon(nodeType: NodeType, branch?: BranchInfo): TreeItemIconDescriptor {
+function isCurrentBranch(
+  nodeType: NodeType,
+  branch: BranchInfo,
+  currentBranchInfo?: BranchInfo
+): boolean {
+  switch (nodeType) {
+    case 'currentBranch':
+      return true;
+    case 'remoteBranch':
+      return (
+        currentBranchInfo?.scope === 'local' &&
+        currentBranchInfo.upstreamName === branch.name &&
+        !currentBranchInfo.upstreamMissing
+      );
+    case 'worktree':
+      return branch.isCurrent;
+    case 'tag':
+      return branch.isCurrent;
+    default:
+      return false;
+  }
+}
+
+function getItemIcon(
+  nodeType: NodeType,
+  branch?: BranchInfo,
+  currentBranchInfo?: BranchInfo
+): TreeItemIconDescriptor {
   const localSyncIcon = getLocalSyncIcon(branch);
   if (localSyncIcon) {
     return localSyncIcon;
+  }
+
+  if (branch?.isPinned) {
+    if (isCurrentBranch(nodeType, branch, currentBranchInfo)) {
+      return { resourcePath: 'star-current.svg' };
+    }
+    return { resourcePath: 'star.svg' };
   }
 
   switch (nodeType) {
@@ -556,6 +647,17 @@ function getItemIcon(nodeType: NodeType, branch?: BranchInfo): TreeItemIconDescr
         colorId: 'list.warningForeground',
       };
     case 'remoteBranch':
+      if (
+        currentBranchInfo?.scope === 'local' &&
+        currentBranchInfo.upstreamName === branch?.name &&
+        !currentBranchInfo.upstreamMissing
+      ) {
+        return {
+          id: 'cloud',
+          colorId: 'gitDecoration.addedResourceForeground',
+        };
+      }
+
       return { id: 'cloud' };
     case 'staleRemoteBranch':
       return {
@@ -591,6 +693,13 @@ function getItemIcon(nodeType: NodeType, branch?: BranchInfo): TreeItemIconDescr
         colorId: 'disabledForeground',
       };
     case 'worktree':
+      if (branch?.isCurrent) {
+        return {
+          id: 'folder',
+          colorId: 'gitDecoration.addedResourceForeground',
+        };
+      }
+
       if (branch?.worktreePrunableReason) {
         return {
           id: 'folder',

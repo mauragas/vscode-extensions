@@ -1,7 +1,7 @@
 import type { RemoteTrackingState } from '../branchModel';
 import { resolveHostedRepository } from './hosting';
 import type { RemoteInfo } from './hosting';
-import { listRefs } from './refListing';
+import { invalidateRemoteTagCache, listRefs } from './refListing';
 import {
   doesLocalBranchExist,
   ensureRemoteExists,
@@ -78,6 +78,7 @@ export async function getRemoteDetails(repoRoot: string): Promise<RemoteInfo[]> 
 
 export async function addRemote(repoRoot: string, remoteName: string, remoteUrl: string): Promise<void> {
   await runGit(repoRoot, ['remote', 'add', remoteName, remoteUrl]);
+  invalidateRemoteTagCache(repoRoot);
 }
 
 export async function renameRemote(
@@ -87,11 +88,13 @@ export async function renameRemote(
 ): Promise<void> {
   await ensureRemoteExists(repoRoot, remoteName);
   await runGit(repoRoot, ['remote', 'rename', remoteName, newRemoteName]);
+  invalidateRemoteTagCache(repoRoot);
 }
 
 export async function removeRemote(repoRoot: string, remoteName: string): Promise<void> {
   await ensureRemoteExists(repoRoot, remoteName);
   await runGit(repoRoot, ['remote', 'remove', remoteName]);
+  invalidateRemoteTagCache(repoRoot);
 }
 
 export async function setRemoteFetchUrl(
@@ -101,6 +104,7 @@ export async function setRemoteFetchUrl(
 ): Promise<void> {
   await ensureRemoteExists(repoRoot, remoteName);
   await runGit(repoRoot, ['remote', 'set-url', remoteName, remoteUrl]);
+  invalidateRemoteTagCache(repoRoot);
 }
 
 export async function setRemotePushUrl(
@@ -110,6 +114,7 @@ export async function setRemotePushUrl(
 ): Promise<void> {
   await ensureRemoteExists(repoRoot, remoteName);
   await runGit(repoRoot, ['remote', 'set-url', '--push', remoteName, remoteUrl]);
+  invalidateRemoteTagCache(repoRoot);
 }
 
 export async function fetchRemote(
@@ -119,6 +124,7 @@ export async function fetchRemote(
 ): Promise<void> {
   await ensureRemoteExists(repoRoot, remoteName);
   await runGit(repoRoot, ['fetch', ...(options.prune ? ['--prune'] : []), remoteName]);
+  invalidateRemoteTagCache(repoRoot);
 }
 
 export async function getRemoteBranches(repoRoot: string) {
@@ -246,10 +252,12 @@ export async function deleteRemoteBranch(
 
 export async function fetchRemoteState(repoRoot: string): Promise<void> {
   await runGit(repoRoot, ['fetch', '--all', '--prune']);
+  invalidateRemoteTagCache(repoRoot);
 }
 
 export async function fetchAllRemotes(repoRoot: string): Promise<void> {
   await runGit(repoRoot, ['fetch', '--all']);
+  invalidateRemoteTagCache(repoRoot);
 }
 
 export { parseRemoteBranchReference };

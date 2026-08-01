@@ -171,11 +171,10 @@ test('pinItem and unpinItem commands reuse the toggle handler and update matchin
   ]);
 });
 
-test('togglePinItem ignores unsupported items', async () => {
+test('togglePinItem supports tags', async () => {
   const vscodeState = createVscodeState();
-  const { commandContext } = createItemCommandsModule({ vscodeState });
-
-  await vscodeState.registeredCommands['gitBranchesPanel.togglePinItem']({
+  const { commandContext, pinContext } = createItemCommandsModule({ vscodeState });
+  const item = {
     nodeType: 'tag',
     repoRoot: '/repo',
     branchInfo: {
@@ -183,6 +182,30 @@ test('togglePinItem ignores unsupported items', async () => {
       isCurrent: false,
       scope: 'tag',
     },
+  };
+
+  await pinContext.updateSelectedItemPinnedContext('gitBranchesPanel', item);
+  vscodeState.executedCommands = [];
+
+  await vscodeState.registeredCommands['gitBranchesPanel.togglePinItem'](item);
+
+  assert.deepEqual(commandContext.state.toggledItems, [item]);
+  assert.deepEqual(vscodeState.executedCommands, [
+    {
+      command: 'setContext',
+      args: ['gitBranchesPanel.branchesViewSelectedItemPinned', true],
+    },
+  ]);
+});
+
+test('togglePinItem ignores unsupported items', async () => {
+  const vscodeState = createVscodeState();
+  const { commandContext } = createItemCommandsModule({ vscodeState });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.togglePinItem']({
+    nodeType: 'remoteConfig',
+    repoRoot: '/repo',
+    branchInfo: undefined,
   });
 
   assert.deepEqual(commandContext.state.toggledItems, []);

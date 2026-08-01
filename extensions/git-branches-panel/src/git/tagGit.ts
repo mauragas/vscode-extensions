@@ -1,4 +1,4 @@
-import { listRefs } from './refListing';
+import { invalidateRemoteTagCache, listRefs } from './refListing';
 import { ensureRemoteExists, runGit } from './shared';
 
 const TAG_FIELD_SEPARATOR = '\u001f';
@@ -44,8 +44,18 @@ export async function getTags(repoRoot: string) {
   return listRefs(repoRoot, 'refs/tags', 'tag');
 }
 
+const CHECKED_OUT_TAG_CONFIG_KEY = 'gitBranchesPanel.checkedOutTag';
+
 export async function checkoutTag(repoRoot: string, tagName: string): Promise<void> {
   await runGit(repoRoot, ['checkout', `refs/tags/${tagName}`]);
+  await runGit(repoRoot, ['config', CHECKED_OUT_TAG_CONFIG_KEY, tagName]);
+}
+
+export async function clearCheckedOutTag(repoRoot: string): Promise<void> {
+  try {
+    await runGit(repoRoot, ['config', '--local', '--unset', CHECKED_OUT_TAG_CONFIG_KEY]);
+  } catch {
+  }
 }
 
 export async function createTag(
@@ -86,6 +96,7 @@ export async function deleteTag(repoRoot: string, tagName: string): Promise<void
 export async function pushAllTags(repoRoot: string, remoteName: string): Promise<void> {
   await ensureRemoteExists(repoRoot, remoteName);
   await runGit(repoRoot, ['push', remoteName, '--tags']);
+  invalidateRemoteTagCache(repoRoot);
 }
 
 export async function pushTag(
@@ -95,6 +106,7 @@ export async function pushTag(
 ): Promise<void> {
   await ensureRemoteExists(repoRoot, remoteName);
   await runGit(repoRoot, ['push', remoteName, `refs/tags/${tagName}`]);
+  invalidateRemoteTagCache(repoRoot);
 }
 
 export async function deleteRemoteTag(
@@ -104,6 +116,7 @@ export async function deleteRemoteTag(
 ): Promise<void> {
   await ensureRemoteExists(repoRoot, remoteName);
   await runGit(repoRoot, ['push', remoteName, `:refs/tags/${tagName}`]);
+  invalidateRemoteTagCache(repoRoot);
 }
 
 export async function getTagDetails(

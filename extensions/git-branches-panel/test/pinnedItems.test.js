@@ -47,6 +47,13 @@ test('buildPinnedItemKey prefers stable worktree and stash identities', () => {
     }),
     '/repo::local::feature/demo'
   );
+  assert.equal(
+    buildPinnedItemKey('/repo', {
+      name: 'v1.0.0',
+      scope: 'tag',
+    }),
+    '/repo::tag::v1.0.0'
+  );
 });
 
 test('PinnedItemsStore toggles pin state and persists sorted keys', async () => {
@@ -85,6 +92,46 @@ test('PinnedItemsStore toggles pin state and persists sorted keys', async () => 
     {
       key: PINNED_ITEMS_STORAGE_KEY,
       value: ['/repo::local::feature/demo'],
+    },
+  ]);
+});
+
+test('PinnedItemsStore supports tags with tag scope', async () => {
+  const { memento, updates } = createMemento();
+  const store = new PinnedItemsStore(memento);
+
+  assert.equal(
+    store.isPinned('/repo', {
+      name: 'v1.0.0',
+      scope: 'tag',
+    }),
+    false
+  );
+
+  const didPinTag = await store.toggle('/repo', {
+    name: 'v1.0.0',
+    scope: 'tag',
+  });
+  const didKeepPinnedTag = store.isPinned('/repo', {
+    name: 'v1.0.0',
+    scope: 'tag',
+  });
+  const didUnpinTag = await store.toggle('/repo', {
+    name: 'v1.0.0',
+    scope: 'tag',
+  });
+
+  assert.equal(didPinTag, true);
+  assert.equal(didKeepPinnedTag, true);
+  assert.equal(didUnpinTag, false);
+  assert.deepEqual(updates, [
+    {
+      key: PINNED_ITEMS_STORAGE_KEY,
+      value: ['/repo::tag::v1.0.0'],
+    },
+    {
+      key: PINNED_ITEMS_STORAGE_KEY,
+      value: [],
     },
   ]);
 });

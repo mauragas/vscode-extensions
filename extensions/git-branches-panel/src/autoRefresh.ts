@@ -54,6 +54,7 @@ export function registerAutoRefresh(
   const periodicTimer = setInterval(() => {
     void periodicRefresh();
   }, CHECK_INTERVAL_MS);
+  periodicTimer.unref?.();
 
   context.subscriptions.push(
     headWatcher,

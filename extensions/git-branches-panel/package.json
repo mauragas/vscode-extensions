@@ -2,7 +2,7 @@
   "name": "git-branches-panel",
   "displayName": "Git Branches Panel",
   "description": "Tree view for branches, tags, stashes, worktrees, hooks, and remotes across one or multiple Git repositories with grouping, search, filtering, compare/history workflows, remote host integration, worktree maintenance, sync state, and quick actions.",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "publisher": "karolis-mauragas",
   "license": "MIT",
   "repository": {
@@ -409,6 +409,11 @@
         "command": "gitBranchesPanel.copyTagName",
         "title": "Copy Tag Name",
         "icon": "$(copy)"
+      },
+      {
+        "command": "gitBranchesPanel.mergeTagIntoCurrent",
+        "title": "Merge Tag into Current Branch",
+        "icon": "$(git-merge)"
       },
       {
         "command": "gitBranchesPanel.mergeIntoCurrent",
@@ -2831,12 +2836,12 @@
         },
         {
           "command": "gitBranchesPanel.pinItem",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && viewItem =~ /^(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|remoteBranch|staleRemoteBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch|stash|(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*)$/",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && viewItem =~ /^(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|remoteBranch|staleRemoteBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch|tag(?::remote)?|stash|(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*)$/",
           "group": "inline@4"
         },
         {
           "command": "gitBranchesPanel.unpinItem",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && viewItem =~ /^pinned:(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|remoteBranch|staleRemoteBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch|stash|(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*)$/",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && viewItem =~ /^pinned:(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|remoteBranch|staleRemoteBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch|tag(?::remote)?|stash|(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*)$/",
           "group": "inline@4"
         },
         {
@@ -2971,28 +2976,23 @@
         },
         {
           "command": "gitBranchesPanel.checkoutTag",
-          "when": "viewItem == tag",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "inline@1"
         },
         {
           "command": "gitBranchesPanel.pushTag",
-          "when": "viewItem == tag",
+          "when": "viewItem == tag || viewItem == pinned:tag",
           "group": "inline@2"
         },
         {
           "command": "gitBranchesPanel.deleteTag",
-          "when": "viewItem == tag",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "inline@3"
         },
         {
           "command": "gitBranchesPanel.popStash",
           "when": "viewItem =~ /^(?:pinned:)?(?:stash)$/",
           "group": "inline@1"
-        },
-        {
-          "command": "gitBranchesPanel.applyStash",
-          "when": "viewItem =~ /^(?:pinned:)?(?:stash)$/",
-          "group": "inline@2"
         },
         {
           "command": "gitBranchesPanel.dropStash",
@@ -3861,32 +3861,32 @@
         },
         {
           "command": "gitBranchesPanel.updateBranchFromSource",
-          "when": "gitBranchesPanel.currentBranchCanUpdateFromSource && viewItem =~ /^(?:pinned:)?(?:currentBranch(?::ahead)?|publishableCurrentBranch)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?:\\:.+)?|currentBranch(?:\\:.+)?|publishableBranch|publishableCurrentBranch(?:\\:.+)?|missingUpstreamBranch|protectedBranch(?:\\:.+)?|protectedPublishableBranch|protectedMissingUpstreamBranch|busyBranch|busyCurrentBranch|busyPublishableBranch|busyPublishableCurrentBranch|busyMissingUpstreamBranch)$/",
           "group": "1_branchSource@1"
         },
         {
           "command": "gitBranchesPanel.openBranchOnRemote",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|remoteBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|remoteBranch|protectedBranch(?::ahead)?|protectedRemoteBranch)$/",
           "group": "1_remoteHosting@1"
         },
         {
           "command": "gitBranchesPanel.openComparePage",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|remoteBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|remoteBranch|protectedBranch(?::ahead)?|protectedRemoteBranch)$/",
           "group": "1_remoteHosting@2"
         },
         {
           "command": "gitBranchesPanel.createPullRequest",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|remoteBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|remoteBranch|protectedBranch(?::ahead)?|protectedRemoteBranch)$/",
           "group": "1_remoteHosting@3"
         },
         {
           "command": "gitBranchesPanel.copyBranchUrl",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|remoteBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|remoteBranch|protectedBranch(?::ahead)?|protectedRemoteBranch)$/",
           "group": "1_remoteHosting@4"
         },
         {
           "command": "gitBranchesPanel.copyCompareUrl",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|remoteBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|remoteBranch|protectedBranch(?::ahead)?|protectedRemoteBranch)$/",
           "group": "1_remoteHosting@5"
         },
         {
@@ -3936,57 +3936,72 @@
         },
         {
           "command": "gitBranchesPanel.checkoutTag",
-          "when": "viewItem == tag",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "1_tag@1"
         },
         {
           "command": "gitBranchesPanel.createWorktreeFromRef",
-          "when": "viewItem == tag",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "1_tag@1.5"
         },
         {
           "command": "gitBranchesPanel.pushTag",
-          "when": "viewItem == tag",
+          "when": "viewItem == tag || viewItem == pinned:tag",
           "group": "1_tag@1.6"
         },
         {
+          "command": "gitBranchesPanel.mergeTagIntoCurrent",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
+          "group": "1_tag@1.9"
+        },
+        {
+          "command": "gitBranchesPanel.newBranchFromSelected",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
+          "group": "1_tag@1.7"
+        },
+        {
+          "command": "gitBranchesPanel.newBranchFromSelectedAndCheckout",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
+          "group": "1_tag@1.8"
+        },
+        {
           "command": "gitBranchesPanel.copyTagName",
-          "when": "viewItem == tag",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "1_tag@2"
         },
         {
           "command": "gitBranchesPanel.showRefHistory",
-          "when": "viewItem == tag",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "1_tag@2.5"
         },
         {
           "command": "gitBranchesPanel.openChangedFilesForRef",
-          "when": "viewItem == tag",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "1_tag@2.6"
         },
         {
           "command": "gitBranchesPanel.compareTagWithCurrent",
-          "when": "viewItem == tag",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "1_tag@2.7"
         },
         {
           "command": "gitBranchesPanel.showTagDetails",
-          "when": "viewItem == tag",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "1_tag@2.8"
         },
         {
           "command": "gitBranchesPanel.copyTagTargetSha",
-          "when": "viewItem == tag",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "1_tag@2.9"
         },
         {
           "command": "gitBranchesPanel.deleteTag",
-          "when": "viewItem == tag",
+          "when": "viewItem == tag || viewItem == pinned:tag || viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "2_tag@1"
         },
         {
           "command": "gitBranchesPanel.deleteRemoteTag",
-          "when": "viewItem == tag",
+          "when": "viewItem == tag:remote || viewItem == pinned:tag:remote",
           "group": "2_tag@1.5"
         },
         {

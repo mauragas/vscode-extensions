@@ -705,6 +705,69 @@ test('newBranchFromSelectedAndCheckout creates and checks out a branch from a re
   ]);
 });
 
+test('newBranchFromSelected stores tag refs as refs/tags source metadata', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.inputBoxResponse = ' feature/from-tag ';
+  const createBranchFromRefCalls = [];
+
+  createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    sanitizeSpy: [],
+    sanitizeImpl() {
+      return 'feature/from-tag';
+    },
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef(repoRoot, branchName, startPoint, options) {
+        createBranchFromRefCalls.push({ repoRoot, branchName, startPoint, options });
+      },
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.newBranchFromSelected']({
+    nodeType: 'tag',
+    branchName: '2.3.0',
+    repoRoot: '/repo',
+  });
+
+  assert.deepEqual(createBranchFromRefCalls, [
+    {
+      repoRoot: '/repo',
+      branchName: 'feature/from-tag',
+      startPoint: '2.3.0',
+      options: { checkout: false, sourceRef: 'refs/tags/2.3.0' },
+    },
+  ]);
+});
+
 test('newBranch stops when sanitization removes every valid branch-name character', async () => {
   const vscodeState = createVscodeState();
   vscodeState.inputBoxResponse = ' ??? ';
@@ -1003,8 +1066,14 @@ test('updateBranchFromSource refreshes remote-tracking sources, revalidates the 
       async getDiffFilesBetweenRefs() {
         return [];
       },
-      async mergeBranchIntoCurrent(repoRoot, refName) {
-        mergeCalls.push({ repoRoot, refName });
+      async getSourceBranchState() {
+        return {
+          sourceBehindCount: 2,
+          sourceRefMissing: false,
+        };
+      },
+      async mergeRefIntoBranch(repoRoot, branchName, refName) {
+        mergeCalls.push({ repoRoot, branchName, refName });
       },
       async pushBranch() {
         return {
@@ -1045,12 +1114,97 @@ test('updateBranchFromSource refreshes remote-tracking sources, revalidates the 
 
   assert.deepEqual(fetchRemoteStateCalls, ['/repo']);
   assert.deepEqual(getBranchesCalls, ['/repo']);
-  assert.deepEqual(mergeCalls, [{ repoRoot: '/repo', refName: 'refs/remotes/origin/main' }]);
+  assert.deepEqual(mergeCalls, [{ repoRoot: '/repo', branchName: 'feature/demo', refName: 'refs/remotes/origin/main' }]);
   assert.deepEqual(commandContext.state.loadingTitles, ["Updating 'feature/demo' from 'origin/main'…"]);
   assert.deepEqual(commandContext.state.successRefreshes, [
     {
       message: "Merged 'origin/main' into 'feature/demo'.",
       options: { fetchRemoteState: true, forceFetchRemoteState: true },
+    },
+  ]);
+});
+
+test('updateBranchFromSource matches the current local branch when the clicked item name includes refs/heads prefix', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Merge');
+  const mergeCalls = [];
+
+  const { commandContext } = createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getBranches() {
+        return [
+          {
+            name: 'test2',
+            isCurrent: true,
+            scope: 'local',
+            createdFromRef: 'refs/heads/main',
+            createdFromDisplayName: 'main',
+            sourceBehindCount: 1,
+          },
+        ];
+      },
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async getSourceBranchState() {
+        return {
+          sourceBehindCount: 1,
+          sourceRefMissing: false,
+        };
+      },
+      async mergeRefIntoBranch(repoRoot, branchName, refName) {
+        mergeCalls.push({ repoRoot, branchName, refName });
+      },
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.updateBranchFromSource']({
+    nodeType: 'currentBranch',
+    contextValue: 'currentBranch',
+    branchName: 'refs/heads/test2',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'refs/heads/test2',
+      isCurrent: true,
+      scope: 'local',
+      createdFromRef: 'refs/heads/main',
+      createdFromDisplayName: 'main',
+      sourceBehindCount: 1,
+    },
+  });
+
+  assert.deepEqual(mergeCalls, [{ repoRoot: '/repo', branchName: 'test2', refName: 'refs/heads/main' }]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: "Merged 'main' into 'refs/heads/test2'.",
+      options: { fetchRemoteState: false, forceFetchRemoteState: false },
     },
   ]);
 });
@@ -1084,8 +1238,14 @@ test('updateBranchFromSource stops when the refreshed branch is already up to da
       async getDiffFilesBetweenRefs() {
         return [];
       },
-      async mergeBranchIntoCurrent(repoRoot, refName) {
-        mergeCalls.push({ repoRoot, refName });
+      async getSourceBranchState() {
+        return {
+          sourceBehindCount: 0,
+          sourceRefMissing: false,
+        };
+      },
+      async mergeRefIntoBranch(repoRoot, branchName, refName) {
+        mergeCalls.push({ repoRoot, branchName, refName });
       },
       async pushBranch() {
         return {
@@ -1160,8 +1320,14 @@ test('updateBranchFromSource stops when the refreshed branch source ref is missi
       async getDiffFilesBetweenRefs() {
         return [];
       },
-      async mergeBranchIntoCurrent(repoRoot, refName) {
-        mergeCalls.push({ repoRoot, refName });
+      async getSourceBranchState() {
+        return {
+          sourceBehindCount: 0,
+          sourceRefMissing: true,
+        };
+      },
+      async mergeRefIntoBranch(repoRoot, branchName, refName) {
+        mergeCalls.push({ repoRoot, branchName, refName });
       },
       async pushBranch() {
         return {
@@ -1204,6 +1370,153 @@ test('updateBranchFromSource stops when the refreshed branch source ref is missi
   assert.deepEqual(commandContext.state.successRefreshes, []);
   assert.match(vscodeState.infoMessages[0], /no longer exists/i);
   assert.deepEqual(commandContext.state.refreshCalls, [{ fetchRemoteState: false }]);
+});
+
+test('updateBranchFromSource explains when the current branch has no recorded source branch', async () => {
+  const vscodeState = createVscodeState();
+
+  createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.updateBranchFromSource']({
+    nodeType: 'currentBranch',
+    contextValue: 'currentBranch',
+    branchName: 'feature/demo',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'feature/demo',
+      isCurrent: true,
+      scope: 'local',
+    },
+  });
+
+  assert.match(vscodeState.infoMessages[0], /does not have a recorded source branch/i);
+});
+
+test('updateBranchFromSource updates a non-current branch without checking it out first', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Merge');
+  const checkoutCalls = [];
+  const mergeCalls = [];
+
+  const { commandContext } = createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    gitMock: {
+      async checkoutBranch(repoRoot, branchName) {
+        checkoutCalls.push({ repoRoot, branchName });
+      },
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getBranches() {
+        return [
+          {
+            name: 'feature/demo',
+            isCurrent: false,
+            scope: 'local',
+            createdFromRef: 'refs/heads/main',
+            createdFromDisplayName: 'main',
+          },
+        ];
+      },
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async getSourceBranchState() {
+        return {
+          sourceBehindCount: 2,
+          sourceRefMissing: false,
+        };
+      },
+      async mergeRefIntoBranch(repoRoot, branchName, refName) {
+        mergeCalls.push({ repoRoot, branchName, refName });
+      },
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+  commandContext.state.currentBranch = {
+    name: 'main',
+    isCurrent: true,
+    scope: 'local',
+  };
+
+  await vscodeState.registeredCommands['gitBranchesPanel.updateBranchFromSource']({
+    nodeType: 'branch',
+    contextValue: 'branch',
+    branchName: 'feature/demo',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'feature/demo',
+      isCurrent: false,
+      scope: 'local',
+      createdFromRef: 'refs/heads/main',
+      createdFromDisplayName: 'main',
+      sourceBehindCount: 2,
+    },
+  });
+
+  assert.deepEqual(checkoutCalls, []);
+  assert.deepEqual(mergeCalls, [{ repoRoot: '/repo', branchName: 'feature/demo', refName: 'refs/heads/main' }]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: "Merged 'main' into 'feature/demo'.",
+      options: { fetchRemoteState: false, forceFetchRemoteState: false },
+    },
+  ]);
 });
 
 test('showBranchActions exposes update from source for current branches with available source commits', async () => {
@@ -1275,6 +1588,193 @@ test('showBranchActions exposes update from source for current branches with ava
       args: [item],
     },
   ]);
+});
+
+test('showBranchActions exposes update from source for current branches with source metadata in branch info', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.quickPickSelector = (items) =>
+    items.find((item) => item.actionId === 'updateBranchFromSource');
+
+  createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  const item = {
+    nodeType: 'currentBranch',
+    contextValue: 'currentBranch',
+    branchName: 'feature/demo',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'feature/demo',
+      isCurrent: true,
+      scope: 'local',
+      createdFromRef: 'refs/heads/main',
+      createdFromDisplayName: 'main',
+      sourceBehindCount: 2,
+      sourceRefMissing: false,
+    },
+  };
+
+  await vscodeState.registeredCommands['gitBranchesPanel.showBranchActions'](item);
+
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(git-merge) Update from Source Branch'
+    )
+  );
+});
+
+test('showBranchActions exposes update from source for non-current branches with a valid source even when already up to date', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.quickPickSelector = (items) =>
+    items.find((item) => item.actionId === 'updateBranchFromSource');
+
+  createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.showBranchActions']({
+    nodeType: 'branch',
+    contextValue: 'branch',
+    branchName: 'feature/demo-child',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'feature/demo-child',
+      isCurrent: false,
+      scope: 'local',
+      createdFromRef: 'refs/heads/feature/demo-source',
+      createdFromDisplayName: 'feature/demo-source',
+      sourceBehindCount: 0,
+      sourceRefMissing: false,
+    },
+  });
+
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(git-merge) Update from Source Branch'
+    )
+  );
+});
+
+test('showBranchActions exposes update from source for local branches even without recorded source metadata', async () => {
+  const vscodeState = createVscodeState();
+  createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.showBranchActions']({
+    nodeType: 'branch',
+    contextValue: 'branch',
+    branchName: 'feature/no-source',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'feature/no-source',
+      isCurrent: false,
+      scope: 'local',
+    },
+  });
+
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(git-merge) Update from Source Branch'
+    )
+  );
 });
 
 test('showBranchActions exposes single-branch pull for tracked local branches', async () => {
