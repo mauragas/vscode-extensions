@@ -852,16 +852,51 @@ function resolveSameTipSourceAnchor(
   );
 
   if (sourceAnchorBranchNames.length !== 1) {
-    return undefined;
+    return resolveUniqueSameTipPeerSourceRef(branchName, sameTipBranchNames, configuredCreatedFromByBranch);
   }
 
   const [sourceAnchorBranchName] = sourceAnchorBranchNames;
   if (!sourceAnchorBranchName || sourceAnchorBranchName === branchName) {
-    return undefined;
+    return resolveUniqueSameTipPeerSourceRef(branchName, sameTipBranchNames, configuredCreatedFromByBranch);
   }
 
   return {
     sourceRef: buildLocalBranchRef(sourceAnchorBranchName),
+    kind: 'sameTipAnchor',
+  };
+}
+
+function resolveUniqueSameTipPeerSourceRef(
+  branchName: string,
+  sameTipBranchNames: readonly string[],
+  configuredCreatedFromByBranch: ReadonlyMap<string, CreatedFromResolution | undefined>
+): CreatedFromResolution | undefined {
+  const uniquePeerSourceRefs = new Set<string>();
+
+  for (const candidateBranchName of sameTipBranchNames) {
+    if (candidateBranchName === branchName) {
+      continue;
+    }
+
+    const createdFromResolution = configuredCreatedFromByBranch.get(candidateBranchName);
+    if (!createdFromResolution || createdFromResolution.kind === 'mergeBase') {
+      continue;
+    }
+
+    uniquePeerSourceRefs.add(createdFromResolution.sourceRef);
+  }
+
+  if (uniquePeerSourceRefs.size !== 1) {
+    return undefined;
+  }
+
+  const [sourceRef] = [...uniquePeerSourceRefs];
+  if (!sourceRef) {
+    return undefined;
+  }
+
+  return {
+    sourceRef,
     kind: 'sameTipAnchor',
   };
 }
