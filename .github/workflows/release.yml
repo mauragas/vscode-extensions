@@ -29,6 +29,7 @@ jobs:
         id: version
         run: |
           VERSION=$(node -p "require('./extensions/git-branches-panel/package.json').version")
+          RELEASE_TAG="$VERSION"
 
           if [[ -z "$VERSION" ]]; then
             echo "Extension version is empty." >&2
@@ -36,11 +37,14 @@ jobs:
           fi
 
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "release_tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
 
-          if git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null; then
-            TAG_SHA=$(git rev-list -n 1 "$VERSION")
-            HEAD_SHA=$(git rev-parse HEAD)
+          HEAD_SHA=$(git rev-parse HEAD)
+
+          if git rev-parse -q --verify "refs/tags/$RELEASE_TAG" >/dev/null; then
+            TAG_SHA=$(git rev-list -n 1 "$RELEASE_TAG")
             echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "existing_tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
             if [[ "$TAG_SHA" == "$HEAD_SHA" ]]; then
               echo "tagged_head=true" >> "$GITHUB_OUTPUT"
               echo "should_release=true" >> "$GITHUB_OUTPUT"
@@ -50,6 +54,7 @@ jobs:
             fi
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "existing_tag=" >> "$GITHUB_OUTPUT"
             echo "tagged_head=false" >> "$GITHUB_OUTPUT"
             echo "should_release=true" >> "$GITHUB_OUTPUT"
           fi
@@ -57,7 +62,7 @@ jobs:
       - name: Skip already released version
         if: steps.version.outputs.should_release != 'true'
         run: |
-          echo "Version ${{ steps.version.outputs.version }} already has a tag on an earlier commit; skipping release."
+          echo "Version ${{ steps.version.outputs.version }} already has an existing tag (${{ steps.version.outputs.existing_tag }}); skipping release."
 
       - name: Package .vsix
         if: steps.version.outputs.should_release == 'true'
@@ -77,7 +82,7 @@ jobs:
           NOTES=""
 
           while IFS= read -r line; do
-            if [[ "$line" =~ ^##\ \[$VERSION\] ]]; then
+            if [[ "$line" == "## [$VERSION]"* ]]; then
               FOUND_VERSION=true
               IN_VERSION=true
               continue
@@ -104,18 +109,19 @@ jobs:
       - name: Create Git tag
         if: steps.version.outputs.exists != 'true'
         env:
+          RELEASE_TAG: ${{ steps.version.outputs.release_tag }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "$VERSION" -m "Release $VERSION"
-          git push origin "$VERSION"
+          git tag -a "$RELEASE_TAG" -m "Release $VERSION"
+          git push origin "$RELEASE_TAG"
 
       - name: Create GitHub Release
         if: steps.version.outputs.should_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.version }}
+          tag_name: ${{ steps.version.outputs.release_tag }}
           name: ${{ steps.version.outputs.version }}
           body: ${{ steps.changelog.outputs.notes }}
           files: extensions/git-branches-panel/git-branches-panel-*.vsix
