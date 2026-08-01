@@ -385,6 +385,44 @@ test('getBranches falls back to compatible Git config hints when the recorded so
   assert.equal(fallbackBranch.sourceRefMissing, false);
 });
 
+test('getBranches prefers a unique same-tip source anchor over a generic merge-base fallback', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  await createBranchFromRef(repoRoot, 'bugfix/source-anchor', 'main', {
+    checkout: true,
+    sourceRef: 'refs/heads/main',
+  });
+  commitFile(repoRoot, 'bugfix.txt', 'bugfix\n', 'Advance bugfix source');
+  runGit(repoRoot, ['checkout', 'main']);
+
+  runGit(repoRoot, ['branch', 'test/create-from-bugfix', 'bugfix/source-anchor']);
+  runGit(
+    repoRoot,
+    [
+      'config',
+      'branch.test/create-from-bugfix.github-pr-base-branch',
+      'mauragas#vscode-extensions#bugfix/source-anchor',
+    ]
+  );
+  runGit(
+    repoRoot,
+    ['config', 'branch.test/create-from-bugfix.vscode-merge-base', 'origin/bugfix/source-anchor']
+  );
+
+  runGit(repoRoot, ['branch', 'test/create-from-bugfix-2', 'test/create-from-bugfix']);
+  runGit(
+    repoRoot,
+    ['config', 'branch.test/create-from-bugfix-2.vscode-merge-base', 'origin/main']
+  );
+
+  const branches = await getBranches(repoRoot);
+  const secondChildBranch = branches.find((branch) => branch.name === 'test/create-from-bugfix-2');
+
+  assert.ok(secondChildBranch);
+  assert.equal(secondChildBranch.createdFromRef, 'refs/heads/bugfix/source-anchor');
+  assert.equal(secondChildBranch.createdFromDisplayName, 'bugfix/source-anchor');
+});
+
 test('getBranches reports when the current branch is behind its recorded local source branch', async (t) => {
   const repoRoot = createTempRepository(t);
 
