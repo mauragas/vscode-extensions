@@ -98,6 +98,7 @@ interface BranchRemoteState {
 export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
   const branches = await listRefs(repoRoot, 'refs/heads', 'local');
   const localBranchTipShas = await getLocalBranchTipShas(repoRoot);
+  const localBranchesContainingTipCache = new Map<string, Promise<Set<string>>>();
   const localBranchNames = new Set(branches.map((branch) => normalizeLocalBranchConfigName(branch.name)));
   const createdFromEntries = await readGitConfigEntries(
     repoRoot,
@@ -129,7 +130,7 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
   );
 
   const resolvedCreatedFromByBranch = new Map<string, CreatedFromResolution | undefined>(
-    branches.map((branch) => {
+    await Promise.all(branches.map(async (branch) => {
       const configuredCreatedFrom = configuredCreatedFromByBranch.get(branch.name);
       if (!shouldPreferSameTipSourceAnchor(configuredCreatedFrom)) {
         return [branch.name, configuredCreatedFrom] as const;
@@ -137,13 +138,15 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
 
       return [
         branch.name,
-        resolveSameTipSourceAnchor(
+        await resolvePreferredLocalSourceAnchor(
+          repoRoot,
           branch.name,
           localBranchTipShas,
-          configuredCreatedFromByBranch
+          configuredCreatedFromByBranch,
+          localBranchesContainingTipCache
         ) ?? configuredCreatedFrom,
       ] as const;
-    })
+    }))
   );
 
   const enrichedBranches: BranchInfo[] = await Promise.all(
@@ -857,6 +860,25 @@ function shouldPreferSameTipSourceAnchor(
   return !createdFromResolution || createdFromResolution.kind === 'mergeBase';
 }
 
+async function resolvePreferredLocalSourceAnchor(
+  repoRoot: string,
+  branchName: string,
+  localBranchTipShas: ReadonlyMap<string, string>,
+  configuredCreatedFromByBranch: ReadonlyMap<string, CreatedFromResolution | undefined>,
+  localBranchesContainingTipCache: Map<string, Promise<Set<string>>>
+): Promise<CreatedFromResolution | undefined> {
+  return (
+    resolveSameTipSourceAnchor(branchName, localBranchTipShas, configuredCreatedFromByBranch) ??
+    resolveContainingBranchSourceAnchor(
+      repoRoot,
+      branchName,
+      localBranchTipShas,
+      configuredCreatedFromByBranch,
+      localBranchesContainingTipCache
+    )
+  );
+}
+
 function resolveSameTipSourceAnchor(
   branchName: string,
   localBranchTipShas: ReadonlyMap<string, string>,
@@ -944,6 +966,94 @@ function resolveUniqueSameTipPeerSourceRef(
     sourceRef,
     kind: 'sameTipAnchor',
   };
+}
+
+async function resolveContainingBranchSourceAnchor(
+  repoRoot: string,
+  branchName: string,
+  localBranchTipShas: ReadonlyMap<string, string>,
+  configuredCreatedFromByBranch: ReadonlyMap<string, CreatedFromResolution | undefined>,
+  localBranchesContainingTipCache: Map<string, Promise<Set<string>>>
+): Promise<CreatedFromResolution | undefined> {
+  const tipSha = localBranchTipShas.get(branchName);
+  if (!tipSha) {
+    return undefined;
+  }
+
+  const containingBranchNames = await getLocalBranchesContainingTip(
+    repoRoot,
+    tipSha,
+    localBranchesContainingTipCache
+  );
+  if (containingBranchNames.size < 2) {
+    return undefined;
+  }
+
+  const candidateSourceRefs = new Set<string>();
+
+  for (const candidateBranchName of containingBranchNames) {
+    if (candidateBranchName === branchName) {
+      continue;
+    }
+
+    const createdFromResolution = configuredCreatedFromByBranch.get(candidateBranchName);
+    if (!createdFromResolution || createdFromResolution.kind === 'mergeBase') {
+      continue;
+    }
+
+    const sourceRef = createdFromResolution.sourceRef;
+    if (!sourceRef.startsWith(LOCAL_BRANCH_REF_PREFIX)) {
+      continue;
+    }
+
+    const sourceBranchName = normalizeLocalBranchConfigName(sourceRef);
+    if (containingBranchNames.has(sourceBranchName)) {
+      candidateSourceRefs.add(sourceRef);
+    }
+  }
+
+  if (candidateSourceRefs.size !== 1) {
+    return undefined;
+  }
+
+  const [sourceRef] = [...candidateSourceRefs];
+  if (!sourceRef) {
+    return undefined;
+  }
+
+  return {
+    sourceRef,
+    kind: 'sameTipAnchor',
+  };
+}
+
+async function getLocalBranchesContainingTip(
+  repoRoot: string,
+  tipSha: string,
+  cache: Map<string, Promise<Set<string>>>
+): Promise<Set<string>> {
+  const cached = cache.get(tipSha);
+  if (cached) {
+    return cached;
+  }
+
+  const loadPromise = runGit(repoRoot, [
+    'for-each-ref',
+    '--format=%(refname:lstrip=2)',
+    '--contains',
+    tipSha,
+    'refs/heads',
+  ]).then(({ stdout }) =>
+    new Set(
+      stdout
+        .split(/\r?\n/u)
+        .map((line) => line.trim())
+        .filter(Boolean)
+    )
+  );
+
+  cache.set(tipSha, loadPromise);
+  return loadPromise;
 }
 
 function getSameTipLocalSourceBranchName(

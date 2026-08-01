@@ -472,6 +472,43 @@ test('getBranches inherits a unique stronger same-tip peer source when the sourc
   assert.equal(secondChildBranch.createdFromDisplayName, 'bugfix/source-anchor');
 });
 
+test('getBranches inherits a unique stronger containing-branch source when the sibling branch has advanced away', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'bugfix/source-anchor']);
+  commitFile(repoRoot, 'bugfix.txt', 'bugfix\n', 'Advance bugfix source');
+
+  runGit(repoRoot, ['branch', 'test/create-from-bugfix']);
+  runGit(
+    repoRoot,
+    [
+      'config',
+      'branch.test/create-from-bugfix.github-pr-base-branch',
+      'mauragas#vscode-extensions#bugfix/source-anchor',
+    ]
+  );
+  runGit(
+    repoRoot,
+    ['config', 'branch.test/create-from-bugfix.vscode-merge-base', 'origin/bugfix/source-anchor']
+  );
+
+  runGit(repoRoot, ['branch', 'test/create-from-bugfix-2', 'test/create-from-bugfix']);
+  runGit(
+    repoRoot,
+    ['config', 'branch.test/create-from-bugfix-2.vscode-merge-base', 'origin/main']
+  );
+
+  runGit(repoRoot, ['checkout', 'test/create-from-bugfix']);
+  commitFile(repoRoot, 'child.txt', 'child branch advanced\n', 'Advance child branch');
+
+  const branches = await getBranches(repoRoot);
+  const secondChildBranch = branches.find((branch) => branch.name === 'test/create-from-bugfix-2');
+
+  assert.ok(secondChildBranch);
+  assert.equal(secondChildBranch.createdFromRef, 'refs/heads/bugfix/source-anchor');
+  assert.equal(secondChildBranch.createdFromDisplayName, 'bugfix/source-anchor');
+});
+
 test('getBranches reports when the current branch is behind its recorded local source branch', async (t) => {
   const repoRoot = createTempRepository(t);
 
