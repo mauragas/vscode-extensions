@@ -98,11 +98,8 @@ export function buildTreeItemPresentation(
   const description = buildTreeItemDescription(node.info, syncStatus);
   const prioritizedLabel = buildTreeItemLabel(
     node.label,
-    node.fullName,
     nodeType,
-    node.info.isCurrent,
-    node.info.isPinned,
-    currentBranchInfo
+    node.info.isCurrent
   );
   const activationCommand = resolveActivationCommand(nodeType, node.info.isCurrent);
 
@@ -481,53 +478,13 @@ function shouldShowSyncStatus(nodeType: NodeType): boolean {
 
 function buildTreeItemLabel(
   label: string,
-  branchName: string,
   nodeType: NodeType,
-  isCurrent: boolean,
-  isPinned: boolean | undefined,
-  currentBranchInfo?: BranchInfo
+  isCurrent: boolean
 ): string {
-  const prefixParts: string[] = [];
-  if (nodeType === 'currentBranch' || (nodeType === 'worktree' && isCurrent) || (nodeType === 'tag' && isCurrent)) {
-    prefixParts.push('●');
-  }
+  const isActiveRef =
+    nodeType === 'currentBranch' || (nodeType === 'worktree' && isCurrent) || (nodeType === 'tag' && isCurrent);
 
-  const prefix = prefixParts.length > 0 ? `${prefixParts.join(' ')} ` : '';
-  const text = `${prefix}${label}`;
-
-  const isRemoteTrackingCurrent =
-    nodeType === 'remoteBranch' &&
-    currentBranchInfo?.scope === 'local' &&
-    currentBranchInfo.upstreamName === branchName;
-
-  const shouldStyleBold =
-    nodeType === 'currentBranch' ||
-    isRemoteTrackingCurrent ||
-    (nodeType === 'worktree' && isCurrent) ||
-    (nodeType === 'tag' && isCurrent);
-
-  if (shouldStyleBold) {
-    return toMathematicalBold(text);
-  }
-
-  return text;
-}
-
-const BOLD_LOWER_A = 0x1D41A;
-const BOLD_UPPER_A = 0x1D400;
-
-function toMathematicalBold(text: string): string {
-  let result = '';
-  for (const ch of text) {
-    if (ch >= 'a' && ch <= 'z') {
-      result += String.fromCodePoint(BOLD_LOWER_A + (ch.codePointAt(0)! - 'a'.codePointAt(0)!));
-    } else if (ch >= 'A' && ch <= 'Z') {
-      result += String.fromCodePoint(BOLD_UPPER_A + (ch.codePointAt(0)! - 'A'.codePointAt(0)!));
-    } else {
-      result += ch;
-    }
-  }
-  return result;
+  return isActiveRef ? `▶ ${label}` : label;
 }
 
 function getItemContextValue(nodeType: NodeType, branch: BranchInfo): string {

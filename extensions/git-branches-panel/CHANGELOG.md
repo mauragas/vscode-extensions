@@ -13,7 +13,7 @@ All notable changes to this project will be documented in this file.
 - Cached remote-tag detection between refreshes and invalidate it after tag or remote mutations, avoiding repeated `git ls-remote --tags` scans when multiple repositories are open.
 - Fixed the multi-repository source-update context so **Update from Source Branch** follows the active repository for global context and only appears on current-branch rows whose context actually carries `:sourceUpdate`.
 - Auto-refresh now unreferences its periodic timer so background refresh scheduling does not keep the extension host or test process alive on shutdown.
-- Removed the unused `gitBranchesPanel.boldFontFamily` setting; bold branch/tag/worktree labels still rely on your normal VS Code `list.fontFamily` support for the Unicode bold glyphs.
+- Current branch/tag/worktree labels now use the normal tree font with a `▶` marker instead of mathematical bold Unicode glyphs so active refs stay cleaner and easier to spot.
 
 ## [2.3.0] - 2026-07-27
 
