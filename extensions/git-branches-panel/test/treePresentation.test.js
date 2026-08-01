@@ -203,6 +203,36 @@ test('buildBranchTooltipContent shows created-from metadata for non-current loca
   assert.match(tooltip, /Upstream: origin\/feature\/test4/);
 });
 
+test('buildTreeItemPresentation treats the current branch upstream as the remote current branch', () => {
+  const remoteTrackingCurrentPresentation = buildTreeItemPresentation(
+    {
+      kind: 'branch',
+      fullName: 'origin/feature/demo',
+      label: 'demo',
+      path: 'origin/feature/demo',
+      info: {
+        name: 'origin/feature/demo',
+        isCurrent: false,
+        scope: 'remote',
+        remoteName: 'origin',
+      },
+    },
+    {
+      name: 'feature/demo',
+      isCurrent: true,
+      scope: 'local',
+      upstreamName: 'origin/feature/demo',
+    }
+  );
+
+  assert.equal(remoteTrackingCurrentPresentation.label, '𝐝𝐞𝐦𝐨');
+  assert.equal(remoteTrackingCurrentPresentation.icon.id, 'cloud');
+  assert.equal(
+    remoteTrackingCurrentPresentation.icon.colorId,
+    'gitDecoration.addedResourceForeground'
+  );
+});
+
 test('buildTreeItemPresentation maps sections, folders, and branch types consistently', () => {
   const inactiveRepositoryPresentation = buildTreeItemPresentation({
     kind: 'repository',

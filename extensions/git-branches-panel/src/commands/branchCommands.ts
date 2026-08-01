@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { join } from 'node:path';
 
 import {
+  canUpdateFromSourceBranch,
   hasSourceBranchUpdate,
   isPublishableBranch,
   type RemoteTrackingState,
@@ -463,7 +464,12 @@ async function handleUpdateBranchFromSource(
     'Could not determine the current branch.',
     repoRoot
   );
-  if (currentBranchInfo?.name !== targetBranchName) {
+  if (
+    !branchesReferToSameLocalBranch(
+      currentBranchInfo?.name,
+      targetBranchName
+    )
+  ) {
     try {
       await checkoutBranch(repoRoot, targetBranchName);
     } catch {
@@ -1330,6 +1336,20 @@ function getLocalBranchIdentityCandidates(branchName: string): string[] {
   return [...candidates].filter(Boolean);
 }
 
+function branchesReferToSameLocalBranch(
+  leftBranchName: string | undefined,
+  rightBranchName: string | undefined
+): boolean {
+  if (!leftBranchName || !rightBranchName) {
+    return false;
+  }
+
+  const rightBranchCandidates = new Set(getLocalBranchIdentityCandidates(rightBranchName));
+  return getLocalBranchIdentityCandidates(leftBranchName).some((candidate) =>
+    rightBranchCandidates.has(candidate)
+  );
+}
+
 function toStoredSourceRef(item: Pick<BranchTreeItem, 'nodeType' | 'branchName'>): string | undefined {
   if (!item.branchName) {
     return undefined;
@@ -1391,7 +1411,7 @@ function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
       )
     );
 
-    if (item.branchInfo && hasSourceBranchUpdate(item.branchInfo)) {
+    if (item.branchInfo && canUpdateFromSourceBranch(item.branchInfo)) {
       items.push(
         createBranchActionItem(
           'updateBranchFromSource',

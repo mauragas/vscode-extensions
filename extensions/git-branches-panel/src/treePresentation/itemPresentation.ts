@@ -98,6 +98,7 @@ export function buildTreeItemPresentation(
   const description = buildTreeItemDescription(node.info, syncStatus);
   const prioritizedLabel = buildTreeItemLabel(
     node.label,
+    node.fullName,
     nodeType,
     node.info.isCurrent,
     node.info.isPinned,
@@ -480,6 +481,7 @@ function shouldShowSyncStatus(nodeType: NodeType): boolean {
 
 function buildTreeItemLabel(
   label: string,
+  branchName: string,
   nodeType: NodeType,
   isCurrent: boolean,
   isPinned: boolean | undefined,
@@ -496,7 +498,7 @@ function buildTreeItemLabel(
   const isRemoteTrackingCurrent =
     nodeType === 'remoteBranch' &&
     currentBranchInfo?.scope === 'local' &&
-    currentBranchInfo.upstreamName === label;
+    currentBranchInfo.upstreamName === branchName;
 
   const shouldStyleBold =
     nodeType === 'currentBranch' ||

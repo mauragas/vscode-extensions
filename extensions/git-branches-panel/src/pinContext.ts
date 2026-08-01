@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { hasSourceBranchUpdate } from './branchModel';
+import { canUpdateFromSourceBranch } from './branchModel';
 import type { BranchTreeItem, NodeType } from './treeItem';
 
 export type BranchViewId = 'gitBranchesPanel' | 'gitBranchesSCM';
@@ -69,7 +69,7 @@ export function isSourceUpdatableItem(
     item?.repoRoot &&
       item.branchInfo &&
       SOURCE_UPDATABLE_NODE_TYPES.has(item.nodeType) &&
-      hasSourceBranchUpdate(item.branchInfo)
+      canUpdateFromSourceBranch(item.branchInfo)
   );
 }
 

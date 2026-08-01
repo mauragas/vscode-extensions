@@ -17,6 +17,7 @@ const test = require('node:test');
 const {
   applyStash,
   addRemote,
+  checkoutBranch,
   cleanRepository,
   cherryPickRef,
   checkoutRemoteBranch,
@@ -217,6 +218,18 @@ test('getTags marks the checked-out tag as current', async (t) => {
 
   assert.ok(checkedOutTag);
   assert.equal(checkedOutTag.isCurrent, true);
+});
+
+test('checkoutBranch clears checked-out tag metadata when leaving detached tag state', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  await checkoutTag(repoRoot, 'v1.0.0');
+  await checkoutBranch(repoRoot, 'main');
+
+  const tags = await getTags(repoRoot);
+  const currentTagNames = tags.filter((tag) => tag.isCurrent).map((tag) => tag.name);
+
+  assert.deepEqual(currentTagNames, []);
 });
 
 test('getTags sets isRemoteTag for tags that exist on remotes', async (t) => {
@@ -443,6 +456,25 @@ test('getBranches reports when the current branch is behind its recorded local s
   assert.equal(childBranch.createdFromDisplayName, 'feature/source');
   assert.equal(childBranch.sourceRefMissing, false);
   assert.equal(childBranch.sourceBehindCount, 1);
+});
+
+test('getBranches does not compute sourceBehindCount for non-current branches with recorded sources', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'feature/source']);
+  await createBranchFromRef(repoRoot, 'feature/child', 'feature/source', {
+    checkout: false,
+    sourceRef: 'refs/heads/feature/source',
+  });
+  commitFile(repoRoot, 'source.txt', 'source\n', 'Advance source branch');
+
+  const branches = await getBranches(repoRoot);
+  const childBranch = branches.find((branch) => branch.name === 'feature/child');
+
+  assert.ok(childBranch);
+  assert.equal(childBranch.createdFromDisplayName, 'feature/source');
+  assert.equal(childBranch.sourceRefMissing, false);
+  assert.equal(childBranch.sourceBehindCount, 0);
 });
 
 test('getBranches reports when the current branch is behind its recorded remote-tracking source branch', async (t) => {

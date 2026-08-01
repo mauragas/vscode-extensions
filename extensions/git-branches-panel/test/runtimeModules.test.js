@@ -551,21 +551,19 @@ test('BranchTreeProvider scopes currentBranchCanUpdateFromSource to the active r
       [
         '/repo-a',
         {
-          name: 'feature/no-update',
+          name: 'feature/no-source',
           isCurrent: true,
           scope: 'local',
-          createdFromRef: 'refs/heads/main',
-          sourceBehindCount: 0,
         },
       ],
       [
         '/repo-b',
         {
-          name: 'feature/update-available',
+          name: 'feature/source-recorded',
           isCurrent: true,
           scope: 'local',
           createdFromRef: 'refs/heads/main',
-          sourceBehindCount: 2,
+          sourceBehindCount: 0,
         },
       ],
     ]),

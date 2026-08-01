@@ -6,6 +6,7 @@ import type { BranchInfo } from '../branchModel';
 import { isTrackedBranch } from '../branchModel';
 import { listRefs } from './refListing';
 import { fetchRemoteState } from './remoteGit';
+import { clearCheckedOutTag } from './tagGit';
 import {
   parseRemoteBranchReference,
   doesRemoteBranchExist,
@@ -172,10 +173,7 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
 
 export async function checkoutBranch(repoRoot: string, branchName: string): Promise<void> {
   await runGit(repoRoot, ['checkout', branchName]);
-  try {
-    await runGit(repoRoot, ['config', '--local', '--unset', 'gitBranchesPanel.checkedOutTag']);
-  } catch {
-  }
+  await clearCheckedOutTag(repoRoot);
 }
 
 export async function createBranch(
@@ -723,6 +721,13 @@ async function resolveSourceBranchState(
     return {
       sourceBehindCount: 0,
       sourceRefMissing: true,
+    };
+  }
+
+  if (!branch.isCurrent) {
+    return {
+      sourceBehindCount: 0,
+      sourceRefMissing: false,
     };
   }
 

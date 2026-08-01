@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import {
+  canUpdateFromSourceBranch,
   type BranchInfo,
   type BranchSortOrder,
   type TagSortOrder,
@@ -446,7 +447,7 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     const activeCurrentBranch = activeRepoRoot ? this.getCurrentBranch(activeRepoRoot) : undefined;
 
     const visibleCurrentBranchCanUpdateFromSource = Boolean(
-      activeCurrentBranch && hasSourceBranchUpdate(activeCurrentBranch)
+      activeCurrentBranch && canUpdateFromSourceBranch(activeCurrentBranch)
     );
 
     const currentBranchNeedsPublish = Boolean(currentBranch && isPublishableBranch(currentBranch));

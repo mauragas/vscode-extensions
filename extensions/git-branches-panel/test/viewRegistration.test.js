@@ -341,7 +341,7 @@ test('registerBranchViews keeps per-view source-update contexts isolated across 
       name: 'feature/demo',
       isCurrent: false,
       createdFromRef: 'refs/heads/main',
-      sourceBehindCount: 2,
+      sourceBehindCount: 0,
       sourceRefMissing: false,
     },
   };

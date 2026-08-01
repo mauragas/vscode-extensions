@@ -18,6 +18,7 @@ export type {
 
 export {
   buildBranchDescription,
+  canUpdateFromSourceBranch,
   formatSourceBranchStatus,
   formatSyncStatus,
   getPublishTargetName,

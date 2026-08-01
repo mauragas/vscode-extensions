@@ -443,8 +443,10 @@ async function handleMergeTagIntoCurrent(
     return;
   }
 
+  const tagDisplayName = item.branchInfo?.name ?? item.branchName;
+
   const confirmation = await vscode.window.showWarningMessage(
-    `Merge tag '${item.branchName}' into current branch '${currentBranch.name}'?`,
+    `Merge tag '${tagDisplayName}' into current branch '${currentBranch.name}'?`,
     { modal: true },
     'Merge'
   );
@@ -455,12 +457,12 @@ async function handleMergeTagIntoCurrent(
   try {
     await mergeBranchIntoCurrent(item.repoRoot, item.branchName);
     await commandContext.showSuccessAndRefresh(
-      `Merged tag '${item.branchName}' into '${currentBranch.name}'.`,
+      `Merged tag '${tagDisplayName}' into '${currentBranch.name}'.`,
       { fetchRemoteState: false }
     );
   } catch (error) {
     commandContext.showCommandError(
-      `Failed to merge tag '${item.branchName}' into '${currentBranch.name}'`,
+      `Failed to merge tag '${tagDisplayName}' into '${currentBranch.name}'`,
       error
     );
   }
