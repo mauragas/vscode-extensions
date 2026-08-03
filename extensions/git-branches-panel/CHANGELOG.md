@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.4.2] - 2026-08-03
+
+- Fixed recreated local branches that are checked out from their own same-name remote-tracking ref so they no longer show misleading source metadata such as `Created from: origin/<branch>` and instead fall back to better preserved hints like `github-pr-base-branch` when available.
+
 ## [2.4.1] - 2026-08-03
 
 - Stopped showing self-referential **Created from** metadata (for example, `main` showing **Created from: main**) when compatible Git config hints point a branch back at itself.

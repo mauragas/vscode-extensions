@@ -354,17 +354,31 @@ function shouldShowCreatedFromTooltip(
     return false;
   }
 
-  return !isSelfReferentialLocalCreatedFromRef(branch);
+  return !isSelfReferentialCreatedFromRef(branch);
 }
 
-function isSelfReferentialLocalCreatedFromRef(
+function isSelfReferentialCreatedFromRef(
   branch: Pick<BranchInfo, 'name' | 'createdFromRef'>
 ): boolean {
-  if (!branch.createdFromRef?.startsWith('refs/heads/')) {
+  if (!branch.createdFromRef) {
     return false;
   }
 
-  return branch.createdFromRef.slice('refs/heads/'.length) === branch.name;
+  if (branch.createdFromRef.startsWith('refs/heads/')) {
+    return branch.createdFromRef.slice('refs/heads/'.length) === branch.name;
+  }
+
+  if (!branch.createdFromRef.startsWith('refs/remotes/')) {
+    return false;
+  }
+
+  const remoteRef = branch.createdFromRef.slice('refs/remotes/'.length);
+  const firstSeparatorIndex = remoteRef.indexOf('/');
+  if (firstSeparatorIndex < 0) {
+    return false;
+  }
+
+  return remoteRef.slice(firstSeparatorIndex + 1) === branch.name;
 }
 
 function getSectionContextValue(node: Extract<BranchTreeNode, { kind: 'section' }>): string {

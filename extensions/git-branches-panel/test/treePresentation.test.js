@@ -223,6 +223,26 @@ test('buildBranchTooltipContent hides self-referential created-from metadata', (
   assert.equal(tooltip.includes('Source status:'), false);
 });
 
+test('buildBranchTooltipContent hides self-referential created-from metadata for same-name remote-tracking refs', () => {
+  const tooltip = buildBranchTooltipContent({
+    kind: 'branch',
+    fullName: 'test/created-from-feature',
+    label: 'created-from-feature',
+    path: 'test/created-from-feature',
+    info: {
+      name: 'test/created-from-feature',
+      isCurrent: true,
+      createdFromRef: 'refs/remotes/origin/test/created-from-feature',
+      createdFromDisplayName: 'origin/test/created-from-feature',
+      sourceBehindCount: 0,
+    },
+  });
+
+  assert.match(tooltip, /_Current branch_/);
+  assert.equal(tooltip.includes('Created from:'), false);
+  assert.equal(tooltip.includes('Source status:'), false);
+});
+
 test('buildTreeItemPresentation treats the current branch upstream as the remote current branch', () => {
   const remoteTrackingCurrentPresentation = buildTreeItemPresentation(
     {

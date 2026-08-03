@@ -772,11 +772,22 @@ function filterSelfReferentialCreatedFromResolution(
 }
 
 function isSelfReferentialCreatedFromRef(branchName: string, sourceRef: string): boolean {
-  if (!sourceRef.startsWith(LOCAL_BRANCH_REF_PREFIX)) {
+  if (sourceRef.startsWith(LOCAL_BRANCH_REF_PREFIX)) {
+    return normalizeLocalBranchConfigName(sourceRef) === normalizeLocalBranchConfigName(branchName);
+  }
+
+  if (!sourceRef.startsWith(REMOTE_BRANCH_REF_PREFIX)) {
     return false;
   }
 
-  return normalizeLocalBranchConfigName(sourceRef) === normalizeLocalBranchConfigName(branchName);
+  const remoteBranchReference = parseRemoteBranchReference(
+    sourceRef.slice(REMOTE_BRANCH_REF_PREFIX.length)
+  );
+  if (!remoteBranchReference) {
+    return false;
+  }
+
+  return normalizeLocalBranchConfigName(remoteBranchReference.branchName) === normalizeLocalBranchConfigName(branchName);
 }
 
 function omitCreatedFromMetadata(branch: BranchInfo): BranchInfo {
@@ -880,7 +891,11 @@ async function resolveConfiguredCreatedFromRef(
       explicitCreatedFromRef,
       sourceMetadataLookup.localBranchNames
     );
-    if (await doesSourceRefExist(repoRoot, normalizedExplicitSourceRef)) {
+    const isExplicitSourceSelfReferential = isSelfReferentialCreatedFromRef(
+      branchName,
+      normalizedExplicitSourceRef
+    );
+    if (!isExplicitSourceSelfReferential && (await doesSourceRefExist(repoRoot, normalizedExplicitSourceRef))) {
       return {
         sourceRef: normalizedExplicitSourceRef,
         kind: 'explicit',
@@ -893,10 +908,16 @@ async function resolveConfiguredCreatedFromRef(
       sourceMetadataLookup,
       reflogCreatedFromByBranch
     );
-    return fallbackSourceRef ?? {
-      sourceRef: normalizedExplicitSourceRef,
-      kind: 'explicit',
-    };
+    if (fallbackSourceRef) {
+      return fallbackSourceRef;
+    }
+
+    return isExplicitSourceSelfReferential
+      ? undefined
+      : {
+          sourceRef: normalizedExplicitSourceRef,
+          kind: 'explicit',
+        };
   }
 
   return resolveFallbackCreatedFromRef(
@@ -914,7 +935,7 @@ async function resolveFallbackCreatedFromRef(
   reflogCreatedFromByBranch: ReadonlyMap<string, string>
 ): Promise<CreatedFromResolution | undefined> {
   const reflogCreatedFromRef = reflogCreatedFromByBranch.get(branchName);
-  if (reflogCreatedFromRef) {
+  if (reflogCreatedFromRef && !isSelfReferentialCreatedFromRef(branchName, reflogCreatedFromRef)) {
     return {
       sourceRef: reflogCreatedFromRef,
       kind: 'reflog',
@@ -926,7 +947,11 @@ async function resolveFallbackCreatedFromRef(
     sourceMetadataLookup.githubPrBaseEntries,
     sourceMetadataLookup.localBranchNames
   );
-  if (githubPrBaseRef && (await doesSourceRefExist(repoRoot, githubPrBaseRef))) {
+  if (
+    githubPrBaseRef &&
+    !isSelfReferentialCreatedFromRef(branchName, githubPrBaseRef) &&
+    (await doesSourceRefExist(repoRoot, githubPrBaseRef))
+  ) {
     return {
       sourceRef: githubPrBaseRef,
       kind: 'githubPrBase',
@@ -938,7 +963,11 @@ async function resolveFallbackCreatedFromRef(
     sourceMetadataLookup.mergeBaseEntries,
     sourceMetadataLookup.localBranchNames
   );
-  if (mergeBaseRef && (await doesSourceRefExist(repoRoot, mergeBaseRef))) {
+  if (
+    mergeBaseRef &&
+    !isSelfReferentialCreatedFromRef(branchName, mergeBaseRef) &&
+    (await doesSourceRefExist(repoRoot, mergeBaseRef))
+  ) {
     return {
       sourceRef: mergeBaseRef,
       kind: 'mergeBase',

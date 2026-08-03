@@ -566,6 +566,32 @@ test('getBranches refreshes cached reflog source hints after deleting and recrea
   assert.equal(reusedBranch.createdFromDisplayName, 'feature/source-b');
 });
 
+test('getBranches ignores recreated-branch self remote hints and falls back to preserved compatible metadata', async (t) => {
+  const { repoRoot } = createRemoteBackedRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'test/created-from-feature']);
+  runGit(repoRoot, ['push', '-u', 'origin', 'test/created-from-feature']);
+  runGit(repoRoot, ['checkout', 'main']);
+  runGit(repoRoot, ['branch', '-D', 'test/created-from-feature']);
+
+  await checkoutRemoteBranch(repoRoot, 'origin/test/created-from-feature');
+  runGit(
+    repoRoot,
+    ['config', 'branch.test/created-from-feature.github-pr-base-branch', 'mauragas#test#main']
+  );
+  runGit(
+    repoRoot,
+    ['config', 'branch.test/created-from-feature.vscode-merge-base', 'origin/test/created-from-feature']
+  );
+
+  const branches = await getBranches(repoRoot);
+  const recreatedBranch = branches.find((branch) => branch.name === 'test/created-from-feature');
+
+  assert.ok(recreatedBranch);
+  assert.equal(recreatedBranch.createdFromRef, 'refs/heads/main');
+  assert.equal(recreatedBranch.createdFromDisplayName, 'main');
+});
+
 test('getBranches reports when the current branch is behind its recorded local source branch', async (t) => {
   const repoRoot = createTempRepository(t);
 
