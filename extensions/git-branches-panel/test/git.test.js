@@ -592,6 +592,49 @@ test('getBranches ignores recreated-branch self remote hints and falls back to p
   assert.equal(recreatedBranch.createdFromDisplayName, 'main');
 });
 
+test('getBranches collapses weak same-tip peer hints to a unique root base after reverse remote recreation order', async (t) => {
+  const { repoRoot } = createRemoteBackedRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'test/created-from-feature']);
+  runGit(repoRoot, ['push', '-u', 'origin', 'test/created-from-feature']);
+  runGit(repoRoot, ['checkout', '-b', 'test/created-from-feature-2']);
+  runGit(repoRoot, ['push', '-u', 'origin', 'test/created-from-feature-2']);
+  runGit(repoRoot, ['checkout', 'main']);
+  runGit(repoRoot, ['branch', '-D', 'test/created-from-feature', 'test/created-from-feature-2']);
+
+  await checkoutRemoteBranch(repoRoot, 'origin/test/created-from-feature-2');
+  runGit(repoRoot, ['checkout', 'main']);
+  await checkoutRemoteBranch(repoRoot, 'origin/test/created-from-feature');
+
+  runGit(
+    repoRoot,
+    ['config', 'branch.test/created-from-feature.github-pr-base-branch', 'mauragas#test#test/created-from-feature-2']
+  );
+  runGit(
+    repoRoot,
+    ['config', 'branch.test/created-from-feature.vscode-merge-base', 'origin/test/created-from-feature']
+  );
+  runGit(
+    repoRoot,
+    ['config', 'branch.test/created-from-feature-2.github-pr-base-branch', 'mauragas#test#main']
+  );
+  runGit(
+    repoRoot,
+    ['config', 'branch.test/created-from-feature-2.vscode-merge-base', 'origin/test/created-from-feature-2']
+  );
+
+  const branches = await getBranches(repoRoot);
+  const recreatedBranch = branches.find((branch) => branch.name === 'test/created-from-feature');
+  const recreatedChildBranch = branches.find((branch) => branch.name === 'test/created-from-feature-2');
+
+  assert.ok(recreatedBranch);
+  assert.ok(recreatedChildBranch);
+  assert.equal(recreatedBranch.createdFromRef, 'refs/heads/main');
+  assert.equal(recreatedBranch.createdFromDisplayName, 'main');
+  assert.equal(recreatedChildBranch.createdFromRef, 'refs/heads/main');
+  assert.equal(recreatedChildBranch.createdFromDisplayName, 'main');
+});
+
 test('getBranches reports when the current branch is behind its recorded local source branch', async (t) => {
   const repoRoot = createTempRepository(t);
 

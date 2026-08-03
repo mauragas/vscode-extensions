@@ -31,6 +31,7 @@ const REFLOG_RECORD_SEPARATOR = LOCAL_BRANCH_TIP_SHA_RECORD_SEPARATOR;
 const REFLOG_HINT_CACHE_TTL_MS = 30_000;
 const REF_PREFIX = 'refs/';
 const REMOTE_BRANCH_REF_PREFIX = 'refs/remotes/';
+const PREFERRED_BASE_BRANCH_NAMES = ['main', 'master', 'develop', 'trunk'] as const;
 const VSCODE_MERGE_BASE_CONFIG_KEY_SUFFIX = 'vscode-merge-base';
 
 const reflogHintCache = new Map<string, {
@@ -43,7 +44,13 @@ const reflogHintLoads = new Map<string, {
   loadPromise: Promise<ReadonlyMap<string, string>>;
 }>();
 
-type CreatedFromResolutionKind = 'explicit' | 'reflog' | 'githubPrBase' | 'mergeBase' | 'sameTipAnchor';
+type CreatedFromResolutionKind =
+  | 'explicit'
+  | 'reflog'
+  | 'githubPrBase'
+  | 'mergeBase'
+  | 'sameTipAnchor'
+  | 'sameTipRootBase';
 
 interface CreatedFromResolution {
   sourceRef: string;
@@ -138,20 +145,23 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
     localBranchTipShas
   );
 
-  const configuredCreatedFromByBranch = new Map<string, CreatedFromResolution | undefined>(
-    await Promise.all(
-      branches.map(async (branch) => [
-        branch.name,
-        filterSelfReferentialCreatedFromResolution(
+  const configuredCreatedFromByBranch = normalizeWeakSameTipSourceRoots(
+    localBranchTipShas,
+    new Map<string, CreatedFromResolution | undefined>(
+      await Promise.all(
+        branches.map(async (branch) => [
           branch.name,
-          await resolveConfiguredCreatedFromRef(
-            repoRoot,
+          filterSelfReferentialCreatedFromResolution(
             branch.name,
-            sourceMetadataLookup,
-            reflogCreatedFromByBranch
-          )
-        ),
-      ] as const)
+            await resolveConfiguredCreatedFromRef(
+              repoRoot,
+              branch.name,
+              sourceMetadataLookup,
+              reflogCreatedFromByBranch
+            )
+          ),
+        ] as const)
+      )
     )
   );
 
@@ -1200,6 +1210,152 @@ function shouldPreferSameTipSourceAnchor(
   createdFromResolution: CreatedFromResolution | undefined
 ): boolean {
   return !createdFromResolution || createdFromResolution.kind === 'mergeBase';
+}
+
+function normalizeWeakSameTipSourceRoots(
+  localBranchTipShas: ReadonlyMap<string, string>,
+  configuredCreatedFromByBranch: ReadonlyMap<string, CreatedFromResolution | undefined>
+): ReadonlyMap<string, CreatedFromResolution | undefined> {
+  const normalizedCreatedFromByBranch = new Map(configuredCreatedFromByBranch);
+
+  for (const [branchName, createdFromResolution] of configuredCreatedFromByBranch.entries()) {
+    if (!createdFromResolution || !isWeakCompatibleCreatedFromResolution(createdFromResolution)) {
+      continue;
+    }
+
+    const sameTipRootBaseResolution = resolveUniqueSameTipRootBase(
+      branchName,
+      localBranchTipShas,
+      configuredCreatedFromByBranch
+    );
+    if (sameTipRootBaseResolution) {
+      normalizedCreatedFromByBranch.set(branchName, sameTipRootBaseResolution);
+    }
+  }
+
+  return normalizedCreatedFromByBranch;
+}
+
+function isWeakCompatibleCreatedFromResolution(
+  createdFromResolution: CreatedFromResolution
+): boolean {
+  return createdFromResolution.kind === 'githubPrBase' || createdFromResolution.kind === 'mergeBase';
+}
+
+function resolveUniqueSameTipRootBase(
+  branchName: string,
+  localBranchTipShas: ReadonlyMap<string, string>,
+  configuredCreatedFromByBranch: ReadonlyMap<string, CreatedFromResolution | undefined>
+): CreatedFromResolution | undefined {
+  const sameTipBranchNameSet = getSameTipBranchNameSet(branchName, localBranchTipShas);
+  if (sameTipBranchNameSet.size < 2) {
+    return undefined;
+  }
+
+  const uniqueRootSourceRefs = new Set<string>();
+
+  for (const sameTipBranchName of sameTipBranchNameSet) {
+    const rootSourceRef = resolveSameTipSourceRootRef(
+      sameTipBranchName,
+      sameTipBranchNameSet,
+      configuredCreatedFromByBranch
+    );
+    if (!rootSourceRef) {
+      continue;
+    }
+
+    uniqueRootSourceRefs.add(rootSourceRef);
+    if (uniqueRootSourceRefs.size > 1) {
+      return undefined;
+    }
+  }
+
+  if (uniqueRootSourceRefs.size !== 1) {
+    return undefined;
+  }
+
+  const [rootSourceRef] = [...uniqueRootSourceRefs];
+  if (!rootSourceRef || isSelfReferentialCreatedFromRef(branchName, rootSourceRef)) {
+    return undefined;
+  }
+
+  return {
+    sourceRef: rootSourceRef,
+    kind: 'sameTipRootBase',
+  };
+}
+
+function resolveSameTipSourceRootRef(
+  branchName: string,
+  sameTipBranchNameSet: ReadonlySet<string>,
+  configuredCreatedFromByBranch: ReadonlyMap<string, CreatedFromResolution | undefined>
+): string | undefined {
+  const preferredBaseBranchName = getPreferredSameTipBaseBranchName(sameTipBranchNameSet);
+  if (preferredBaseBranchName && branchName === preferredBaseBranchName) {
+    return buildLocalBranchRef(preferredBaseBranchName);
+  }
+
+  const visitedBranchNames = new Set<string>();
+  let currentBranchName = branchName;
+  let currentResolution = configuredCreatedFromByBranch.get(currentBranchName);
+
+  while (true) {
+    if (!currentResolution) {
+      return buildLocalBranchRef(currentBranchName);
+    }
+
+    const sameTipSourceBranchName = getSameTipLocalSourceBranchName(
+      currentResolution.sourceRef,
+      sameTipBranchNameSet
+    );
+    if (!sameTipSourceBranchName) {
+      return currentResolution.sourceRef;
+    }
+
+    if (preferredBaseBranchName && sameTipSourceBranchName === preferredBaseBranchName) {
+      return buildLocalBranchRef(preferredBaseBranchName);
+    }
+
+    if (visitedBranchNames.has(sameTipSourceBranchName)) {
+      return undefined;
+    }
+
+    visitedBranchNames.add(sameTipSourceBranchName);
+    currentBranchName = sameTipSourceBranchName;
+    currentResolution = configuredCreatedFromByBranch.get(currentBranchName);
+  }
+}
+
+function getPreferredSameTipBaseBranchName(
+  sameTipBranchNameSet: ReadonlySet<string>
+): string | undefined {
+  for (const preferredBaseBranchName of PREFERRED_BASE_BRANCH_NAMES) {
+    if (sameTipBranchNameSet.has(preferredBaseBranchName)) {
+      return preferredBaseBranchName;
+    }
+  }
+
+  const simpleBranchNames = [...sameTipBranchNameSet].filter(
+    (candidateBranchName) => !candidateBranchName.includes('/')
+  );
+
+  return simpleBranchNames.length === 1 ? simpleBranchNames[0] : undefined;
+}
+
+function getSameTipBranchNameSet(
+  branchName: string,
+  localBranchTipShas: ReadonlyMap<string, string>
+): ReadonlySet<string> {
+  const tipSha = localBranchTipShas.get(branchName);
+  if (!tipSha) {
+    return new Set();
+  }
+
+  return new Set(
+    [...localBranchTipShas.entries()]
+      .filter(([, candidateTipSha]) => candidateTipSha === tipSha)
+      .map(([candidateBranchName]) => candidateBranchName)
+  );
 }
 
 async function resolvePreferredLocalSourceAnchor(
