@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { join } from 'node:path';
 
 import {
+  canUpdateFromSourceBranch,
   getCreatedFromReferenceDescription,
   getUpdateFromSourceActionLabel,
   isPublishableBranch,
@@ -87,6 +88,8 @@ const REMOTE_HOSTING_COMPARE_BASE_SETTING = 'remoteHosting.compareBase';
 const REMOTE_HOSTING_CUSTOM_PROVIDERS_SETTING = 'remoteHosting.customProviders';
 const DISCARD_CHANGES_AND_SWITCH_ACTION = 'Discard local changes and switch';
 const LOCAL_BRANCH_REF_PREFIX = 'refs/heads/';
+
+type BranchSelectionViewId = 'gitBranchesPanel' | 'gitBranchesSCM';
 
 type RemoteBranchTrackingState = RemoteTrackingState;
 type RemoteBranchDeleteFailureKind =
@@ -212,6 +215,12 @@ export function registerBranchDomainCommands(
     vscode.commands.registerCommand('gitBranchesPanel.renameBranch', async (item: BranchTreeItem) => {
       await handleRenameBranch(item, commandContext);
     }),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.renameSelectedBranch',
+      async (viewId?: BranchSelectionViewId) => {
+        await handleRenameSelectedBranch(viewId, commandContext);
+      }
+    ),
     vscode.commands.registerCommand('gitBranchesPanel.copyBranchName', async (item: BranchTreeItem) => {
       await handleCopyBranchName(item);
     }),
@@ -448,7 +457,7 @@ async function handleUpdateBranchFromSource(
 ): Promise<void> {
   if (!item?.branchName || !item.repoRoot) {
     vscode.window.showInformationMessage(
-      'Choose a local branch you want to update from its source branch or inferred base.'
+      'Choose a local branch you want to update from its known source branch.'
     );
     return;
   }
@@ -457,12 +466,19 @@ async function handleUpdateBranchFromSource(
   const repoRoot = item.repoRoot;
   if (!targetBranchName || !repoRoot) {
     vscode.window.showInformationMessage(
-      'Choose a local branch you want to update from its source branch or inferred base.'
+      'Choose a local branch you want to update from its known source branch.'
     );
     return;
   }
 
   const branchInfo = item.branchInfo;
+  if (branchInfo?.createdFromRef && branchInfo.createdFromDisplayKind === 'inferred') {
+    vscode.window.showInformationMessage(
+      `Branch '${targetBranchName}' does not have a known source branch. Only branches with an exact known source branch can use Update from Source Branch.`
+    );
+    return;
+  }
+
   const sourceRef = branchInfo?.createdFromRef;
   if (!sourceRef) {
     vscode.window.showInformationMessage(
@@ -496,6 +512,13 @@ async function handleUpdateBranchFromSource(
     }
 
     const resolvedTargetBranchName = latestBranchInfo.name;
+    if (latestBranchInfo.createdFromDisplayKind === 'inferred') {
+      vscode.window.showInformationMessage(
+        `Branch '${targetBranchName}' does not have a known source branch. Only branches with an exact known source branch can use Update from Source Branch.`
+      );
+      return;
+    }
+
     const sourceReferenceDescription = getCreatedFromReferenceDescription(latestBranchInfo);
     const sourceReferenceDescriptionLabel = `${sourceReferenceDescription[0].toUpperCase()}${sourceReferenceDescription.slice(1)}`;
 
@@ -777,6 +800,10 @@ async function handleRenameBranch(
   item: BranchTreeItem,
   commandContext: CommandContext
 ): Promise<void> {
+  if (!canRenameLocalBranchItem(item)) {
+    return;
+  }
+
   if (!item.branchName || !item.repoRoot) {
     return;
   }
@@ -798,6 +825,18 @@ async function handleRenameBranch(
   } catch (error) {
     commandContext.showCommandError(`Failed to rename '${item.branchName}'`, error);
   }
+}
+
+async function handleRenameSelectedBranch(
+  viewId: BranchSelectionViewId | undefined,
+  commandContext: CommandContext
+): Promise<void> {
+  const selectedItem = commandContext.provider.getSelectedItem(viewId);
+  if (!selectedItem || !canRenameLocalBranchItem(selectedItem)) {
+    return;
+  }
+
+  await handleRenameBranch(selectedItem, commandContext);
 }
 
 async function handleCopyBranchName(item: BranchTreeItem): Promise<void> {
@@ -1390,14 +1429,18 @@ function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
     );
 
     if (
-      item.nodeType === 'branch' ||
-      item.nodeType === 'currentBranch' ||
-      item.nodeType === 'missingUpstreamBranch'
+      (
+        item.nodeType === 'branch' ||
+        item.nodeType === 'currentBranch' ||
+        item.nodeType === 'missingUpstreamBranch'
+      ) &&
+      item.branchInfo &&
+      canUpdateFromSourceBranch(item.branchInfo)
     ) {
       items.push(
         createBranchActionItem(
           'updateBranchFromSource',
-          `$(git-merge) ${getUpdateFromSourceActionLabel(item.branchInfo ?? {})}`,
+          `$(git-merge) ${getUpdateFromSourceActionLabel(item.branchInfo)}`,
           async () => {
             await vscode.commands.executeCommand('gitBranchesPanel.updateBranchFromSource', item);
           }
@@ -1632,6 +1675,16 @@ function hasOutgoingBranchChanges(
   }
 
   return /(^|:)ahead$/u.test(item.contextValue ?? '');
+}
+
+function canRenameLocalBranchItem(
+  item: Pick<BranchTreeItem, 'nodeType'>
+): boolean {
+  return (
+    item.nodeType === 'branch' ||
+    item.nodeType === 'currentBranch' ||
+    item.nodeType === 'missingUpstreamBranch'
+  );
 }
 
 function canCreateWorktreeFromItem(item: BranchTreeItem): boolean {

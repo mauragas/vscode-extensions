@@ -2,9 +2,11 @@ import * as vscode from 'vscode';
 
 import { buildCurrentBranchMessage } from './extensionHelpers';
 import {
+  syncSelectedItemCanRenameBranchContexts,
   syncSelectedItemCanUpdateFromSourceContexts,
   syncSelectedItemPinnedContexts,
   type BranchViewId,
+  updateSelectedItemCanRenameBranchContext,
   updateSelectedItemCanUpdateFromSourceContext,
   updateSelectedItemPinnedContext,
 } from './pinContext';
@@ -23,11 +25,12 @@ export function registerBranchViews(
     createBranchTreeView('gitBranchesPanel', provider),
     createBranchTreeView('gitBranchesSCM', provider),
   ] as const;
-  provider.registerTreeViews(treeViews.map(({ treeView }) => treeView));
+  provider.registerTreeViews(treeViews);
   const selectionSubscriptions = treeViews.map(({ viewId, treeView }) =>
     treeView.onDidChangeSelection(({ selection }) => {
       void updateSelectedItemPinnedContext(viewId, selection[0]);
       void updateSelectedItemCanUpdateFromSourceContext(viewId, selection[0]);
+      void updateSelectedItemCanRenameBranchContext(viewId, selection[0]);
       void provider.setActiveRepositoryFromItem(selection[0]);
     })
   );
@@ -35,6 +38,7 @@ export function registerBranchViews(
   updateTreeViewMessages(treeViews.map(({ treeView }) => treeView), provider);
   void syncSelectedItemPinnedContexts(treeViews);
   void syncSelectedItemCanUpdateFromSourceContexts(treeViews);
+  void syncSelectedItemCanRenameBranchContexts(treeViews);
   void provider.syncActiveRepositoryToEditorIfEnabled();
 
   context.subscriptions.push(
@@ -47,6 +51,7 @@ export function registerBranchViews(
       updateTreeViewMessages(treeViews.map(({ treeView }) => treeView), provider);
       void syncSelectedItemPinnedContexts(treeViews);
       void syncSelectedItemCanUpdateFromSourceContexts(treeViews);
+      void syncSelectedItemCanRenameBranchContexts(treeViews);
     })
   );
 }

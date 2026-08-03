@@ -375,6 +375,27 @@ test('getBranches ignores self-referential compatible source hints on existing b
   assert.equal(mainBranch.sourceRefMissing, undefined);
 });
 
+test('getBranches clears weak same-tip inferred ancestry from the preferred base branch', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['branch', 'test/created-from-feature']);
+  runGit(repoRoot, ['branch', 'test/created-from-feature-2']);
+  runGit(repoRoot, ['config', 'branch.main.github-pr-base-branch', 'mauragas#test#test/created-from-feature']);
+  runGit(repoRoot, ['config', 'branch.test/created-from-feature.github-pr-base-branch', 'mauragas#test#test/created-from-feature-2']);
+  runGit(repoRoot, ['config', 'branch.test/created-from-feature-2.github-pr-base-branch', 'mauragas#test#main']);
+  runGit(repoRoot, ['config', 'branch.main.vscode-merge-base', 'origin/main']);
+  runGit(repoRoot, ['config', 'branch.test/created-from-feature.vscode-merge-base', 'origin/test/created-from-feature']);
+  runGit(repoRoot, ['config', 'branch.test/created-from-feature-2.vscode-merge-base', 'origin/test/created-from-feature-2']);
+
+  const branches = await getBranches(repoRoot);
+  const mainBranch = branches.find((branch) => branch.name === 'main');
+
+  assert.ok(mainBranch);
+  assert.equal(mainBranch.createdFromRef, undefined);
+  assert.equal(mainBranch.createdFromDisplayName, undefined);
+  assert.equal(mainBranch.createdFromDisplayKind, undefined);
+});
+
 test('getBranches normalizes legacy tag-created source metadata that was stored as refs/heads/<tag>', async (t) => {
   const repoRoot = createTempRepository(t);
 

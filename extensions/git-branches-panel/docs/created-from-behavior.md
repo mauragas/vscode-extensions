@@ -315,6 +315,28 @@ Possible source-status results:
 
 Non-current branches still keep `Created from`, but they do not calculate a live behind-count against the source branch by default.
 
+### When **Update from Source Branch** is available
+
+The branch action **Update from Source Branch** is intentionally stricter than the tooltip.
+
+It is shown only when the extension has an **exact known source branch**, not just an inferred base.
+
+That means:
+
+- shown for explicit extension metadata
+- shown for strong reflog-derived creation history
+- hidden for weak inferred ancestry such as:
+  - `github-pr-base-branch`
+  - `vscode-merge-base`
+  - same-tip root/base collapse
+  - same-tip anchor heuristics
+
+Why:
+
+- merging from an exact known source branch is a concrete branch operation
+- merging from an inferred base could be misleading when the original branch ancestry is ambiguous
+- row-level branch menus also use row-specific `:sourceUpdate` context, so a selected branch with an exact source will not accidentally make the action appear on a different ambiguous row
+
 ## Scenario 1: Branch created by the extension from a local branch
 
 This is the cleanest case.
@@ -475,6 +497,7 @@ Result:
 
 - `test/created-from-feature` shows `Inferred base: main`
 - `test/created-from-feature-2` shows `Inferred base: main`
+- `main` itself does not show `Inferred base: ...`
 
 Why:
 

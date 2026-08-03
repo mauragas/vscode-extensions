@@ -396,6 +396,93 @@ test('registerBranchViews keeps per-view source-update contexts isolated across 
   );
 });
 
+test('registerBranchViews keeps per-view rename-branch contexts isolated across both tree views', () => {
+  const treeViews = [];
+  const listeners = [];
+  const vscodeState = createVscodeState();
+  const { registerBranchViews } = loadFresh('../out/viewRegistration.js', {
+    vscode: createVscodeMock(false, treeViews, vscodeState),
+  }, ['../out/pinContext.js']);
+
+  const provider = {
+    getCurrentBranch: () => undefined,
+    getActiveRepositoryLabel: () => undefined,
+    getFilterSummary: () => '',
+    hasActiveFilter: () => false,
+    hasVisibleResults: () => true,
+    registerTreeViews: () => {},
+    setActiveRepositoryFromItem: async () => {},
+    syncActiveRepositoryToEditorIfEnabled: async () => {},
+    onDidChangeTreeData: (listener) => {
+      listeners.push(listener);
+      return { dispose() {} };
+    },
+  };
+
+  registerBranchViews({ subscriptions: [] }, provider);
+
+  const renameableBranch = {
+    nodeType: 'branch',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'feature/demo',
+      isCurrent: false,
+      scope: 'local',
+    },
+  };
+  const remoteBranch = {
+    nodeType: 'remoteBranch',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'origin/feature/demo',
+      isCurrent: false,
+      scope: 'remote',
+      remoteName: 'origin',
+    },
+  };
+
+  treeViews[0].fireSelection([renameableBranch]);
+  treeViews[1].fireSelection([remoteBranch]);
+  listeners[0]();
+  treeViews[0].fireSelection([]);
+
+  assert.deepEqual(
+    vscodeState.executedCommands.filter(
+      ({ args }) => typeof args?.[0] === 'string' && args[0].includes('CanRenameBranch')
+    ),
+    [
+      {
+        command: 'setContext',
+        args: ['gitBranchesPanel.branchesViewSelectedItemCanRenameBranch', false],
+      },
+      {
+        command: 'setContext',
+        args: ['gitBranchesPanel.scmViewSelectedItemCanRenameBranch', false],
+      },
+      {
+        command: 'setContext',
+        args: ['gitBranchesPanel.branchesViewSelectedItemCanRenameBranch', true],
+      },
+      {
+        command: 'setContext',
+        args: ['gitBranchesPanel.scmViewSelectedItemCanRenameBranch', false],
+      },
+      {
+        command: 'setContext',
+        args: ['gitBranchesPanel.branchesViewSelectedItemCanRenameBranch', true],
+      },
+      {
+        command: 'setContext',
+        args: ['gitBranchesPanel.scmViewSelectedItemCanRenameBranch', false],
+      },
+      {
+        command: 'setContext',
+        args: ['gitBranchesPanel.branchesViewSelectedItemCanRenameBranch', false],
+      },
+    ]
+  );
+});
+
 test('registerBranchViews shows filter status and a no-results hint when filtering hides every ref', () => {
   const treeViews = [];
   const listeners = [];

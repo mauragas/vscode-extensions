@@ -135,6 +135,8 @@ function createCommandContext() {
       isCurrent: true,
       scope: 'local',
     },
+    selectedItemsByViewId: new Map(),
+    selectedItemRequests: [],
     loadingTitles: [],
     refreshCalls: [],
     successRefreshes: [],
@@ -151,6 +153,10 @@ function createCommandContext() {
         },
         getCurrentBranch() {
           return state.currentBranch;
+        },
+        getSelectedItem(viewId) {
+          state.selectedItemRequests.push(viewId);
+          return state.selectedItemsByViewId.get(viewId);
         },
         async revealBranch(repoRoot, branchName, options) {
           state.revealedBranches.push({ repoRoot, branchName, options });
@@ -1426,7 +1432,7 @@ test('updateBranchFromSource explains when the current branch has no source meta
   assert.match(vscodeState.infoMessages[0], /does not have source metadata/i);
 });
 
-test('updateBranchFromSource describes missing inferred bases accurately', async () => {
+test('updateBranchFromSource refuses inferred bases because the source branch is not exactly known', async () => {
   const vscodeState = createVscodeState();
   const mergeCalls = [];
 
@@ -1449,8 +1455,8 @@ test('updateBranchFromSource describes missing inferred bases accurately', async
             createdFromRef: 'refs/heads/main',
             createdFromDisplayName: 'main',
             createdFromDisplayKind: 'inferred',
-            sourceBehindCount: 0,
-            sourceRefMissing: true,
+            sourceBehindCount: 2,
+            sourceRefMissing: false,
           },
         ];
       },
@@ -1459,8 +1465,8 @@ test('updateBranchFromSource describes missing inferred bases accurately', async
       },
       async getSourceBranchState() {
         return {
-          sourceBehindCount: 0,
-          sourceRefMissing: true,
+          sourceBehindCount: 2,
+          sourceRefMissing: false,
         };
       },
       async mergeRefIntoBranch(repoRoot, branchName, refName) {
@@ -1505,14 +1511,12 @@ test('updateBranchFromSource describes missing inferred bases accurately', async
   });
 
   assert.deepEqual(mergeCalls, []);
-  assert.match(vscodeState.infoMessages[0], /Inferred base 'main' no longer exists/i);
-  assert.deepEqual(commandContext.state.refreshCalls, [{ fetchRemoteState: false }]);
+  assert.match(vscodeState.infoMessages[0], /does not have a known source branch/i);
+  assert.deepEqual(commandContext.state.refreshCalls, []);
 });
 
-test('showBranchActions labels update-from-source as inferred base when ancestry is heuristic', async () => {
+test('showBranchActions hides update-from-source when ancestry is only inferred', async () => {
   const vscodeState = createVscodeState();
-  vscodeState.quickPickSelector = (items) =>
-    items.find((item) => item.actionId === 'updateBranchFromSource');
 
   createBranchCommandsModule({
     vscodeState,
@@ -1567,10 +1571,11 @@ test('showBranchActions labels update-from-source as inferred base when ancestry
     },
   });
 
-  assert.ok(
+  assert.equal(
     vscodeState.quickPickRequests[0].items.some(
-      (quickPickItem) => quickPickItem.label === '$(git-merge) Update from Inferred Base'
-    )
+      (quickPickItem) => quickPickItem.actionId === 'updateBranchFromSource'
+    ),
+    false
   );
 });
 
@@ -1868,7 +1873,7 @@ test('showBranchActions exposes update from source for non-current branches with
   );
 });
 
-test('showBranchActions exposes update from source for local branches even without recorded source metadata', async () => {
+test('showBranchActions hides update from source for local branches without exact source metadata', async () => {
   const vscodeState = createVscodeState();
   createBranchCommandsModule({
     vscodeState,
@@ -1918,10 +1923,11 @@ test('showBranchActions exposes update from source for local branches even witho
     },
   });
 
-  assert.ok(
+  assert.equal(
     vscodeState.quickPickRequests[0].items.some(
-      (quickPickItem) => quickPickItem.label === '$(git-merge) Update from Source Branch'
-    )
+      (quickPickItem) => quickPickItem.actionId === 'updateBranchFromSource'
+    ),
+    false
   );
 });
 
@@ -2948,6 +2954,143 @@ test('showBranchActions exposes actions for missing upstream branches', async ()
       args: [item],
     },
   ]);
+});
+
+test('renameSelectedBranch renames the selected local branch in the focused tree view', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.inputBoxResponse = 'feature/renamed';
+  const renameBranchCalls = [];
+
+  const { commandContext } = createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch(repoRoot, branchName, newBranchName) {
+        renameBranchCalls.push({ repoRoot, branchName, newBranchName });
+      },
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  commandContext.state.selectedItemsByViewId.set('gitBranchesPanel', {
+    nodeType: 'branch',
+    branchName: 'feature/demo',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'feature/demo',
+      isCurrent: false,
+      scope: 'local',
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.renameSelectedBranch']('gitBranchesPanel');
+
+  assert.deepEqual(commandContext.state.selectedItemRequests, ['gitBranchesPanel']);
+  assert.equal(vscodeState.inputBoxRequests.length, 1);
+  assert.equal(vscodeState.inputBoxRequests[0].prompt, "Rename 'feature/demo' to:");
+  assert.equal(vscodeState.inputBoxRequests[0].value, 'feature/demo');
+  assert.deepEqual(renameBranchCalls, [
+    {
+      repoRoot: '/repo',
+      branchName: 'feature/demo',
+      newBranchName: 'feature/renamed',
+    },
+  ]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: "Renamed branch to 'feature/renamed'.",
+      options: {},
+    },
+  ]);
+});
+
+test('renameSelectedBranch ignores non-local selected items', async () => {
+  const vscodeState = createVscodeState();
+  const renameBranchCalls = [];
+
+  const { commandContext } = createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch(repoRoot, branchName, newBranchName) {
+        renameBranchCalls.push({ repoRoot, branchName, newBranchName });
+      },
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  commandContext.state.selectedItemsByViewId.set('gitBranchesSCM', {
+    nodeType: 'remoteBranch',
+    branchName: 'origin/feature/demo',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'origin/feature/demo',
+      isCurrent: false,
+      scope: 'remote',
+      remoteName: 'origin',
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.renameSelectedBranch']('gitBranchesSCM');
+
+  assert.deepEqual(commandContext.state.selectedItemRequests, ['gitBranchesSCM']);
+  assert.equal(vscodeState.inputBoxRequests.length, 0);
+  assert.deepEqual(renameBranchCalls, []);
+  assert.deepEqual(commandContext.state.successRefreshes, []);
 });
 
 test('checkout prompts to create a new branch when checkout would overwrite local changes', async () => {

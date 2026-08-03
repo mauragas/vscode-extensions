@@ -17,6 +17,12 @@ function hasViewItemMenu(commandId, predicate) {
   );
 }
 
+function getViewItemMenus(commandId) {
+  return packageJson.contributes.menus['view/item/context'].filter(
+    (item) => item.command === commandId
+  );
+}
+
 function hasViewTitleMenu(commandId, predicate = () => true) {
   return packageJson.contributes.menus['view/title'].some(
     (item) => item.command === commandId && predicate(item)
@@ -52,8 +58,14 @@ function getInlineViewItemContextCommands() {
   )];
 }
 
-test('package manifest exposes the 2.4.2 multi-repo, source-update, search, remote-host, history, remote-management, worktree, tag, and advanced-branch contributions', () => {
-  assert.equal(packageJson.version, '2.4.2');
+function getKeybindings(commandId) {
+  return (packageJson.contributes.keybindings ?? []).filter(
+    (keybinding) => keybinding.command === commandId
+  );
+}
+
+test('package manifest exposes the 2.4.3 multi-repo, source-update, search, remote-host, history, remote-management, worktree, tag, and advanced-branch contributions', () => {
+  assert.equal(packageJson.version, '2.4.3');
 
   const expectedCommands = [
     ['gitBranchesPanel.selectRepository', 'Select Active Repository'],
@@ -138,6 +150,28 @@ test('package manifest exposes the 2.4.2 multi-repo, source-update, search, remo
   assert.equal(getCommand('gitBranchesPanel.showAdvancedBranchOperations').icon, '$(tools)');
   assert.equal(getCommand('gitBranchesPanel.resetCurrentToSelected').icon, '$(discard)');
   assert.equal(getCommand('gitBranchesPanel.forcePushWithLease').icon, '$(cloud-upload)');
+
+  const renameSelectedBranchKeybindings = getKeybindings('gitBranchesPanel.renameSelectedBranch');
+  assert.equal(renameSelectedBranchKeybindings.length, 2);
+  assert.deepEqual(
+    renameSelectedBranchKeybindings.map((keybinding) => ({
+      key: keybinding.key,
+      args: keybinding.args,
+      when: keybinding.when,
+    })),
+    [
+      {
+        key: 'f2',
+        args: 'gitBranchesPanel',
+        when: 'listFocus && focusedView == gitBranchesPanel && gitBranchesPanel.branchesViewSelectedItemCanRenameBranch',
+      },
+      {
+        key: 'f2',
+        args: 'gitBranchesSCM',
+        when: 'listFocus && focusedView == gitBranchesSCM && gitBranchesPanel.scmViewSelectedItemCanRenameBranch',
+      },
+    ]
+  );
 
   const settings = packageJson.contributes.configuration.properties;
   assert.equal(settings['gitBranchesPanel.multiRepository.mode'].default, 'auto');
@@ -490,9 +524,33 @@ test('package manifest exposes the 2.4.2 multi-repo, source-update, search, remo
   );
   assert.ok(
     hasViewItemMenu(
+      'gitBranchesPanel.branchActionInProgress',
+      (item) =>
+        item.when === 'viewItem =~ /^(?:pinned:)?(?:busyBranch|busyCurrentBranch|busyPublishableBranch|busyPublishableCurrentBranch|busyMissingUpstreamBranch)(?::sourceUpdate)?$/' &&
+        item.group === 'inline@1'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.newBranchFromSelectedAndCheckout',
+      (item) =>
+        item.when === 'viewItem =~ /^(?:pinned:)?(?:(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)(?::sourceUpdate)?|remoteBranch|staleRemoteBranch|protectedRemoteBranch|protectedStaleRemoteBranch)$/' &&
+        item.group === 'inline@1'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.syncBranch',
+      (item) =>
+        item.when === 'viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?$/' &&
+        item.group === 'inline@2'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
       'gitBranchesPanel.pullBranchChanges',
       (item) =>
-        item.when === 'viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|protectedBranch(?::ahead)?)$/' &&
+        item.when === 'viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?$/' &&
         item.group === 'inline@2.5'
     )
   );
@@ -500,14 +558,60 @@ test('package manifest exposes the 2.4.2 multi-repo, source-update, search, remo
     hasViewItemMenu(
       'gitBranchesPanel.pushBranchChanges',
       (item) =>
-        item.when === 'viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch):ahead$/' &&
+        item.when === 'viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch):ahead(?::sourceUpdate)?$/' &&
         item.group === 'inline@2.6'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.publishBranch',
+      (item) =>
+        item.when === 'viewItem =~ /^(?:pinned:)?(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)(?::sourceUpdate)?$/' &&
+        item.group === 'inline@2'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.checkout',
+      (item) =>
+        item.when === 'viewItem =~ /^(?:pinned:)?(?:(?:branch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|(?:publishableBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)(?::sourceUpdate)?|remoteBranch|staleRemoteBranch|protectedRemoteBranch|protectedStaleRemoteBranch)$/' &&
+        item.group === 'inline@3'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.pinItem',
+      (item) =>
+        item.when === '(view == gitBranchesPanel || view == gitBranchesSCM) && viewItem =~ /^(?:(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)(?::sourceUpdate)?|remoteBranch|staleRemoteBranch|protectedRemoteBranch|protectedStaleRemoteBranch|tag(?::remote)?|stash|(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*)$/' &&
+        item.group === 'inline@4'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.unpinItem',
+      (item) =>
+        item.when === '(view == gitBranchesPanel || view == gitBranchesSCM) && viewItem =~ /^pinned:(?:(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)(?::sourceUpdate)?|remoteBranch|staleRemoteBranch|protectedRemoteBranch|protectedStaleRemoteBranch|tag(?::remote)?|stash|(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*)$/' &&
+        item.group === 'inline@4'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.deleteBranch',
+      (item) =>
+        item.when === 'viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?(?::sourceUpdate)?|publishableBranch(?::sourceUpdate)?|missingUpstreamBranch(?::sourceUpdate)?)$/' &&
+        item.group === 'inline@5'
     )
   );
   assert.ok(
     hasViewItemMenu(
       'gitBranchesPanel.fetchAllPrune',
       (item) => item.when === 'viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' && item.group === 'inline@3'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches',
+      (item) => item.when === 'viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' && item.group === 'inline@3.5'
     )
   );
   assert.ok(
@@ -617,6 +721,12 @@ test('package manifest exposes the 2.4.2 multi-repo, source-update, search, remo
   );
   assert.ok(
     hasViewItemMenu(
+      'gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches',
+      (item) => item.when === 'viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' && item.group === '1_repository@3.5'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
       'gitBranchesPanel.showRepositoryActions',
       (item) =>
         item.when === 'viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/' &&
@@ -625,10 +735,46 @@ test('package manifest exposes the 2.4.2 multi-repo, source-update, search, remo
   );
   assert.ok(
     hasViewItemMenu(
+      'gitBranchesPanel.openBranchOnRemote',
+      (item) =>
+        item.when ===
+          'viewItem =~ /^(?:pinned:)?(?:(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|remoteBranch|protectedRemoteBranch)$/' &&
+        item.group === '1_remoteHosting@1'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.compareWithUpstream',
+      (item) =>
+        item.when ===
+          'viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?$/' &&
+        item.group === '1_history@1'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.showBranchCommits',
+      (item) =>
+        item.when ===
+          'viewItem =~ /^(?:pinned:)?(?:(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)(?::sourceUpdate)?|remoteBranch|staleRemoteBranch|protectedRemoteBranch|protectedStaleRemoteBranch)$/' &&
+        item.group === '1_history@2'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.openChangedFilesForRef',
+      (item) =>
+        item.when ===
+          'viewItem =~ /^(?:pinned:)?(?:(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)(?::sourceUpdate)?|remoteBranch|staleRemoteBranch|protectedRemoteBranch|protectedStaleRemoteBranch)$/' &&
+        item.group === '1_history@3'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
       'gitBranchesPanel.rebaseCurrentOntoSelected',
       (item) =>
         item.when ===
-          'config.gitBranchesPanel.branchContextMenu.showRebaseCurrentOntoSelected && viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/' &&
+          'config.gitBranchesPanel.branchContextMenu.showRebaseCurrentOntoSelected && viewItem =~ /^(?:pinned:)?(?:(?:branch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|(?:publishableBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)(?::sourceUpdate)?|remoteBranch|staleRemoteBranch|protectedRemoteBranch|protectedStaleRemoteBranch)$/' &&
         item.group === '2_advanced@1'
     )
   );
@@ -637,7 +783,7 @@ test('package manifest exposes the 2.4.2 multi-repo, source-update, search, remo
       'gitBranchesPanel.rebaseSelectedOntoCurrent',
       (item) =>
         item.when ===
-          'config.gitBranchesPanel.branchContextMenu.showRebaseSelectedOntoCurrent && viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|publishableBranch|missingUpstreamBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedMissingUpstreamBranch)$/' &&
+          'config.gitBranchesPanel.branchContextMenu.showRebaseSelectedOntoCurrent && viewItem =~ /^(?:pinned:)?(?:(?:branch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|(?:publishableBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)(?::sourceUpdate)?)$/' &&
         item.group === '2_advanced@2'
     )
   );
@@ -646,7 +792,7 @@ test('package manifest exposes the 2.4.2 multi-repo, source-update, search, remo
       'gitBranchesPanel.squashMergeIntoCurrent',
       (item) =>
         item.when ===
-          'config.gitBranchesPanel.branchContextMenu.showSquashMergeIntoCurrent && viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/' &&
+          'config.gitBranchesPanel.branchContextMenu.showSquashMergeIntoCurrent && viewItem =~ /^(?:pinned:)?(?:(?:branch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|(?:publishableBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)(?::sourceUpdate)?|remoteBranch|staleRemoteBranch|protectedRemoteBranch|protectedStaleRemoteBranch)$/' &&
         item.group === '2_advanced@3'
     )
   );
@@ -655,7 +801,7 @@ test('package manifest exposes the 2.4.2 multi-repo, source-update, search, remo
       'gitBranchesPanel.resetCurrentToSelected',
       (item) =>
         item.when ===
-          'config.gitBranchesPanel.branchContextMenu.showResetCurrentToSelected && viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/' &&
+          'config.gitBranchesPanel.branchContextMenu.showResetCurrentToSelected && viewItem =~ /^(?:pinned:)?(?:(?:branch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|(?:publishableBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)(?::sourceUpdate)?|remoteBranch|staleRemoteBranch|protectedRemoteBranch|protectedStaleRemoteBranch)$/' &&
         item.group === '2_advanced@4'
     )
   );
@@ -664,7 +810,7 @@ test('package manifest exposes the 2.4.2 multi-repo, source-update, search, remo
       'gitBranchesPanel.forcePushWithLease',
       (item) =>
         item.when ===
-          'config.gitBranchesPanel.branchContextMenu.showForcePushWithLease && viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|protectedBranch(?::ahead)?)$/' &&
+          'config.gitBranchesPanel.branchContextMenu.showForcePushWithLease && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?$/' &&
         item.group === '2_advanced@5'
     )
   );
@@ -683,13 +829,112 @@ test('package manifest exposes the 2.4.2 multi-repo, source-update, search, remo
   );
   assert.ok(
     hasViewItemMenu(
+      'gitBranchesPanel.showBranchActions',
+      (item) =>
+        item.when ===
+          'viewItem =~ /^(?:pinned:)?(?:(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)(?::sourceUpdate)?|remoteBranch|staleRemoteBranch|protectedRemoteBranch|protectedStaleRemoteBranch)$/' &&
+        item.group === '2_more@1'
+    )
+  );
+  const exactSourceBranchMenuCommands = [
+    ['gitBranchesPanel.openBranchOnRemote', '1_remoteHosting@1'],
+    ['gitBranchesPanel.openComparePage', '1_remoteHosting@2'],
+    ['gitBranchesPanel.createPullRequest', '1_remoteHosting@3'],
+    ['gitBranchesPanel.copyBranchUrl', '1_remoteHosting@4'],
+    ['gitBranchesPanel.copyCompareUrl', '1_remoteHosting@5'],
+    ['gitBranchesPanel.compareWithUpstream', '1_history@1'],
+    ['gitBranchesPanel.showBranchCommits', '1_history@2'],
+    ['gitBranchesPanel.openChangedFilesForRef', '1_history@3'],
+    ['gitBranchesPanel.showBranchActions', '2_more@1'],
+  ];
+  for (const [commandId, group] of exactSourceBranchMenuCommands) {
+    assert.ok(
+      hasViewItemMenu(
+        commandId,
+        (item) =>
+          item.group === group &&
+          item.when.includes('sourceUpdate')
+      ),
+      `${commandId} should stay visible for exact-source branch rows that carry the :sourceUpdate context.`
+    );
+  }
+  assert.ok(
+    hasViewItemMenu(
       'gitBranchesPanel.updateBranchFromSource',
       (item) =>
-        item.when.includes('viewItem =~') &&
-        item.when.includes('branch(?:\\:.+)?') &&
-        item.when.includes('currentBranch') &&
-        item.when.includes('busyBranch') &&
+        item.when ===
+          'viewItem =~ /^(?:pinned:)?(?:branch(?:\\:.+)?|currentBranch(?:\\:.+)?|publishableBranch|publishableCurrentBranch(?:\\:.+)?|missingUpstreamBranch|protectedBranch(?:\\:.+)?|protectedPublishableBranch|protectedMissingUpstreamBranch|busyBranch|busyCurrentBranch|busyPublishableBranch|busyPublishableCurrentBranch|busyMissingUpstreamBranch):sourceUpdate$/' &&
         item.group === '1_branchSource@1'
+    )
+  );
+  const updateBranchFromSourceViewItemMenus = getViewItemMenus(
+    'gitBranchesPanel.updateBranchFromSource'
+  );
+  assert.equal(updateBranchFromSourceViewItemMenus.length, 1);
+  assert.ok(
+    updateBranchFromSourceViewItemMenus.every((item) => item.when.includes(':sourceUpdate')),
+    'Update from Source Branch should only be contributed for rows that carry the :sourceUpdate context.'
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.publishBranch',
+      (item) =>
+        item.when ===
+          'viewItem =~ /^(?:pinned:)?(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch):sourceUpdate$/' &&
+        item.group === '1_branchKnownSource@1'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.checkout',
+      (item) =>
+        item.when ===
+          'viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch):sourceUpdate$/' &&
+        item.group === '1_branchKnownSource@2'
+    )
+  );
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.copyBranchName',
+      (item) =>
+        item.when ===
+          'viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch):sourceUpdate$/' &&
+        item.group === '1_branchKnownSource@8'
+    )
+  );
+  const missingUpstreamKnownSourceCommands = [
+    ['gitBranchesPanel.publishBranch', '1_branchKnownSource@1'],
+    ['gitBranchesPanel.checkout', '1_branchKnownSource@2'],
+    ['gitBranchesPanel.newBranchFromSelected', '1_branchKnownSource@3'],
+    ['gitBranchesPanel.newBranchFromSelectedAndCheckout', '1_branchKnownSource@4'],
+    ['gitBranchesPanel.createWorktreeFromRef', '1_branchKnownSource@5'],
+    ['gitBranchesPanel.renameBranch', '1_branchKnownSource@6'],
+    ['gitBranchesPanel.createTag', '1_branchKnownSource@7'],
+    ['gitBranchesPanel.copyBranchName', '1_branchKnownSource@8'],
+    ['gitBranchesPanel.compareBranchWithCurrent', '1_branchKnownSource@9'],
+    ['gitBranchesPanel.mergeIntoCurrent', '1_branchKnownSource@10'],
+    ['gitBranchesPanel.cherryPickIntoCurrent', '1_branchKnownSource@11'],
+  ];
+  for (const [commandId, group] of missingUpstreamKnownSourceCommands) {
+    assert.ok(
+      hasViewItemMenu(
+        commandId,
+        (item) =>
+          item.group === group &&
+          item.when.includes('missingUpstreamBranch') &&
+          item.when.includes('protectedMissingUpstreamBranch') &&
+          item.when.includes(':sourceUpdate$/')
+      ),
+      `${commandId} should stay available for missing-upstream branches with exact source metadata.`
+    );
+  }
+  assert.ok(
+    hasViewItemMenu(
+      'gitBranchesPanel.deleteBranch',
+      (item) =>
+        item.when ===
+          'viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|missingUpstreamBranch):sourceUpdate$/' &&
+        item.group === '1_branchKnownSource@12'
     )
   );
   assert.ok(
