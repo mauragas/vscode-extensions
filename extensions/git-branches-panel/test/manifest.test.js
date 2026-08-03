@@ -85,6 +85,7 @@ test('package manifest exposes the 2.4.2 multi-repo, source-update, search, remo
     ['gitBranchesPanel.addRemote', 'Add Remote...'],
     ['gitBranchesPanel.fetchRemote', 'Fetch Remote'],
     ['gitBranchesPanel.fetchRemotePrune', 'Fetch Remote (Prune)'],
+    ['gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches', 'Fetch All (Prune) and Prune Missing Upstreams'],
     ['gitBranchesPanel.copyRemoteFetchUrl', 'Copy Fetch URL'],
     ['gitBranchesPanel.copyRemotePushUrl', 'Copy Push URL'],
     ['gitBranchesPanel.openRemoteHomepage', 'Open Remote Homepage'],
@@ -120,6 +121,7 @@ test('package manifest exposes the 2.4.2 multi-repo, source-update, search, remo
   assert.equal(getCommand('gitBranchesPanel.addRemote').icon, '$(add)');
   assert.equal(getCommand('gitBranchesPanel.fetchAllRepositories').icon, '$(repo-fetch)');
   assert.equal(getCommand('gitBranchesPanel.fetchAllRepositoriesPrune').icon, '$(clear-all)');
+  assert.equal(getCommand('gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches').icon, '$(trash)');
   assert.equal(getCommand('gitBranchesPanel.syncAllRepositoriesBranches').icon, '$(sync)');
   assert.equal(getCommand('gitBranchesPanel.pullAllRepositoriesChanges').icon, '$(repo-pull)');
   assert.equal(getCommand('gitBranchesPanel.updateBranchFromSource').icon, '$(git-merge)');
@@ -366,10 +368,24 @@ test('package manifest exposes the 2.4.2 multi-repo, source-update, search, remo
   );
   assert.ok(
     hasToolbarViewTitleMenu(
+      'gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches',
+      'singleRepository',
+      'fetchAllPrune'
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
       'gitBranchesPanel.fetchAllRepositoriesPrune',
       'multiRepository',
       'fetchAllPrune',
       (item) => item.when.includes('gitBranchesPanel.groupedRepositories')
+    )
+  );
+  assert.ok(
+    hasToolbarViewTitleMenu(
+      'gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches',
+      'multiRepository',
+      'fetchAllPrune'
     )
   );
   assert.ok(

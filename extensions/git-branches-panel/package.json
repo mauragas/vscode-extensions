@@ -171,6 +171,11 @@
         "icon": "$(clear-all)"
       },
       {
+        "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+        "title": "Fetch All (Prune) and Prune Missing Upstreams",
+        "icon": "$(trash)"
+      },
+      {
         "command": "gitBranchesPanel.fetchAllRepositories",
         "title": "Fetch All Repositories",
         "icon": "$(repo-fetch)"
@@ -698,6 +703,11 @@
           "group": "navigation@1"
         },
         {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot1 == 'fetchAllPrune'",
+          "group": "navigation@1.1"
+        },
+        {
           "command": "gitBranchesPanel.refresh",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot1 == 'refresh'",
           "group": "navigation@1"
@@ -761,6 +771,11 @@
           "command": "gitBranchesPanel.fetchAllPrune",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot2 == 'fetchAllPrune'",
           "group": "navigation@2"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot2 == 'fetchAllPrune'",
+          "group": "navigation@2.1"
         },
         {
           "command": "gitBranchesPanel.refresh",
@@ -828,6 +843,11 @@
           "group": "navigation@3"
         },
         {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot3 == 'fetchAllPrune'",
+          "group": "navigation@3.1"
+        },
+        {
           "command": "gitBranchesPanel.refresh",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot3 == 'refresh'",
           "group": "navigation@3"
@@ -891,6 +911,11 @@
           "command": "gitBranchesPanel.fetchAllPrune",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot4 == 'fetchAllPrune'",
           "group": "navigation@4"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot4 == 'fetchAllPrune'",
+          "group": "navigation@4.1"
         },
         {
           "command": "gitBranchesPanel.refresh",
@@ -958,6 +983,11 @@
           "group": "navigation@5"
         },
         {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot5 == 'fetchAllPrune'",
+          "group": "navigation@5.1"
+        },
+        {
           "command": "gitBranchesPanel.refresh",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot5 == 'refresh'",
           "group": "navigation@5"
@@ -1021,6 +1051,11 @@
           "command": "gitBranchesPanel.fetchAllPrune",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot6 == 'fetchAllPrune'",
           "group": "navigation@6"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot6 == 'fetchAllPrune'",
+          "group": "navigation@6.1"
         },
         {
           "command": "gitBranchesPanel.refresh",
@@ -1088,6 +1123,11 @@
           "group": "navigation@7"
         },
         {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot7 == 'fetchAllPrune'",
+          "group": "navigation@7.1"
+        },
+        {
           "command": "gitBranchesPanel.refresh",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot7 == 'refresh'",
           "group": "navigation@7"
@@ -1151,6 +1191,11 @@
           "command": "gitBranchesPanel.fetchAllPrune",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot8 == 'fetchAllPrune'",
           "group": "navigation@8"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot8 == 'fetchAllPrune'",
+          "group": "navigation@8.1"
         },
         {
           "command": "gitBranchesPanel.refresh",
@@ -1218,6 +1263,11 @@
           "group": "navigation@9"
         },
         {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot9 == 'fetchAllPrune'",
+          "group": "navigation@9.1"
+        },
+        {
           "command": "gitBranchesPanel.refresh",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot9 == 'refresh'",
           "group": "navigation@9"
@@ -1281,6 +1331,11 @@
           "command": "gitBranchesPanel.fetchAllPrune",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot10 == 'fetchAllPrune'",
           "group": "navigation@10"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot10 == 'fetchAllPrune'",
+          "group": "navigation@10.1"
         },
         {
           "command": "gitBranchesPanel.refresh",
@@ -1348,6 +1403,11 @@
           "group": "navigation@11"
         },
         {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot11 == 'fetchAllPrune'",
+          "group": "navigation@11.1"
+        },
+        {
           "command": "gitBranchesPanel.refresh",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot11 == 'refresh'",
           "group": "navigation@11"
@@ -1413,6 +1473,11 @@
           "group": "navigation@12"
         },
         {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot12 == 'fetchAllPrune'",
+          "group": "navigation@12.1"
+        },
+        {
           "command": "gitBranchesPanel.refresh",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot12 == 'refresh'",
           "group": "navigation@12"
@@ -1476,6 +1541,11 @@
           "command": "gitBranchesPanel.fetchAllPrune",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot13 == 'fetchAllPrune'",
           "group": "navigation@13"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && !gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.singleRepository.slot13 == 'fetchAllPrune'",
+          "group": "navigation@13.1"
         },
         {
           "command": "gitBranchesPanel.refresh",
@@ -1566,6 +1636,11 @@
           "command": "gitBranchesPanel.fetchAllRepositoriesPrune",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot1 == 'fetchAllPrune'",
           "group": "navigation@1"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot1 == 'fetchAllPrune'",
+          "group": "navigation@1.1"
         },
         {
           "command": "gitBranchesPanel.refresh",
@@ -1668,6 +1743,11 @@
           "group": "navigation@2"
         },
         {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot2 == 'fetchAllPrune'",
+          "group": "navigation@2.1"
+        },
+        {
           "command": "gitBranchesPanel.refresh",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot2 == 'refresh'",
           "group": "navigation@2"
@@ -1766,6 +1846,11 @@
           "command": "gitBranchesPanel.fetchAllRepositoriesPrune",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot3 == 'fetchAllPrune'",
           "group": "navigation@3"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot3 == 'fetchAllPrune'",
+          "group": "navigation@3.1"
         },
         {
           "command": "gitBranchesPanel.refresh",
@@ -1868,6 +1953,11 @@
           "group": "navigation@4"
         },
         {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot4 == 'fetchAllPrune'",
+          "group": "navigation@4.1"
+        },
+        {
           "command": "gitBranchesPanel.refresh",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot4 == 'refresh'",
           "group": "navigation@4"
@@ -1966,6 +2056,11 @@
           "command": "gitBranchesPanel.fetchAllRepositoriesPrune",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot5 == 'fetchAllPrune'",
           "group": "navigation@5"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot5 == 'fetchAllPrune'",
+          "group": "navigation@5.1"
         },
         {
           "command": "gitBranchesPanel.refresh",
@@ -2068,6 +2163,11 @@
           "group": "navigation@6"
         },
         {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot6 == 'fetchAllPrune'",
+          "group": "navigation@6.1"
+        },
+        {
           "command": "gitBranchesPanel.refresh",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot6 == 'refresh'",
           "group": "navigation@6"
@@ -2166,6 +2266,11 @@
           "command": "gitBranchesPanel.fetchAllRepositoriesPrune",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot7 == 'fetchAllPrune'",
           "group": "navigation@7"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot7 == 'fetchAllPrune'",
+          "group": "navigation@7.1"
         },
         {
           "command": "gitBranchesPanel.refresh",
@@ -2268,6 +2373,11 @@
           "group": "navigation@8"
         },
         {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot8 == 'fetchAllPrune'",
+          "group": "navigation@8.1"
+        },
+        {
           "command": "gitBranchesPanel.refresh",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot8 == 'refresh'",
           "group": "navigation@8"
@@ -2366,6 +2476,11 @@
           "command": "gitBranchesPanel.fetchAllRepositoriesPrune",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot9 == 'fetchAllPrune'",
           "group": "navigation@9"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot9 == 'fetchAllPrune'",
+          "group": "navigation@9.1"
         },
         {
           "command": "gitBranchesPanel.refresh",
@@ -2468,6 +2583,11 @@
           "group": "navigation@10"
         },
         {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot10 == 'fetchAllPrune'",
+          "group": "navigation@10.1"
+        },
+        {
           "command": "gitBranchesPanel.refresh",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot10 == 'refresh'",
           "group": "navigation@10"
@@ -2566,6 +2686,11 @@
           "command": "gitBranchesPanel.fetchAllRepositoriesPrune",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot11 == 'fetchAllPrune'",
           "group": "navigation@11"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot11 == 'fetchAllPrune'",
+          "group": "navigation@11.1"
         },
         {
           "command": "gitBranchesPanel.refresh",
@@ -2668,6 +2793,11 @@
           "group": "navigation@12"
         },
         {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot12 == 'fetchAllPrune'",
+          "group": "navigation@12.1"
+        },
+        {
           "command": "gitBranchesPanel.refresh",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot12 == 'refresh'",
           "group": "navigation@12"
@@ -2766,6 +2896,11 @@
           "command": "gitBranchesPanel.fetchAllRepositoriesPrune",
           "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.groupedRepositories && gitBranchesPanel.toolbar.multiRepository.slot13 == 'fetchAllPrune'",
           "group": "navigation@13"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && gitBranchesPanel.multipleRepositories && gitBranchesPanel.toolbar.multiRepository.slot13 == 'fetchAllPrune'",
+          "group": "navigation@13.1"
         },
         {
           "command": "gitBranchesPanel.refresh",
