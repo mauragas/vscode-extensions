@@ -26,11 +26,13 @@ const GITHUB_PR_BASE_BRANCH_CONFIG_KEY_SUFFIX = 'github-pr-base-branch';
 const LOCAL_BRANCH_REF_PREFIX = 'refs/heads/';
 const LOCAL_BRANCH_TIP_SHA_FIELD_SEPARATOR = '\u001f';
 const LOCAL_BRANCH_TIP_SHA_RECORD_SEPARATOR = '\u001e';
+const REFLOG_FIELD_SEPARATOR = '\u001f';
+const REFLOG_RECORD_SEPARATOR = '\u001e';
 const REF_PREFIX = 'refs/';
 const REMOTE_BRANCH_REF_PREFIX = 'refs/remotes/';
 const VSCODE_MERGE_BASE_CONFIG_KEY_SUFFIX = 'vscode-merge-base';
 
-type CreatedFromResolutionKind = 'explicit' | 'githubPrBase' | 'mergeBase' | 'sameTipAnchor';
+type CreatedFromResolutionKind = 'explicit' | 'reflog' | 'githubPrBase' | 'mergeBase' | 'sameTipAnchor';
 
 interface CreatedFromResolution {
   sourceRef: string;
@@ -119,6 +121,10 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
     githubPrBaseEntries,
     mergeBaseEntries,
   };
+  const reflogCreatedFromByBranch = await resolveCreatedFromReflogHints(
+    repoRoot,
+    localBranchNames
+  );
 
   const configuredCreatedFromByBranch = new Map<string, CreatedFromResolution | undefined>(
     await Promise.all(
@@ -126,7 +132,12 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
         branch.name,
         filterSelfReferentialCreatedFromResolution(
           branch.name,
-          await resolveConfiguredCreatedFromRef(repoRoot, branch.name, sourceMetadataLookup)
+          await resolveConfiguredCreatedFromRef(
+            repoRoot,
+            branch.name,
+            sourceMetadataLookup,
+            reflogCreatedFromByBranch
+          )
         ),
       ] as const)
     )
@@ -827,7 +838,8 @@ export async function getSourceBranchState(
 async function resolveConfiguredCreatedFromRef(
   repoRoot: string,
   branchName: string,
-  sourceMetadataLookup: BranchSourceMetadataLookup
+  sourceMetadataLookup: BranchSourceMetadataLookup,
+  reflogCreatedFromByBranch: ReadonlyMap<string, string>
 ): Promise<CreatedFromResolution | undefined> {
   const explicitCreatedFromRef = sourceMetadataLookup.createdFromEntries.get(
     buildCreatedFromConfigKey(branchName)
@@ -845,10 +857,11 @@ async function resolveConfiguredCreatedFromRef(
       };
     }
 
-    const fallbackSourceRef = await resolveCompatibleConfigCreatedFromRef(
+    const fallbackSourceRef = await resolveFallbackCreatedFromRef(
       repoRoot,
       branchName,
-      sourceMetadataLookup
+      sourceMetadataLookup,
+      reflogCreatedFromByBranch
     );
     return fallbackSourceRef ?? {
       sourceRef: normalizedExplicitSourceRef,
@@ -856,14 +869,28 @@ async function resolveConfiguredCreatedFromRef(
     };
   }
 
-  return resolveCompatibleConfigCreatedFromRef(repoRoot, branchName, sourceMetadataLookup);
+  return resolveFallbackCreatedFromRef(
+    repoRoot,
+    branchName,
+    sourceMetadataLookup,
+    reflogCreatedFromByBranch
+  );
 }
 
-async function resolveCompatibleConfigCreatedFromRef(
+async function resolveFallbackCreatedFromRef(
   repoRoot: string,
   branchName: string,
-  sourceMetadataLookup: BranchSourceMetadataLookup
+  sourceMetadataLookup: BranchSourceMetadataLookup,
+  reflogCreatedFromByBranch: ReadonlyMap<string, string>
 ): Promise<CreatedFromResolution | undefined> {
+  const reflogCreatedFromRef = reflogCreatedFromByBranch.get(branchName);
+  if (reflogCreatedFromRef) {
+    return {
+      sourceRef: reflogCreatedFromRef,
+      kind: 'reflog',
+    };
+  }
+
   const githubPrBaseRef = inferCreatedFromRefFromGitHubPrBase(
     branchName,
     sourceMetadataLookup.githubPrBaseEntries,
@@ -889,6 +916,159 @@ async function resolveCompatibleConfigCreatedFromRef(
   }
 
   return undefined;
+}
+
+async function resolveCreatedFromReflogHints(
+  repoRoot: string,
+  localBranchNames: ReadonlySet<string>
+): Promise<ReadonlyMap<string, string>> {
+  if (localBranchNames.size === 0) {
+    return new Map();
+  }
+
+  let stdout = '';
+  try {
+    ({ stdout } = await runGit(repoRoot, [
+      'reflog',
+      'show',
+      '--all',
+      `--format=%gd${REFLOG_FIELD_SEPARATOR}%gs${REFLOG_RECORD_SEPARATOR}`,
+    ]));
+  } catch {
+    return new Map();
+  }
+
+  const oldestHeadCheckoutSourceByTargetBranch = new Map<string, string>();
+  const oldestBranchCreationSourceByBranch = new Map<string, string>();
+
+  for (const record of stdout.split(REFLOG_RECORD_SEPARATOR)) {
+    const trimmedRecord = record.trim();
+    if (!trimmedRecord) {
+      continue;
+    }
+
+    const [selector = '', subject = ''] = trimmedRecord.split(REFLOG_FIELD_SEPARATOR);
+    if (!selector || !subject) {
+      continue;
+    }
+
+    const reflogName = parseReflogSelectorName(selector);
+    if (!reflogName) {
+      continue;
+    }
+
+    if (reflogName === 'HEAD') {
+      const checkoutMatch = subject.match(/^checkout: moving from (.+) to (.+)$/u);
+      if (!checkoutMatch) {
+        continue;
+      }
+
+      const targetBranchName = normalizeHeadCheckoutTargetBranchName(
+        checkoutMatch[2],
+        localBranchNames
+      );
+      if (!targetBranchName) {
+        continue;
+      }
+
+      oldestHeadCheckoutSourceByTargetBranch.set(targetBranchName, checkoutMatch[1].trim());
+      continue;
+    }
+
+    if (!localBranchNames.has(reflogName)) {
+      continue;
+    }
+
+    const branchCreationMatch = subject.match(/^branch: Created from (.+)$/u);
+    if (!branchCreationMatch) {
+      continue;
+    }
+
+    oldestBranchCreationSourceByBranch.set(reflogName, branchCreationMatch[1].trim());
+  }
+
+  const createdFromEntries = await Promise.all(
+    [...oldestBranchCreationSourceByBranch.entries()].map(async ([branchName, sourceDescriptor]) => {
+      const normalizedSourceRef = await normalizeReflogSourceRef(
+        repoRoot,
+        sourceDescriptor === 'HEAD'
+          ? oldestHeadCheckoutSourceByTargetBranch.get(branchName)
+          : sourceDescriptor,
+        localBranchNames
+      );
+
+      return normalizedSourceRef
+        ? ([branchName, normalizedSourceRef] as const)
+        : undefined;
+    })
+  );
+
+  return new Map(
+    createdFromEntries.filter(
+      (entry): entry is readonly [string, string] => entry !== undefined
+    )
+  );
+}
+
+function parseReflogSelectorName(selector: string): string | undefined {
+  const match = selector.trim().match(/^(.*)@\{\d+\}$/u);
+  return match?.[1]?.trim();
+}
+
+function normalizeHeadCheckoutTargetBranchName(
+  targetDescriptor: string,
+  localBranchNames: ReadonlySet<string>
+): string | undefined {
+  const normalizedTargetDescriptor = targetDescriptor.trim().replace(/^"+|"+$/gu, '');
+  if (localBranchNames.has(normalizedTargetDescriptor)) {
+    return normalizedTargetDescriptor;
+  }
+
+  if (!normalizedTargetDescriptor.startsWith(LOCAL_BRANCH_REF_PREFIX)) {
+    return undefined;
+  }
+
+  const branchName = normalizeLocalBranchConfigName(normalizedTargetDescriptor);
+  return localBranchNames.has(branchName) ? branchName : undefined;
+}
+
+async function normalizeReflogSourceRef(
+  repoRoot: string,
+  sourceDescriptor: string | undefined,
+  localBranchNames: ReadonlySet<string>
+): Promise<string | undefined> {
+  const normalizedSourceDescriptor = sourceDescriptor?.trim().replace(/^"+|"+$/gu, '');
+  if (
+    !normalizedSourceDescriptor ||
+    normalizedSourceDescriptor === 'HEAD' ||
+    normalizedSourceDescriptor === '(no branch)' ||
+    /^[0-9a-f]{7,40}$/iu.test(normalizedSourceDescriptor)
+  ) {
+    return undefined;
+  }
+
+  if (normalizedSourceDescriptor.startsWith(REF_PREFIX)) {
+    return normalizedSourceDescriptor;
+  }
+
+  if (localBranchNames.has(normalizedSourceDescriptor)) {
+    return buildLocalBranchRef(normalizedSourceDescriptor);
+  }
+
+  const remoteBranchReference = parseRemoteBranchReference(normalizedSourceDescriptor);
+  if (remoteBranchReference) {
+    return `${REMOTE_BRANCH_REF_PREFIX}${remoteBranchReference.fullName}`;
+  }
+
+  if (await doesTagExist(repoRoot, normalizedSourceDescriptor)) {
+    return `refs/tags/${normalizedSourceDescriptor}`;
+  }
+
+  if (/[~^:\\]/u.test(normalizedSourceDescriptor)) {
+    return undefined;
+  }
+
+  return buildLocalBranchRef(normalizedSourceDescriptor);
 }
 
 function shouldPreferSameTipSourceAnchor(

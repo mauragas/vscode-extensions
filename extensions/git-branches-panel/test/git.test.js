@@ -328,7 +328,7 @@ test('getBranches preserves source metadata for local branches named with a head
   assert.equal(prefixedBranch.createdFromDisplayName, 'main');
 });
 
-test('getBranches does not infer source metadata from branch reflog alone', async (t) => {
+test('getBranches infers source metadata for checkout-created branches from reflog', async (t) => {
   const repoRoot = createTempRepository(t);
 
   runGit(repoRoot, ['checkout', '-b', 'bugfix/test', 'main']);
@@ -338,8 +338,8 @@ test('getBranches does not infer source metadata from branch reflog alone', asyn
   const bugfixBranch = branches.find((branch) => branch.name === 'bugfix/test');
 
   assert.ok(bugfixBranch);
-  assert.equal(bugfixBranch.createdFromRef, undefined);
-  assert.equal(bugfixBranch.createdFromDisplayName, undefined);
+  assert.equal(bugfixBranch.createdFromRef, 'refs/heads/main');
+  assert.equal(bugfixBranch.createdFromDisplayName, 'main');
 });
 
 test('getBranches falls back to compatible Git config metadata when explicit source tracking is missing', async (t) => {
@@ -414,7 +414,7 @@ test('getBranches falls back to compatible Git config hints when the recorded so
   assert.equal(fallbackBranch.sourceRefMissing, false);
 });
 
-test('getBranches prefers a unique same-tip source anchor over a generic merge-base fallback', async (t) => {
+test('getBranches prefers the direct same-tip parent branch over a generic merge-base fallback', async (t) => {
   const repoRoot = createTempRepository(t);
 
   await createBranchFromRef(repoRoot, 'bugfix/source-anchor', 'main', {
@@ -448,11 +448,11 @@ test('getBranches prefers a unique same-tip source anchor over a generic merge-b
   const secondChildBranch = branches.find((branch) => branch.name === 'test/create-from-bugfix-2');
 
   assert.ok(secondChildBranch);
-  assert.equal(secondChildBranch.createdFromRef, 'refs/heads/bugfix/source-anchor');
-  assert.equal(secondChildBranch.createdFromDisplayName, 'bugfix/source-anchor');
+  assert.equal(secondChildBranch.createdFromRef, 'refs/heads/test/create-from-bugfix');
+  assert.equal(secondChildBranch.createdFromDisplayName, 'test/create-from-bugfix');
 });
 
-test('getBranches inherits a unique stronger same-tip peer source when the source branch has advanced', async (t) => {
+test('getBranches preserves the direct same-tip parent branch when the source branch has advanced', async (t) => {
   const repoRoot = createTempRepository(t);
 
   runGit(repoRoot, ['checkout', '-b', 'bugfix/source-anchor']);
@@ -484,11 +484,11 @@ test('getBranches inherits a unique stronger same-tip peer source when the sourc
   const secondChildBranch = branches.find((branch) => branch.name === 'test/create-from-bugfix-2');
 
   assert.ok(secondChildBranch);
-  assert.equal(secondChildBranch.createdFromRef, 'refs/heads/bugfix/source-anchor');
-  assert.equal(secondChildBranch.createdFromDisplayName, 'bugfix/source-anchor');
+  assert.equal(secondChildBranch.createdFromRef, 'refs/heads/test/create-from-bugfix');
+  assert.equal(secondChildBranch.createdFromDisplayName, 'test/create-from-bugfix');
 });
 
-test('getBranches inherits a unique stronger containing-branch source when the sibling branch has advanced away', async (t) => {
+test('getBranches preserves the direct containing parent branch when the sibling branch has advanced away', async (t) => {
   const repoRoot = createTempRepository(t);
 
   runGit(repoRoot, ['checkout', '-b', 'bugfix/source-anchor']);
@@ -521,8 +521,24 @@ test('getBranches inherits a unique stronger containing-branch source when the s
   const secondChildBranch = branches.find((branch) => branch.name === 'test/create-from-bugfix-2');
 
   assert.ok(secondChildBranch);
-  assert.equal(secondChildBranch.createdFromRef, 'refs/heads/bugfix/source-anchor');
-  assert.equal(secondChildBranch.createdFromDisplayName, 'bugfix/source-anchor');
+  assert.equal(secondChildBranch.createdFromRef, 'refs/heads/test/create-from-bugfix');
+  assert.equal(secondChildBranch.createdFromDisplayName, 'test/create-from-bugfix');
+});
+
+test('getBranches prefers the direct checkout parent branch over a weaker merge-base fallback', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['checkout', '-b', 'bugfix/source-parent']);
+  runGit(repoRoot, ['config', 'branch.bugfix/source-parent.gitbranchespanelcreatedfromref', 'refs/heads/main']);
+  runGit(repoRoot, ['checkout', '-b', 'test/from-current-parent']);
+  runGit(repoRoot, ['config', 'branch.test/from-current-parent.vscode-merge-base', 'origin/main']);
+
+  const branches = await getBranches(repoRoot);
+  const childBranch = branches.find((branch) => branch.name === 'test/from-current-parent');
+
+  assert.ok(childBranch);
+  assert.equal(childBranch.createdFromRef, 'refs/heads/bugfix/source-parent');
+  assert.equal(childBranch.createdFromDisplayName, 'bugfix/source-parent');
 });
 
 test('getBranches reports when the current branch is behind its recorded local source branch', async (t) => {
@@ -620,9 +636,10 @@ test('getBranches does not mark local branches as current when a tag is checked 
   assert.deepEqual(currentTagNames, ['test3']);
 });
 
-test('getBranches returns branch without source info when config entry is missing', async (t) => {
+test('getBranches returns branch without source info when a checkout-created branch came from detached HEAD', async (t) => {
   const repoRoot = createTempRepository(t);
 
+  runGit(repoRoot, ['checkout', '--detach', 'HEAD']);
   runGit(repoRoot, ['checkout', '-b', 'feature/reflog-test']);
 
   const branches = await getBranches(repoRoot);
@@ -633,7 +650,7 @@ test('getBranches returns branch without source info when config entry is missin
   assert.equal(testBranch.createdFromDisplayName, undefined);
 });
 
-test('getBranches returns branch without source info when no compatible config hints exist', async (t) => {
+test('getBranches infers source metadata for git branch-created branches from reflog', async (t) => {
   const repoRoot = createTempRepository(t);
 
   runGit(repoRoot, ['branch', 'feature/no-checkout']);
@@ -642,8 +659,8 @@ test('getBranches returns branch without source info when no compatible config h
   const testBranch = branches.find((branch) => branch.name === 'feature/no-checkout');
 
   assert.ok(testBranch);
-  assert.equal(testBranch.createdFromRef, undefined);
-  assert.equal(testBranch.createdFromDisplayName, undefined);
+  assert.equal(testBranch.createdFromRef, 'refs/heads/main');
+  assert.equal(testBranch.createdFromDisplayName, 'main');
 });
 
 test('deleteTag removes the selected local tag', async (t) => {
