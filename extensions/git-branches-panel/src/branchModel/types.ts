@@ -1,5 +1,6 @@
 export type RemoteTrackingState = 'live' | 'stale';
 export type HookSource = 'local' | 'shared';
+export type CreatedFromDisplayKind = 'exact' | 'inferred';
 
 export interface RemoteConfigInfo {
   name: string;
@@ -29,6 +30,7 @@ export interface BranchInfo {
   isDeletionProtected?: boolean;
   createdFromRef?: string;
   createdFromDisplayName?: string;
+  createdFromDisplayKind?: CreatedFromDisplayKind;
   sourceBehindCount?: number;
   sourceRefMissing?: boolean;
   worktreePath?: string;

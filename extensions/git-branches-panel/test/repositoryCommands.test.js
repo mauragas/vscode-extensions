@@ -24,6 +24,7 @@ function loadFresh(modulePath, mocks) {
 
 function createVscodeState() {
   return {
+    configurationValues: {},
     registeredCommands: {},
     executedCommands: [],
     infoMessages: [],
@@ -58,6 +59,21 @@ function createVscodeMock(state) {
         return undefined;
       },
     },
+    workspace: {
+      getConfiguration(section) {
+        assert.equal(section, 'gitBranchesPanel');
+
+        return {
+          get(key, defaultValue) {
+            if (Object.prototype.hasOwnProperty.call(state.configurationValues, key)) {
+              return state.configurationValues[key];
+            }
+
+            return defaultValue;
+          },
+        };
+      },
+    },
   };
 }
 
@@ -86,6 +102,9 @@ function createCommandContext() {
         },
         getRepositoryDescriptors() {
           return state.repositoryDescriptors;
+        },
+        getVisibleRepoRoots() {
+          return state.repositoryDescriptors.map((repository) => repository.repoRoot);
         },
       },
       activationTracker: {},
@@ -240,6 +259,51 @@ test('fetchAllPrune fetches remotes with pruning and refreshes once', async () =
   ]);
 });
 
+test('fetchAllPruneAndPruneMissingUpstreamBranches fetches, confirms, prunes stale local branches, and refreshes once', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Prune');
+  const fetchCalls = [];
+  const deleteCalls = [];
+
+  const { commandContext } = createRepositoryCommandsModule({
+    vscodeState,
+    gitMock: {
+      async cleanRepository() {},
+      async deleteBranch(repoRoot, branchName, force) {
+        deleteCalls.push({ repoRoot, branchName, force });
+      },
+      async fetchAllRemotes() {},
+      async fetchRemoteState(repoRoot) {
+        fetchCalls.push(repoRoot);
+      },
+      async getBranches() {
+        return [
+          { name: 'feature/stale', isCurrent: false, upstreamMissing: true },
+          { name: 'main', isCurrent: false, upstreamMissing: true },
+        ];
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches']();
+
+  assert.deepEqual(fetchCalls, ['/repo']);
+  assert.deepEqual(deleteCalls, [
+    {
+      repoRoot: '/repo',
+      branchName: 'feature/stale',
+      force: true,
+    },
+  ]);
+  assert.deepEqual(commandContext.state.refreshCalls, [{ fetchRemoteState: false }]);
+  assert.equal(commandContext.state.loadingTitles.at(-1), 'Fetching, pruning, and pruning missing upstreams…');
+  assert.match(vscodeState.warningMessages[0].message, /Prune 1 local branch with missing upstreams/);
+  assert.equal(
+    vscodeState.infoMessages.at(-1),
+    'Fetched all remotes, pruned deleted refs, and pruned 1 local branch with missing upstreams. Skipped protected branch: main.'
+  );
+});
+
 test('fetchAll can target the clicked repository item directly', async () => {
   const vscodeState = createVscodeState();
   const fetchCalls = [];
@@ -354,6 +418,56 @@ test('fetchAllRepositoriesPrune prunes every repository and refreshes once', asy
   assert.deepEqual(
     vscodeState.infoMessages.at(-1),
     'Fetched all remotes with pruning in every repository.'
+  );
+});
+
+test('fetchAllPruneAndPruneMissingUpstreamBranches processes all visible repositories when grouped', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Prune');
+  const fetchCalls = [];
+  const deleteCalls = [];
+
+  const { commandContext } = createRepositoryCommandsModule({
+    vscodeState,
+    gitMock: {
+      async cleanRepository() {},
+      async deleteBranch(repoRoot, branchName, force) {
+        deleteCalls.push({ repoRoot, branchName, force });
+      },
+      async fetchAllRemotes() {},
+      async fetchRemoteState(repoRoot) {
+        fetchCalls.push(repoRoot);
+      },
+      async getBranches(repoRoot) {
+        if (repoRoot === '/repo-a') {
+          return [{ name: 'feature/stale-a', isCurrent: false, upstreamMissing: true }];
+        }
+
+        return [{ name: 'feature/stale-b', isCurrent: false, upstreamMissing: true }];
+      },
+    },
+  });
+  commandContext.state.repositoryDescriptors = [
+    { repoRoot: '/repo-a', label: 'repo-a' },
+    { repoRoot: '/repo-b', label: 'repo-b' },
+  ];
+
+  await vscodeState.registeredCommands['gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches']();
+
+  assert.deepEqual(fetchCalls, ['/repo-a', '/repo-b']);
+  assert.deepEqual(deleteCalls, [
+    { repoRoot: '/repo-a', branchName: 'feature/stale-a', force: true },
+    { repoRoot: '/repo-b', branchName: 'feature/stale-b', force: true },
+  ]);
+  assert.deepEqual(commandContext.state.refreshCalls, [{ fetchRemoteState: false }]);
+  assert.equal(
+    commandContext.state.loadingTitles.at(-1),
+    'Fetching, pruning, and pruning missing upstreams across repositories…'
+  );
+  assert.match(vscodeState.warningMessages[0].message, /across 2 repositories/);
+  assert.equal(
+    vscodeState.infoMessages.at(-1),
+    'Fetched all remotes with pruning in 2 repositories and pruned 2 local branches with missing upstreams.'
   );
 });
 

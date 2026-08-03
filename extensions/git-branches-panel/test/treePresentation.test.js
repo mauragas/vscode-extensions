@@ -203,6 +203,49 @@ test('buildBranchTooltipContent shows created-from metadata for non-current loca
   assert.match(tooltip, /Upstream: origin\/feature\/test4/);
 });
 
+test('buildBranchTooltipContent uses inferred wording for heuristic branch ancestry', () => {
+  const tooltip = buildBranchTooltipContent({
+    kind: 'branch',
+    fullName: 'feature/ambiguous',
+    label: 'ambiguous',
+    path: 'feature/ambiguous',
+    info: {
+      name: 'feature/ambiguous',
+      isCurrent: true,
+      createdFromRef: 'refs/heads/main',
+      createdFromDisplayName: 'main',
+      createdFromDisplayKind: 'inferred',
+      sourceBehindCount: 2,
+    },
+  });
+
+  assert.match(tooltip, /Inferred base: main/);
+  assert.match(tooltip, /Base status: 2 commits available/);
+  assert.equal(tooltip.includes('Created from:'), false);
+  assert.equal(tooltip.includes('Source status:'), false);
+});
+
+test('buildBranchTooltipContent uses label-neutral missing-ref status for inferred ancestry', () => {
+  const tooltip = buildBranchTooltipContent({
+    kind: 'branch',
+    fullName: 'feature/ambiguous',
+    label: 'ambiguous',
+    path: 'feature/ambiguous',
+    info: {
+      name: 'feature/ambiguous',
+      isCurrent: true,
+      createdFromRef: 'refs/heads/main',
+      createdFromDisplayName: 'main',
+      createdFromDisplayKind: 'inferred',
+      sourceRefMissing: true,
+    },
+  });
+
+  assert.match(tooltip, /Inferred base: main/);
+  assert.match(tooltip, /Base status: ref missing/);
+  assert.equal(tooltip.includes('source ref missing'), false);
+});
+
 test('buildBranchTooltipContent hides self-referential created-from metadata', () => {
   const tooltip = buildBranchTooltipContent({
     kind: 'branch',
@@ -214,6 +257,26 @@ test('buildBranchTooltipContent hides self-referential created-from metadata', (
       isCurrent: true,
       createdFromRef: 'refs/heads/main',
       createdFromDisplayName: 'main',
+      sourceBehindCount: 0,
+    },
+  });
+
+  assert.match(tooltip, /_Current branch_/);
+  assert.equal(tooltip.includes('Created from:'), false);
+  assert.equal(tooltip.includes('Source status:'), false);
+});
+
+test('buildBranchTooltipContent hides self-referential created-from metadata for same-name remote-tracking refs', () => {
+  const tooltip = buildBranchTooltipContent({
+    kind: 'branch',
+    fullName: 'test/created-from-feature',
+    label: 'created-from-feature',
+    path: 'test/created-from-feature',
+    info: {
+      name: 'test/created-from-feature',
+      isCurrent: true,
+      createdFromRef: 'refs/remotes/origin/test/created-from-feature',
+      createdFromDisplayName: 'origin/test/created-from-feature',
       sourceBehindCount: 0,
     },
   });

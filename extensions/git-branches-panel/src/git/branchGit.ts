@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import type { BranchInfo } from '../branchModel';
+import type { BranchInfo, CreatedFromDisplayKind } from '../branchModel';
 import { isTrackedBranch } from '../branchModel';
 import { listRefs } from './refListing';
 import { fetchRemoteState } from './remoteGit';
@@ -31,6 +31,7 @@ const REFLOG_RECORD_SEPARATOR = LOCAL_BRANCH_TIP_SHA_RECORD_SEPARATOR;
 const REFLOG_HINT_CACHE_TTL_MS = 30_000;
 const REF_PREFIX = 'refs/';
 const REMOTE_BRANCH_REF_PREFIX = 'refs/remotes/';
+const PREFERRED_BASE_BRANCH_NAMES = ['main', 'master', 'develop', 'trunk'] as const;
 const VSCODE_MERGE_BASE_CONFIG_KEY_SUFFIX = 'vscode-merge-base';
 
 const reflogHintCache = new Map<string, {
@@ -43,7 +44,13 @@ const reflogHintLoads = new Map<string, {
   loadPromise: Promise<ReadonlyMap<string, string>>;
 }>();
 
-type CreatedFromResolutionKind = 'explicit' | 'reflog' | 'githubPrBase' | 'mergeBase' | 'sameTipAnchor';
+type CreatedFromResolutionKind =
+  | 'explicit'
+  | 'reflog'
+  | 'githubPrBase'
+  | 'mergeBase'
+  | 'sameTipAnchor'
+  | 'sameTipRootBase';
 
 interface CreatedFromResolution {
   sourceRef: string;
@@ -138,20 +145,23 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
     localBranchTipShas
   );
 
-  const configuredCreatedFromByBranch = new Map<string, CreatedFromResolution | undefined>(
-    await Promise.all(
-      branches.map(async (branch) => [
-        branch.name,
-        filterSelfReferentialCreatedFromResolution(
+  const configuredCreatedFromByBranch = normalizeWeakSameTipSourceRoots(
+    localBranchTipShas,
+    new Map<string, CreatedFromResolution | undefined>(
+      await Promise.all(
+        branches.map(async (branch) => [
           branch.name,
-          await resolveConfiguredCreatedFromRef(
-            repoRoot,
+          filterSelfReferentialCreatedFromResolution(
             branch.name,
-            sourceMetadataLookup,
-            reflogCreatedFromByBranch
-          )
-        ),
-      ] as const)
+            await resolveConfiguredCreatedFromRef(
+              repoRoot,
+              branch.name,
+              sourceMetadataLookup,
+              reflogCreatedFromByBranch
+            )
+          ),
+        ] as const)
+      )
     )
   );
 
@@ -183,10 +193,14 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
       if (branch.createdFromRef) {
         return isSelfReferentialCreatedFromRef(branch.name, branch.createdFromRef)
           ? omitCreatedFromMetadata(branch)
-          : branch;
+          : {
+              ...branch,
+              createdFromDisplayKind: branch.createdFromDisplayKind ?? 'exact',
+            };
       }
 
-      const createdFromRef = resolvedCreatedFromByBranch.get(branch.name)?.sourceRef;
+      const createdFromResolution = resolvedCreatedFromByBranch.get(branch.name);
+      const createdFromRef = createdFromResolution?.sourceRef;
 
       if (!createdFromRef || isSelfReferentialCreatedFromRef(branch.name, createdFromRef)) {
         return branch;
@@ -197,6 +211,7 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
         ...branch,
         createdFromRef,
         createdFromDisplayName: formatRefForDisplay(createdFromRef),
+        createdFromDisplayKind: mapCreatedFromDisplayKind(createdFromResolution?.kind),
         ...sourceState,
       };
     })
@@ -772,11 +787,22 @@ function filterSelfReferentialCreatedFromResolution(
 }
 
 function isSelfReferentialCreatedFromRef(branchName: string, sourceRef: string): boolean {
-  if (!sourceRef.startsWith(LOCAL_BRANCH_REF_PREFIX)) {
+  if (sourceRef.startsWith(LOCAL_BRANCH_REF_PREFIX)) {
+    return normalizeLocalBranchConfigName(sourceRef) === normalizeLocalBranchConfigName(branchName);
+  }
+
+  if (!sourceRef.startsWith(REMOTE_BRANCH_REF_PREFIX)) {
     return false;
   }
 
-  return normalizeLocalBranchConfigName(sourceRef) === normalizeLocalBranchConfigName(branchName);
+  const remoteBranchReference = parseRemoteBranchReference(
+    sourceRef.slice(REMOTE_BRANCH_REF_PREFIX.length)
+  );
+  if (!remoteBranchReference) {
+    return false;
+  }
+
+  return normalizeLocalBranchConfigName(remoteBranchReference.branchName) === normalizeLocalBranchConfigName(branchName);
 }
 
 function omitCreatedFromMetadata(branch: BranchInfo): BranchInfo {
@@ -784,9 +810,24 @@ function omitCreatedFromMetadata(branch: BranchInfo): BranchInfo {
     ...branch,
     createdFromRef: undefined,
     createdFromDisplayName: undefined,
+    createdFromDisplayKind: undefined,
     sourceBehindCount: undefined,
     sourceRefMissing: undefined,
   };
+}
+
+function mapCreatedFromDisplayKind(
+  resolutionKind: CreatedFromResolutionKind | undefined
+): CreatedFromDisplayKind {
+  switch (resolutionKind) {
+    case 'githubPrBase':
+    case 'mergeBase':
+    case 'sameTipRootBase':
+    case 'sameTipAnchor':
+      return 'inferred';
+    default:
+      return 'exact';
+  }
 }
 
 function normalizeLocalBranchConfigName(branchName: string): string {
@@ -880,7 +921,11 @@ async function resolveConfiguredCreatedFromRef(
       explicitCreatedFromRef,
       sourceMetadataLookup.localBranchNames
     );
-    if (await doesSourceRefExist(repoRoot, normalizedExplicitSourceRef)) {
+    const isExplicitSourceSelfReferential = isSelfReferentialCreatedFromRef(
+      branchName,
+      normalizedExplicitSourceRef
+    );
+    if (!isExplicitSourceSelfReferential && (await doesSourceRefExist(repoRoot, normalizedExplicitSourceRef))) {
       return {
         sourceRef: normalizedExplicitSourceRef,
         kind: 'explicit',
@@ -893,10 +938,16 @@ async function resolveConfiguredCreatedFromRef(
       sourceMetadataLookup,
       reflogCreatedFromByBranch
     );
-    return fallbackSourceRef ?? {
-      sourceRef: normalizedExplicitSourceRef,
-      kind: 'explicit',
-    };
+    if (fallbackSourceRef) {
+      return fallbackSourceRef;
+    }
+
+    return isExplicitSourceSelfReferential
+      ? undefined
+      : {
+          sourceRef: normalizedExplicitSourceRef,
+          kind: 'explicit',
+        };
   }
 
   return resolveFallbackCreatedFromRef(
@@ -914,7 +965,7 @@ async function resolveFallbackCreatedFromRef(
   reflogCreatedFromByBranch: ReadonlyMap<string, string>
 ): Promise<CreatedFromResolution | undefined> {
   const reflogCreatedFromRef = reflogCreatedFromByBranch.get(branchName);
-  if (reflogCreatedFromRef) {
+  if (reflogCreatedFromRef && !isSelfReferentialCreatedFromRef(branchName, reflogCreatedFromRef)) {
     return {
       sourceRef: reflogCreatedFromRef,
       kind: 'reflog',
@@ -926,7 +977,11 @@ async function resolveFallbackCreatedFromRef(
     sourceMetadataLookup.githubPrBaseEntries,
     sourceMetadataLookup.localBranchNames
   );
-  if (githubPrBaseRef && (await doesSourceRefExist(repoRoot, githubPrBaseRef))) {
+  if (
+    githubPrBaseRef &&
+    !isSelfReferentialCreatedFromRef(branchName, githubPrBaseRef) &&
+    (await doesSourceRefExist(repoRoot, githubPrBaseRef))
+  ) {
     return {
       sourceRef: githubPrBaseRef,
       kind: 'githubPrBase',
@@ -938,7 +993,11 @@ async function resolveFallbackCreatedFromRef(
     sourceMetadataLookup.mergeBaseEntries,
     sourceMetadataLookup.localBranchNames
   );
-  if (mergeBaseRef && (await doesSourceRefExist(repoRoot, mergeBaseRef))) {
+  if (
+    mergeBaseRef &&
+    !isSelfReferentialCreatedFromRef(branchName, mergeBaseRef) &&
+    (await doesSourceRefExist(repoRoot, mergeBaseRef))
+  ) {
     return {
       sourceRef: mergeBaseRef,
       kind: 'mergeBase',
@@ -1171,6 +1230,152 @@ function shouldPreferSameTipSourceAnchor(
   createdFromResolution: CreatedFromResolution | undefined
 ): boolean {
   return !createdFromResolution || createdFromResolution.kind === 'mergeBase';
+}
+
+function normalizeWeakSameTipSourceRoots(
+  localBranchTipShas: ReadonlyMap<string, string>,
+  configuredCreatedFromByBranch: ReadonlyMap<string, CreatedFromResolution | undefined>
+): ReadonlyMap<string, CreatedFromResolution | undefined> {
+  const normalizedCreatedFromByBranch = new Map(configuredCreatedFromByBranch);
+
+  for (const [branchName, createdFromResolution] of configuredCreatedFromByBranch.entries()) {
+    if (!createdFromResolution || !isWeakCompatibleCreatedFromResolution(createdFromResolution)) {
+      continue;
+    }
+
+    const sameTipRootBaseResolution = resolveUniqueSameTipRootBase(
+      branchName,
+      localBranchTipShas,
+      configuredCreatedFromByBranch
+    );
+    if (sameTipRootBaseResolution) {
+      normalizedCreatedFromByBranch.set(branchName, sameTipRootBaseResolution);
+    }
+  }
+
+  return normalizedCreatedFromByBranch;
+}
+
+function isWeakCompatibleCreatedFromResolution(
+  createdFromResolution: CreatedFromResolution
+): boolean {
+  return createdFromResolution.kind === 'githubPrBase' || createdFromResolution.kind === 'mergeBase';
+}
+
+function resolveUniqueSameTipRootBase(
+  branchName: string,
+  localBranchTipShas: ReadonlyMap<string, string>,
+  configuredCreatedFromByBranch: ReadonlyMap<string, CreatedFromResolution | undefined>
+): CreatedFromResolution | undefined {
+  const sameTipBranchNameSet = getSameTipBranchNameSet(branchName, localBranchTipShas);
+  if (sameTipBranchNameSet.size < 2) {
+    return undefined;
+  }
+
+  const uniqueRootSourceRefs = new Set<string>();
+
+  for (const sameTipBranchName of sameTipBranchNameSet) {
+    const rootSourceRef = resolveSameTipSourceRootRef(
+      sameTipBranchName,
+      sameTipBranchNameSet,
+      configuredCreatedFromByBranch
+    );
+    if (!rootSourceRef) {
+      continue;
+    }
+
+    uniqueRootSourceRefs.add(rootSourceRef);
+    if (uniqueRootSourceRefs.size > 1) {
+      return undefined;
+    }
+  }
+
+  if (uniqueRootSourceRefs.size !== 1) {
+    return undefined;
+  }
+
+  const [rootSourceRef] = [...uniqueRootSourceRefs];
+  if (!rootSourceRef || isSelfReferentialCreatedFromRef(branchName, rootSourceRef)) {
+    return undefined;
+  }
+
+  return {
+    sourceRef: rootSourceRef,
+    kind: 'sameTipRootBase',
+  };
+}
+
+function resolveSameTipSourceRootRef(
+  branchName: string,
+  sameTipBranchNameSet: ReadonlySet<string>,
+  configuredCreatedFromByBranch: ReadonlyMap<string, CreatedFromResolution | undefined>
+): string | undefined {
+  const preferredBaseBranchName = getPreferredSameTipBaseBranchName(sameTipBranchNameSet);
+  if (preferredBaseBranchName && branchName === preferredBaseBranchName) {
+    return buildLocalBranchRef(preferredBaseBranchName);
+  }
+
+  const visitedBranchNames = new Set<string>();
+  let currentBranchName = branchName;
+  let currentResolution = configuredCreatedFromByBranch.get(currentBranchName);
+
+  while (true) {
+    if (!currentResolution) {
+      return buildLocalBranchRef(currentBranchName);
+    }
+
+    const sameTipSourceBranchName = getSameTipLocalSourceBranchName(
+      currentResolution.sourceRef,
+      sameTipBranchNameSet
+    );
+    if (!sameTipSourceBranchName) {
+      return currentResolution.sourceRef;
+    }
+
+    if (preferredBaseBranchName && sameTipSourceBranchName === preferredBaseBranchName) {
+      return buildLocalBranchRef(preferredBaseBranchName);
+    }
+
+    if (visitedBranchNames.has(sameTipSourceBranchName)) {
+      return undefined;
+    }
+
+    visitedBranchNames.add(sameTipSourceBranchName);
+    currentBranchName = sameTipSourceBranchName;
+    currentResolution = configuredCreatedFromByBranch.get(currentBranchName);
+  }
+}
+
+function getPreferredSameTipBaseBranchName(
+  sameTipBranchNameSet: ReadonlySet<string>
+): string | undefined {
+  for (const preferredBaseBranchName of PREFERRED_BASE_BRANCH_NAMES) {
+    if (sameTipBranchNameSet.has(preferredBaseBranchName)) {
+      return preferredBaseBranchName;
+    }
+  }
+
+  const simpleBranchNames = [...sameTipBranchNameSet].filter(
+    (candidateBranchName) => !candidateBranchName.includes('/')
+  );
+
+  return simpleBranchNames.length === 1 ? simpleBranchNames[0] : undefined;
+}
+
+function getSameTipBranchNameSet(
+  branchName: string,
+  localBranchTipShas: ReadonlyMap<string, string>
+): ReadonlySet<string> {
+  const tipSha = localBranchTipShas.get(branchName);
+  if (!tipSha) {
+    return new Set();
+  }
+
+  return new Set(
+    [...localBranchTipShas.entries()]
+      .filter(([, candidateTipSha]) => candidateTipSha === tipSha)
+      .map(([candidateBranchName]) => candidateBranchName)
+  );
 }
 
 async function resolvePreferredLocalSourceAnchor(
