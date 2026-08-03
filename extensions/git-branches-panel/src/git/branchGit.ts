@@ -26,11 +26,22 @@ const GITHUB_PR_BASE_BRANCH_CONFIG_KEY_SUFFIX = 'github-pr-base-branch';
 const LOCAL_BRANCH_REF_PREFIX = 'refs/heads/';
 const LOCAL_BRANCH_TIP_SHA_FIELD_SEPARATOR = '\u001f';
 const LOCAL_BRANCH_TIP_SHA_RECORD_SEPARATOR = '\u001e';
-const REFLOG_FIELD_SEPARATOR = '\u001f';
-const REFLOG_RECORD_SEPARATOR = '\u001e';
+const REFLOG_FIELD_SEPARATOR = LOCAL_BRANCH_TIP_SHA_FIELD_SEPARATOR;
+const REFLOG_RECORD_SEPARATOR = LOCAL_BRANCH_TIP_SHA_RECORD_SEPARATOR;
+const REFLOG_HINT_CACHE_TTL_MS = 30_000;
 const REF_PREFIX = 'refs/';
 const REMOTE_BRANCH_REF_PREFIX = 'refs/remotes/';
 const VSCODE_MERGE_BASE_CONFIG_KEY_SUFFIX = 'vscode-merge-base';
+
+const reflogHintCache = new Map<string, {
+  branchStateCacheKey: string;
+  createdFromByBranch: ReadonlyMap<string, string>;
+  expiresAt: number;
+}>();
+const reflogHintLoads = new Map<string, {
+  branchStateCacheKey: string;
+  loadPromise: Promise<ReadonlyMap<string, string>>;
+}>();
 
 type CreatedFromResolutionKind = 'explicit' | 'reflog' | 'githubPrBase' | 'mergeBase' | 'sameTipAnchor';
 
@@ -121,9 +132,10 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
     githubPrBaseEntries,
     mergeBaseEntries,
   };
-  const reflogCreatedFromByBranch = await resolveCreatedFromReflogHints(
+  const reflogCreatedFromByBranch = await getCreatedFromReflogHints(
     repoRoot,
-    localBranchNames
+    localBranchNames,
+    localBranchTipShas
   );
 
   const configuredCreatedFromByBranch = new Map<string, CreatedFromResolution | undefined>(
@@ -215,14 +227,23 @@ export async function createBranchFromRef(
   startPoint: string,
   options: CreateBranchFromRefOptions = {}
 ): Promise<void> {
+  let branchCreated = false;
+
   if (options.checkout ?? false) {
     await runGit(repoRoot, ['checkout', '-b', branchName, startPoint]);
   } else {
     await runGit(repoRoot, ['branch', branchName, startPoint]);
   }
+  branchCreated = true;
 
-  if (options.sourceRef) {
-    await writeGitConfig(repoRoot, buildCreatedFromConfigKey(branchName), options.sourceRef);
+  try {
+    if (options.sourceRef) {
+      await writeGitConfig(repoRoot, buildCreatedFromConfigKey(branchName), options.sourceRef);
+    }
+  } finally {
+    if (branchCreated) {
+      invalidateCreatedFromReflogHintCache(repoRoot);
+    }
   }
 }
 
@@ -233,10 +254,14 @@ export async function renameBranch(
 ): Promise<void> {
   await runGit(repoRoot, ['branch', '-m', branchName, newBranchName]);
 
-  const createdFromRef = await readGitConfig(repoRoot, buildCreatedFromConfigKey(branchName));
-  if (createdFromRef) {
-    await writeGitConfig(repoRoot, buildCreatedFromConfigKey(newBranchName), createdFromRef);
-    await unsetGitConfig(repoRoot, buildCreatedFromConfigKey(branchName));
+  try {
+    const createdFromRef = await readGitConfig(repoRoot, buildCreatedFromConfigKey(branchName));
+    if (createdFromRef) {
+      await writeGitConfig(repoRoot, buildCreatedFromConfigKey(newBranchName), createdFromRef);
+      await unsetGitConfig(repoRoot, buildCreatedFromConfigKey(branchName));
+    }
+  } finally {
+    invalidateCreatedFromReflogHintCache(repoRoot);
   }
 }
 
@@ -246,7 +271,12 @@ export async function deleteBranch(
   force: boolean
 ): Promise<void> {
   await runGit(repoRoot, ['branch', force ? '-D' : '-d', branchName]);
-  await unsetGitConfig(repoRoot, buildCreatedFromConfigKey(branchName));
+
+  try {
+    await unsetGitConfig(repoRoot, buildCreatedFromConfigKey(branchName));
+  } finally {
+    invalidateCreatedFromReflogHintCache(repoRoot);
+  }
 }
 
 export async function syncBranch(
@@ -918,7 +948,52 @@ async function resolveFallbackCreatedFromRef(
   return undefined;
 }
 
-async function resolveCreatedFromReflogHints(
+async function getCreatedFromReflogHints(
+  repoRoot: string,
+  localBranchNames: ReadonlySet<string>,
+  localBranchTipShas: ReadonlyMap<string, string>
+): Promise<ReadonlyMap<string, string>> {
+  if (localBranchNames.size === 0) {
+    return new Map();
+  }
+
+  const branchStateCacheKey = buildLocalBranchStateCacheKey(localBranchTipShas);
+  const cachedEntry = reflogHintCache.get(repoRoot);
+  if (cachedEntry && cachedEntry.branchStateCacheKey === branchStateCacheKey && cachedEntry.expiresAt > Date.now()) {
+    return cachedEntry.createdFromByBranch;
+  }
+
+  const pendingLoad = reflogHintLoads.get(repoRoot);
+  if (pendingLoad && pendingLoad.branchStateCacheKey === branchStateCacheKey) {
+    return pendingLoad.loadPromise;
+  }
+
+  const loadPromise = loadCreatedFromReflogHints(repoRoot, localBranchNames)
+    .then((createdFromByBranch) => {
+      reflogHintCache.set(repoRoot, {
+        branchStateCacheKey,
+        createdFromByBranch,
+        expiresAt: Date.now() + REFLOG_HINT_CACHE_TTL_MS,
+      });
+
+      return createdFromByBranch;
+    })
+    .finally(() => {
+      const currentLoad = reflogHintLoads.get(repoRoot);
+      if (currentLoad?.loadPromise === loadPromise) {
+        reflogHintLoads.delete(repoRoot);
+      }
+    });
+
+  reflogHintLoads.set(repoRoot, {
+    branchStateCacheKey,
+    loadPromise,
+  });
+
+  return loadPromise;
+}
+
+async function loadCreatedFromReflogHints(
   repoRoot: string,
   localBranchNames: ReadonlySet<string>
 ): Promise<ReadonlyMap<string, string>> {
@@ -1008,6 +1083,27 @@ async function resolveCreatedFromReflogHints(
       (entry): entry is readonly [string, string] => entry !== undefined
     )
   );
+}
+
+function invalidateCreatedFromReflogHintCache(repoRoot?: string): void {
+  if (repoRoot) {
+    reflogHintCache.delete(repoRoot);
+    reflogHintLoads.delete(repoRoot);
+    return;
+  }
+
+  reflogHintCache.clear();
+  reflogHintLoads.clear();
+}
+
+function buildLocalBranchStateCacheKey(localBranchTipShas: ReadonlyMap<string, string>): string {
+  return [...localBranchTipShas.entries()]
+    .sort(([leftBranchName], [rightBranchName]) => leftBranchName.localeCompare(rightBranchName))
+    .map(
+      ([branchName, tipSha]) =>
+        `${branchName}${LOCAL_BRANCH_TIP_SHA_FIELD_SEPARATOR}${tipSha}`
+    )
+    .join(LOCAL_BRANCH_TIP_SHA_RECORD_SEPARATOR);
 }
 
 function parseReflogSelectorName(selector: string): string | undefined {

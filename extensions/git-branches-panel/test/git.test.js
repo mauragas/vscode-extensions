@@ -541,6 +541,31 @@ test('getBranches prefers the direct checkout parent branch over a weaker merge-
   assert.equal(childBranch.createdFromDisplayName, 'bugfix/source-parent');
 });
 
+test('getBranches refreshes cached reflog source hints after deleting and recreating the same branch name', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['branch', 'feature/source-a']);
+  runGit(repoRoot, ['branch', 'feature/source-b']);
+  runGit(repoRoot, ['branch', 'feature/reused', 'feature/source-a']);
+
+  let branches = await getBranches(repoRoot);
+  let reusedBranch = branches.find((branch) => branch.name === 'feature/reused');
+
+  assert.ok(reusedBranch);
+  assert.equal(reusedBranch.createdFromRef, 'refs/heads/feature/source-a');
+  assert.equal(reusedBranch.createdFromDisplayName, 'feature/source-a');
+
+  await deleteBranch(repoRoot, 'feature/reused', false);
+  runGit(repoRoot, ['branch', 'feature/reused', 'feature/source-b']);
+
+  branches = await getBranches(repoRoot);
+  reusedBranch = branches.find((branch) => branch.name === 'feature/reused');
+
+  assert.ok(reusedBranch);
+  assert.equal(reusedBranch.createdFromRef, 'refs/heads/feature/source-b');
+  assert.equal(reusedBranch.createdFromDisplayName, 'feature/source-b');
+});
+
 test('getBranches reports when the current branch is behind its recorded local source branch', async (t) => {
   const repoRoot = createTempRepository(t);
 
