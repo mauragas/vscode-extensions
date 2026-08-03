@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import { join } from 'node:path';
 
 import {
+  getCreatedFromReferenceDescription,
+  getUpdateFromSourceActionLabel,
   isPublishableBranch,
   type RemoteTrackingState,
 } from '../branchModel';
@@ -446,7 +448,7 @@ async function handleUpdateBranchFromSource(
 ): Promise<void> {
   if (!item?.branchName || !item.repoRoot) {
     vscode.window.showInformationMessage(
-      'Choose a local branch you want to update from its recorded source branch.'
+      'Choose a local branch you want to update from its source branch or inferred base.'
     );
     return;
   }
@@ -455,7 +457,7 @@ async function handleUpdateBranchFromSource(
   const repoRoot = item.repoRoot;
   if (!targetBranchName || !repoRoot) {
     vscode.window.showInformationMessage(
-      'Choose a local branch you want to update from its recorded source branch.'
+      'Choose a local branch you want to update from its source branch or inferred base.'
     );
     return;
   }
@@ -464,7 +466,7 @@ async function handleUpdateBranchFromSource(
   const sourceRef = branchInfo?.createdFromRef;
   if (!sourceRef) {
     vscode.window.showInformationMessage(
-      `Branch '${targetBranchName}' does not have a recorded source branch.`
+      `Branch '${targetBranchName}' does not have source metadata.`
     );
     return;
   }
@@ -488,12 +490,14 @@ async function handleUpdateBranchFromSource(
     const latestSourceRef = latestBranchInfo.createdFromRef;
     if (!latestSourceRef) {
       vscode.window.showInformationMessage(
-        `Branch '${targetBranchName}' does not have a recorded source branch.`
+        `Branch '${targetBranchName}' does not have source metadata.`
       );
       return;
     }
 
     const resolvedTargetBranchName = latestBranchInfo.name;
+    const sourceReferenceDescription = getCreatedFromReferenceDescription(latestBranchInfo);
+    const sourceReferenceDescriptionLabel = `${sourceReferenceDescription[0].toUpperCase()}${sourceReferenceDescription.slice(1)}`;
 
     latestSourceDisplayName = latestBranchInfo.createdFromDisplayName ?? latestSourceRef;
     const latestSourceState = await getSourceBranchState(
@@ -505,7 +509,7 @@ async function handleUpdateBranchFromSource(
     if (latestSourceState.sourceRefMissing) {
       await commandContext.refresh({ fetchRemoteState: false });
       vscode.window.showInformationMessage(
-        `Recorded source branch '${latestSourceDisplayName}' no longer exists.`
+        `${sourceReferenceDescriptionLabel} '${latestSourceDisplayName}' no longer exists.`
       );
       return;
     }
@@ -1393,7 +1397,7 @@ function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
       items.push(
         createBranchActionItem(
           'updateBranchFromSource',
-          '$(git-merge) Update from Source Branch',
+          `$(git-merge) ${getUpdateFromSourceActionLabel(item.branchInfo ?? {})}`,
           async () => {
             await vscode.commands.executeCommand('gitBranchesPanel.updateBranchFromSource', item);
           }

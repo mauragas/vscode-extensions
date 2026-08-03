@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import type { BranchInfo } from '../branchModel';
+import type { BranchInfo, CreatedFromDisplayKind } from '../branchModel';
 import { isTrackedBranch } from '../branchModel';
 import { listRefs } from './refListing';
 import { fetchRemoteState } from './remoteGit';
@@ -193,10 +193,14 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
       if (branch.createdFromRef) {
         return isSelfReferentialCreatedFromRef(branch.name, branch.createdFromRef)
           ? omitCreatedFromMetadata(branch)
-          : branch;
+          : {
+              ...branch,
+              createdFromDisplayKind: branch.createdFromDisplayKind ?? 'exact',
+            };
       }
 
-      const createdFromRef = resolvedCreatedFromByBranch.get(branch.name)?.sourceRef;
+      const createdFromResolution = resolvedCreatedFromByBranch.get(branch.name);
+      const createdFromRef = createdFromResolution?.sourceRef;
 
       if (!createdFromRef || isSelfReferentialCreatedFromRef(branch.name, createdFromRef)) {
         return branch;
@@ -207,6 +211,7 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
         ...branch,
         createdFromRef,
         createdFromDisplayName: formatRefForDisplay(createdFromRef),
+        createdFromDisplayKind: mapCreatedFromDisplayKind(createdFromResolution?.kind),
         ...sourceState,
       };
     })
@@ -805,9 +810,24 @@ function omitCreatedFromMetadata(branch: BranchInfo): BranchInfo {
     ...branch,
     createdFromRef: undefined,
     createdFromDisplayName: undefined,
+    createdFromDisplayKind: undefined,
     sourceBehindCount: undefined,
     sourceRefMissing: undefined,
   };
+}
+
+function mapCreatedFromDisplayKind(
+  resolutionKind: CreatedFromResolutionKind | undefined
+): CreatedFromDisplayKind {
+  switch (resolutionKind) {
+    case 'githubPrBase':
+    case 'mergeBase':
+    case 'sameTipRootBase':
+    case 'sameTipAnchor':
+      return 'inferred';
+    default:
+      return 'exact';
+  }
 }
 
 function normalizeLocalBranchConfigName(branchName: string): string {

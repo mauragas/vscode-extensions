@@ -203,6 +203,28 @@ test('buildBranchTooltipContent shows created-from metadata for non-current loca
   assert.match(tooltip, /Upstream: origin\/feature\/test4/);
 });
 
+test('buildBranchTooltipContent uses inferred wording for heuristic branch ancestry', () => {
+  const tooltip = buildBranchTooltipContent({
+    kind: 'branch',
+    fullName: 'feature/ambiguous',
+    label: 'ambiguous',
+    path: 'feature/ambiguous',
+    info: {
+      name: 'feature/ambiguous',
+      isCurrent: true,
+      createdFromRef: 'refs/heads/main',
+      createdFromDisplayName: 'main',
+      createdFromDisplayKind: 'inferred',
+      sourceBehindCount: 2,
+    },
+  });
+
+  assert.match(tooltip, /Inferred base: main/);
+  assert.match(tooltip, /Base status: 2 commits available/);
+  assert.equal(tooltip.includes('Created from:'), false);
+  assert.equal(tooltip.includes('Source status:'), false);
+});
+
 test('buildBranchTooltipContent hides self-referential created-from metadata', () => {
   const tooltip = buildBranchTooltipContent({
     kind: 'branch',

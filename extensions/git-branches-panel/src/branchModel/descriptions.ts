@@ -1,5 +1,35 @@
 import type { BranchInfo, BranchSyncState } from './types';
 
+export function isInferredCreatedFrom(
+  branch: Pick<BranchInfo, 'createdFromDisplayKind'>
+): boolean {
+  return branch.createdFromDisplayKind === 'inferred';
+}
+
+export function getCreatedFromLabel(
+  branch: Pick<BranchInfo, 'createdFromDisplayKind'>
+): string {
+  return isInferredCreatedFrom(branch) ? 'Inferred base' : 'Created from';
+}
+
+export function getCreatedFromStatusLabel(
+  branch: Pick<BranchInfo, 'createdFromDisplayKind'>
+): string {
+  return isInferredCreatedFrom(branch) ? 'Base status' : 'Source status';
+}
+
+export function getCreatedFromReferenceDescription(
+  branch: Pick<BranchInfo, 'createdFromDisplayKind'>
+): string {
+  return isInferredCreatedFrom(branch) ? 'inferred base' : 'recorded source branch';
+}
+
+export function getUpdateFromSourceActionLabel(
+  branch: Pick<BranchInfo, 'createdFromDisplayKind'>
+): string {
+  return isInferredCreatedFrom(branch) ? 'Update from Inferred Base' : 'Update from Source Branch';
+}
+
 export function parseUpstreamTrack(trackText: string): BranchSyncState {
   const normalizedTrackText = trackText.trim();
   if (!normalizedTrackText) {
@@ -79,7 +109,7 @@ export function hasSourceBranchUpdate(
 export function formatSourceBranchStatus(
   branch: Pick<
     BranchInfo,
-    'createdFromDisplayName' | 'isCurrent' | 'sourceBehindCount' | 'sourceRefMissing'
+    'createdFromDisplayName' | 'createdFromDisplayKind' | 'isCurrent' | 'sourceBehindCount' | 'sourceRefMissing'
   >
 ): string | undefined {
   if (!branch.createdFromDisplayName) {

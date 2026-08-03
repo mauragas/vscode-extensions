@@ -2,6 +2,8 @@ import {
   buildBranchDescription,
   formatSourceBranchStatus,
   formatSyncStatus,
+  getCreatedFromLabel,
+  getCreatedFromStatusLabel,
   getPublishTargetName,
   hasSourceBranchUpdate,
   isPublishableBranch,
@@ -259,11 +261,11 @@ export function buildBranchTooltipContent(node: TreeBranch): string {
   }
 
   if (shouldShowCreatedFromTooltip(node.info)) {
-    tooltipLines.push('', `Created from: ${node.info.createdFromDisplayName}`);
+    tooltipLines.push('', `${getCreatedFromLabel(node.info)}: ${node.info.createdFromDisplayName}`);
 
     const sourceStatus = formatSourceBranchStatus(node.info);
     if (sourceStatus) {
-      tooltipLines.push('', `Source status: ${sourceStatus}`);
+      tooltipLines.push('', `${getCreatedFromStatusLabel(node.info)}: ${sourceStatus}`);
     }
   }
 

@@ -1372,7 +1372,7 @@ test('updateBranchFromSource stops when the refreshed branch source ref is missi
   assert.deepEqual(commandContext.state.refreshCalls, [{ fetchRemoteState: false }]);
 });
 
-test('updateBranchFromSource explains when the current branch has no recorded source branch', async () => {
+test('updateBranchFromSource explains when the current branch has no source metadata', async () => {
   const vscodeState = createVscodeState();
 
   createBranchCommandsModule({
@@ -1423,7 +1423,155 @@ test('updateBranchFromSource explains when the current branch has no recorded so
     },
   });
 
-  assert.match(vscodeState.infoMessages[0], /does not have a recorded source branch/i);
+  assert.match(vscodeState.infoMessages[0], /does not have source metadata/i);
+});
+
+test('updateBranchFromSource describes missing inferred bases accurately', async () => {
+  const vscodeState = createVscodeState();
+  const mergeCalls = [];
+
+  const { commandContext } = createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getBranches() {
+        return [
+          {
+            name: 'feature/demo',
+            isCurrent: true,
+            scope: 'local',
+            createdFromRef: 'refs/heads/main',
+            createdFromDisplayName: 'main',
+            createdFromDisplayKind: 'inferred',
+            sourceBehindCount: 0,
+            sourceRefMissing: true,
+          },
+        ];
+      },
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async getSourceBranchState() {
+        return {
+          sourceBehindCount: 0,
+          sourceRefMissing: true,
+        };
+      },
+      async mergeRefIntoBranch(repoRoot, branchName, refName) {
+        mergeCalls.push({ repoRoot, branchName, refName });
+      },
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.updateBranchFromSource']({
+    nodeType: 'currentBranch',
+    contextValue: 'currentBranch',
+    branchName: 'feature/demo',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'feature/demo',
+      isCurrent: true,
+      scope: 'local',
+      createdFromRef: 'refs/heads/main',
+      createdFromDisplayName: 'main',
+      createdFromDisplayKind: 'inferred',
+      sourceBehindCount: 1,
+    },
+  });
+
+  assert.deepEqual(mergeCalls, []);
+  assert.match(vscodeState.infoMessages[0], /Inferred base 'main' no longer exists/i);
+  assert.deepEqual(commandContext.state.refreshCalls, [{ fetchRemoteState: false }]);
+});
+
+test('showBranchActions labels update-from-source as inferred base when ancestry is heuristic', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.quickPickSelector = (items) =>
+    items.find((item) => item.actionId === 'updateBranchFromSource');
+
+  createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch() {},
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.showBranchActions']({
+    nodeType: 'currentBranch',
+    contextValue: 'currentBranch',
+    branchName: 'feature/demo-child',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'feature/demo-child',
+      isCurrent: true,
+      scope: 'local',
+      createdFromRef: 'refs/heads/main',
+      createdFromDisplayName: 'main',
+      createdFromDisplayKind: 'inferred',
+      sourceBehindCount: 2,
+      sourceRefMissing: false,
+    },
+  });
+
+  assert.ok(
+    vscodeState.quickPickRequests[0].items.some(
+      (quickPickItem) => quickPickItem.label === '$(git-merge) Update from Inferred Base'
+    )
+  );
 });
 
 test('updateBranchFromSource updates a non-current branch without checking it out first', async () => {
