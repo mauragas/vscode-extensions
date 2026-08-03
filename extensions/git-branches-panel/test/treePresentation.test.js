@@ -203,6 +203,26 @@ test('buildBranchTooltipContent shows created-from metadata for non-current loca
   assert.match(tooltip, /Upstream: origin\/feature\/test4/);
 });
 
+test('buildBranchTooltipContent hides self-referential created-from metadata', () => {
+  const tooltip = buildBranchTooltipContent({
+    kind: 'branch',
+    fullName: 'main',
+    label: 'main',
+    path: 'main',
+    info: {
+      name: 'main',
+      isCurrent: true,
+      createdFromRef: 'refs/heads/main',
+      createdFromDisplayName: 'main',
+      sourceBehindCount: 0,
+    },
+  });
+
+  assert.match(tooltip, /_Current branch_/);
+  assert.equal(tooltip.includes('Created from:'), false);
+  assert.equal(tooltip.includes('Source status:'), false);
+});
+
 test('buildTreeItemPresentation treats the current branch upstream as the remote current branch', () => {
   const remoteTrackingCurrentPresentation = buildTreeItemPresentation(
     {

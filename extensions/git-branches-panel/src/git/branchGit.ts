@@ -124,7 +124,10 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
     await Promise.all(
       branches.map(async (branch) => [
         branch.name,
-        await resolveConfiguredCreatedFromRef(repoRoot, branch.name, sourceMetadataLookup),
+        filterSelfReferentialCreatedFromResolution(
+          branch.name,
+          await resolveConfiguredCreatedFromRef(repoRoot, branch.name, sourceMetadataLookup)
+        ),
       ] as const)
     )
   );
@@ -138,13 +141,16 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
 
       return [
         branch.name,
-        await resolvePreferredLocalSourceAnchor(
-          repoRoot,
+        filterSelfReferentialCreatedFromResolution(
           branch.name,
-          localBranchTipShas,
-          configuredCreatedFromByBranch,
-          localBranchesContainingTipCache
-        ) ?? configuredCreatedFrom,
+          await resolvePreferredLocalSourceAnchor(
+            repoRoot,
+            branch.name,
+            localBranchTipShas,
+            configuredCreatedFromByBranch,
+            localBranchesContainingTipCache
+          ) ?? configuredCreatedFrom
+        ),
       ] as const;
     }))
   );
@@ -152,12 +158,14 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
   const enrichedBranches: BranchInfo[] = await Promise.all(
     branches.map(async (branch: BranchInfo) => {
       if (branch.createdFromRef) {
-        return branch;
+        return isSelfReferentialCreatedFromRef(branch.name, branch.createdFromRef)
+          ? omitCreatedFromMetadata(branch)
+          : branch;
       }
 
       const createdFromRef = resolvedCreatedFromByBranch.get(branch.name)?.sourceRef;
 
-      if (!createdFromRef) {
+      if (!createdFromRef || isSelfReferentialCreatedFromRef(branch.name, createdFromRef)) {
         return branch;
       }
 
@@ -709,6 +717,35 @@ function buildActualLocalBranchRef(branchName: string): string {
   return branchName.startsWith(LOCAL_BRANCH_REF_PREFIX)
     ? branchName
     : `${LOCAL_BRANCH_REF_PREFIX}${branchName}`;
+}
+
+function filterSelfReferentialCreatedFromResolution(
+  branchName: string,
+  resolution: CreatedFromResolution | undefined
+): CreatedFromResolution | undefined {
+  if (!resolution || !isSelfReferentialCreatedFromRef(branchName, resolution.sourceRef)) {
+    return resolution;
+  }
+
+  return undefined;
+}
+
+function isSelfReferentialCreatedFromRef(branchName: string, sourceRef: string): boolean {
+  if (!sourceRef.startsWith(LOCAL_BRANCH_REF_PREFIX)) {
+    return false;
+  }
+
+  return normalizeLocalBranchConfigName(sourceRef) === normalizeLocalBranchConfigName(branchName);
+}
+
+function omitCreatedFromMetadata(branch: BranchInfo): BranchInfo {
+  return {
+    ...branch,
+    createdFromRef: undefined,
+    createdFromDisplayName: undefined,
+    sourceBehindCount: undefined,
+    sourceRefMissing: undefined,
+  };
 }
 
 function normalizeLocalBranchConfigName(branchName: string): string {

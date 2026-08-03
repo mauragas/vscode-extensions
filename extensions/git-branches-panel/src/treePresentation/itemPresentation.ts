@@ -258,7 +258,7 @@ export function buildBranchTooltipContent(node: TreeBranch): string {
     tooltipLines.push('', '_Current branch_');
   }
 
-  if (node.info.createdFromDisplayName) {
+  if (shouldShowCreatedFromTooltip(node.info)) {
     tooltipLines.push('', `Created from: ${node.info.createdFromDisplayName}`);
 
     const sourceStatus = formatSourceBranchStatus(node.info);
@@ -345,6 +345,26 @@ function buildTrackedLocalSyncDescription(branch: BranchInfo): string | undefine
   }
 
   return parts.length > 0 ? parts.join(' ') : undefined;
+}
+
+function shouldShowCreatedFromTooltip(
+  branch: Pick<BranchInfo, 'name' | 'createdFromDisplayName' | 'createdFromRef'>
+): boolean {
+  if (!branch.createdFromDisplayName) {
+    return false;
+  }
+
+  return !isSelfReferentialLocalCreatedFromRef(branch);
+}
+
+function isSelfReferentialLocalCreatedFromRef(
+  branch: Pick<BranchInfo, 'name' | 'createdFromRef'>
+): boolean {
+  if (!branch.createdFromRef?.startsWith('refs/heads/')) {
+    return false;
+  }
+
+  return branch.createdFromRef.slice('refs/heads/'.length) === branch.name;
 }
 
 function getSectionContextValue(node: Extract<BranchTreeNode, { kind: 'section' }>): string {

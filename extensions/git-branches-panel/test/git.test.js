@@ -357,6 +357,22 @@ test('getBranches falls back to compatible Git config metadata when explicit sou
   assert.equal(bugfixBranch.createdFromDisplayName, 'main');
 });
 
+test('getBranches ignores self-referential compatible source hints on existing branches', async (t) => {
+  const repoRoot = createTempRepository(t);
+
+  runGit(repoRoot, ['config', 'branch.main.github-pr-base-branch', 'mauragas#vscode-extensions#main']);
+  runGit(repoRoot, ['config', 'branch.main.vscode-merge-base', 'origin/main']);
+
+  const branches = await getBranches(repoRoot);
+  const mainBranch = branches.find((branch) => branch.name === 'main');
+
+  assert.ok(mainBranch);
+  assert.equal(mainBranch.createdFromRef, undefined);
+  assert.equal(mainBranch.createdFromDisplayName, undefined);
+  assert.equal(mainBranch.sourceBehindCount, undefined);
+  assert.equal(mainBranch.sourceRefMissing, undefined);
+});
+
 test('getBranches normalizes legacy tag-created source metadata that was stored as refs/heads/<tag>', async (t) => {
   const repoRoot = createTempRepository(t);
 
