@@ -86,7 +86,7 @@ export function isSourceUpdatableItem(
 
 export function isRenameableBranchItem(
   item: BranchTreeItem | undefined
-): item is SourceUpdatableBranchTreeItem {
+): item is PinnableBranchTreeItem {
   return Boolean(
     item?.repoRoot &&
       item.branchInfo &&

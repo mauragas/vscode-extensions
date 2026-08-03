@@ -457,7 +457,7 @@ async function handleUpdateBranchFromSource(
 ): Promise<void> {
   if (!item?.branchName || !item.repoRoot) {
     vscode.window.showInformationMessage(
-      'Choose a local branch you want to update from its source branch or inferred base.'
+      'Choose a local branch you want to update from its known source branch.'
     );
     return;
   }
@@ -466,7 +466,7 @@ async function handleUpdateBranchFromSource(
   const repoRoot = item.repoRoot;
   if (!targetBranchName || !repoRoot) {
     vscode.window.showInformationMessage(
-      'Choose a local branch you want to update from its source branch or inferred base.'
+      'Choose a local branch you want to update from its known source branch.'
     );
     return;
   }

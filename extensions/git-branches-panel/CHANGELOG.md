@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 - Refined branch ancestry wording so exact evidence continues to show **Created from**, while weaker reconstructed ancestry now shows **Inferred base** with matching status text such as `Base status: ref missing`.
 - Restricted **Update from Source Branch** to branches with an exact known source branch, hiding it for inferred or ambiguous ancestry to avoid misleading merge suggestions.
 - Added a repository-level **Fetch All (Prune) and Prune Missing Upstreams** cleanup shortcut both in the top toolbar and on grouped repository rows, with all-repositories behavior preserved for the grouped top-bar action.
+- Fixed source-tracked branch hover and right-click actions so branches with exact known sources keep the normal branch menu/actions instead of only showing **Update from Source Branch**.
+- Added `F2` as a shortcut to rename the selected local branch in both Branches tree views.
 
 ## [2.4.2] - 2026-08-03
 
