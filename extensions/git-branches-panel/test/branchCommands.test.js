@@ -1426,7 +1426,7 @@ test('updateBranchFromSource explains when the current branch has no source meta
   assert.match(vscodeState.infoMessages[0], /does not have source metadata/i);
 });
 
-test('updateBranchFromSource describes missing inferred bases accurately', async () => {
+test('updateBranchFromSource refuses inferred bases because the source branch is not exactly known', async () => {
   const vscodeState = createVscodeState();
   const mergeCalls = [];
 
@@ -1449,8 +1449,8 @@ test('updateBranchFromSource describes missing inferred bases accurately', async
             createdFromRef: 'refs/heads/main',
             createdFromDisplayName: 'main',
             createdFromDisplayKind: 'inferred',
-            sourceBehindCount: 0,
-            sourceRefMissing: true,
+            sourceBehindCount: 2,
+            sourceRefMissing: false,
           },
         ];
       },
@@ -1459,8 +1459,8 @@ test('updateBranchFromSource describes missing inferred bases accurately', async
       },
       async getSourceBranchState() {
         return {
-          sourceBehindCount: 0,
-          sourceRefMissing: true,
+          sourceBehindCount: 2,
+          sourceRefMissing: false,
         };
       },
       async mergeRefIntoBranch(repoRoot, branchName, refName) {
@@ -1505,14 +1505,12 @@ test('updateBranchFromSource describes missing inferred bases accurately', async
   });
 
   assert.deepEqual(mergeCalls, []);
-  assert.match(vscodeState.infoMessages[0], /Inferred base 'main' no longer exists/i);
-  assert.deepEqual(commandContext.state.refreshCalls, [{ fetchRemoteState: false }]);
+  assert.match(vscodeState.infoMessages[0], /does not have a known source branch/i);
+  assert.deepEqual(commandContext.state.refreshCalls, []);
 });
 
-test('showBranchActions labels update-from-source as inferred base when ancestry is heuristic', async () => {
+test('showBranchActions hides update-from-source when ancestry is only inferred', async () => {
   const vscodeState = createVscodeState();
-  vscodeState.quickPickSelector = (items) =>
-    items.find((item) => item.actionId === 'updateBranchFromSource');
 
   createBranchCommandsModule({
     vscodeState,
@@ -1567,10 +1565,11 @@ test('showBranchActions labels update-from-source as inferred base when ancestry
     },
   });
 
-  assert.ok(
+  assert.equal(
     vscodeState.quickPickRequests[0].items.some(
-      (quickPickItem) => quickPickItem.label === '$(git-merge) Update from Inferred Base'
-    )
+      (quickPickItem) => quickPickItem.actionId === 'updateBranchFromSource'
+    ),
+    false
   );
 });
 
@@ -1868,7 +1867,7 @@ test('showBranchActions exposes update from source for non-current branches with
   );
 });
 
-test('showBranchActions exposes update from source for local branches even without recorded source metadata', async () => {
+test('showBranchActions hides update from source for local branches without exact source metadata', async () => {
   const vscodeState = createVscodeState();
   createBranchCommandsModule({
     vscodeState,
@@ -1918,10 +1917,11 @@ test('showBranchActions exposes update from source for local branches even witho
     },
   });
 
-  assert.ok(
+  assert.equal(
     vscodeState.quickPickRequests[0].items.some(
-      (quickPickItem) => quickPickItem.label === '$(git-merge) Update from Source Branch'
-    )
+      (quickPickItem) => quickPickItem.actionId === 'updateBranchFromSource'
+    ),
+    false
   );
 });
 

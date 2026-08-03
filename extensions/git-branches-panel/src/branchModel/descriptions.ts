@@ -95,13 +95,16 @@ export function getPublishTargetName(
 }
 
 export function canUpdateFromSourceBranch(
-  branch: Pick<BranchInfo, 'createdFromRef' | 'sourceRefMissing'>
+  branch: Pick<BranchInfo, 'createdFromRef' | 'createdFromDisplayKind' | 'sourceRefMissing'>
 ): boolean {
-  return Boolean(branch.createdFromRef) && !branch.sourceRefMissing;
+  return Boolean(branch.createdFromRef) && !branch.sourceRefMissing && !isInferredCreatedFrom(branch);
 }
 
 export function hasSourceBranchUpdate(
-  branch: Pick<BranchInfo, 'isCurrent' | 'createdFromRef' | 'sourceBehindCount' | 'sourceRefMissing'>
+  branch: Pick<
+    BranchInfo,
+    'isCurrent' | 'createdFromRef' | 'createdFromDisplayKind' | 'sourceBehindCount' | 'sourceRefMissing'
+  >
 ): boolean {
   return canUpdateFromSourceBranch(branch) && (branch.sourceBehindCount ?? 0) > 0;
 }

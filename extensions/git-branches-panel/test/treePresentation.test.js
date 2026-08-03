@@ -180,7 +180,7 @@ test('buildBranchTooltipContent and buildTreeItemPresentation surface source-upd
 
   assert.match(sourceUpdateTooltip, /Created from: main/);
   assert.match(sourceUpdateTooltip, /Source status: 2 commits available/);
-  assert.equal(sourceUpdatePresentation.contextValue, 'publishableCurrentBranch');
+  assert.equal(sourceUpdatePresentation.contextValue, 'publishableCurrentBranch:sourceUpdate');
 });
 
 test('buildBranchTooltipContent shows created-from metadata for non-current local branches', () => {
@@ -284,6 +284,38 @@ test('buildBranchTooltipContent hides self-referential created-from metadata for
   assert.match(tooltip, /_Current branch_/);
   assert.equal(tooltip.includes('Created from:'), false);
   assert.equal(tooltip.includes('Source status:'), false);
+});
+
+test('buildTreeItemPresentation adds sourceUpdate context only for exact known source branches', () => {
+  const exactPresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'feature/exact',
+    label: 'exact',
+    path: 'feature/exact',
+    info: {
+      name: 'feature/exact',
+      isCurrent: false,
+      createdFromRef: 'refs/heads/main',
+      createdFromDisplayName: 'main',
+      createdFromDisplayKind: 'exact',
+    },
+  });
+  const inferredPresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'feature/inferred',
+    label: 'inferred',
+    path: 'feature/inferred',
+    info: {
+      name: 'feature/inferred',
+      isCurrent: false,
+      createdFromRef: 'refs/heads/main',
+      createdFromDisplayName: 'main',
+      createdFromDisplayKind: 'inferred',
+    },
+  });
+
+  assert.equal(exactPresentation.contextValue, 'publishableBranch:sourceUpdate');
+  assert.equal(inferredPresentation.contextValue, 'publishableBranch');
 });
 
 test('buildTreeItemPresentation treats the current branch upstream as the remote current branch', () => {

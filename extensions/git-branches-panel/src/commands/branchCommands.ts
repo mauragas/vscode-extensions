@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { join } from 'node:path';
 
 import {
+  canUpdateFromSourceBranch,
   getCreatedFromReferenceDescription,
   getUpdateFromSourceActionLabel,
   isPublishableBranch,
@@ -463,6 +464,13 @@ async function handleUpdateBranchFromSource(
   }
 
   const branchInfo = item.branchInfo;
+  if (branchInfo?.createdFromRef && branchInfo.createdFromDisplayKind === 'inferred') {
+    vscode.window.showInformationMessage(
+      `Branch '${targetBranchName}' does not have a known source branch. Only branches with an exact known source branch can use Update from Source Branch.`
+    );
+    return;
+  }
+
   const sourceRef = branchInfo?.createdFromRef;
   if (!sourceRef) {
     vscode.window.showInformationMessage(
@@ -496,6 +504,13 @@ async function handleUpdateBranchFromSource(
     }
 
     const resolvedTargetBranchName = latestBranchInfo.name;
+    if (latestBranchInfo.createdFromDisplayKind === 'inferred') {
+      vscode.window.showInformationMessage(
+        `Branch '${targetBranchName}' does not have a known source branch. Only branches with an exact known source branch can use Update from Source Branch.`
+      );
+      return;
+    }
+
     const sourceReferenceDescription = getCreatedFromReferenceDescription(latestBranchInfo);
     const sourceReferenceDescriptionLabel = `${sourceReferenceDescription[0].toUpperCase()}${sourceReferenceDescription.slice(1)}`;
 
@@ -1390,14 +1405,18 @@ function buildBranchActionItems(item: BranchTreeItem): BranchActionItem[] {
     );
 
     if (
-      item.nodeType === 'branch' ||
-      item.nodeType === 'currentBranch' ||
-      item.nodeType === 'missingUpstreamBranch'
+      (
+        item.nodeType === 'branch' ||
+        item.nodeType === 'currentBranch' ||
+        item.nodeType === 'missingUpstreamBranch'
+      ) &&
+      item.branchInfo &&
+      canUpdateFromSourceBranch(item.branchInfo)
     ) {
       items.push(
         createBranchActionItem(
           'updateBranchFromSource',
-          `$(git-merge) ${getUpdateFromSourceActionLabel(item.branchInfo ?? {})}`,
+          `$(git-merge) ${getUpdateFromSourceActionLabel(item.branchInfo)}`,
           async () => {
             await vscode.commands.executeCommand('gitBranchesPanel.updateBranchFromSource', item);
           }

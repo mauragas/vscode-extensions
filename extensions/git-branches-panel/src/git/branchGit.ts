@@ -1243,6 +1243,17 @@ function normalizeWeakSameTipSourceRoots(
       continue;
     }
 
+    const sameTipBranchNameSet = getSameTipBranchNameSet(branchName, localBranchTipShas);
+    const preferredBaseBranchName = getPreferredSameTipBaseBranchName(sameTipBranchNameSet);
+    if (
+      sameTipBranchNameSet.size > 1 &&
+      preferredBaseBranchName &&
+      branchName === preferredBaseBranchName
+    ) {
+      normalizedCreatedFromByBranch.set(branchName, undefined);
+      continue;
+    }
+
     const sameTipRootBaseResolution = resolveUniqueSameTipRootBase(
       branchName,
       localBranchTipShas,

@@ -2,7 +2,7 @@
   "name": "git-branches-panel",
   "displayName": "Git Branches Panel",
   "description": "Tree view for branches, tags, stashes, worktrees, hooks, and remotes across one or multiple Git repositories with grouping, search, filtering, compare/history workflows, remote host integration, worktree maintenance, sync state, and quick actions.",
-  "version": "2.4.2",
+  "version": "2.4.3",
   "publisher": "karolis-mauragas",
   "license": "MIT",
   "repository": {
@@ -2936,52 +2936,52 @@
       "view/item/context": [
         {
           "command": "gitBranchesPanel.branchActionInProgress",
-          "when": "viewItem =~ /^(?:pinned:)?(?:busyBranch|busyCurrentBranch|busyPublishableBranch|busyPublishableCurrentBranch|busyMissingUpstreamBranch)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:busyBranch|busyCurrentBranch|busyPublishableBranch|busyPublishableCurrentBranch|busyMissingUpstreamBranch)(?::sourceUpdate)?$/",
           "group": "inline@1"
         },
         {
           "command": "gitBranchesPanel.newBranchFromSelectedAndCheckout",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)(?::sourceUpdate)?|remoteBranch|staleRemoteBranch|protectedRemoteBranch|protectedStaleRemoteBranch)$/",
           "group": "inline@1"
         },
         {
           "command": "gitBranchesPanel.syncBranch",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|protectedBranch(?::ahead)?)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?$/",
           "group": "inline@2"
         },
         {
           "command": "gitBranchesPanel.pullBranchChanges",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|protectedBranch(?::ahead)?)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?$/",
           "group": "inline@2.5"
         },
         {
           "command": "gitBranchesPanel.pushBranchChanges",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch):ahead$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch):ahead(?::sourceUpdate)?$/",
           "group": "inline@2.6"
         },
         {
           "command": "gitBranchesPanel.publishBranch",
-          "when": "viewItem =~ /^(?:pinned:)?(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)(?::sourceUpdate)?$/",
           "group": "inline@2"
         },
         {
           "command": "gitBranchesPanel.checkout",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:(?:branch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|(?:publishableBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)(?::sourceUpdate)?|remoteBranch|staleRemoteBranch|protectedRemoteBranch|protectedStaleRemoteBranch)$/",
           "group": "inline@3"
         },
         {
           "command": "gitBranchesPanel.pinItem",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && viewItem =~ /^(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|remoteBranch|staleRemoteBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch|tag(?::remote)?|stash|(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*)$/",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && viewItem =~ /^(?:(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)(?::sourceUpdate)?|remoteBranch|staleRemoteBranch|protectedRemoteBranch|protectedStaleRemoteBranch|tag(?::remote)?|stash|(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*)$/",
           "group": "inline@4"
         },
         {
           "command": "gitBranchesPanel.unpinItem",
-          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && viewItem =~ /^pinned:(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|remoteBranch|staleRemoteBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch|tag(?::remote)?|stash|(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*)$/",
+          "when": "(view == gitBranchesPanel || view == gitBranchesSCM) && viewItem =~ /^pinned:(?:(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)(?::sourceUpdate)?|remoteBranch|staleRemoteBranch|protectedRemoteBranch|protectedStaleRemoteBranch|tag(?::remote)?|stash|(?:worktree|currentWorktree)(?::(?:detached|locked|prunable))*)$/",
           "group": "inline@4"
         },
         {
           "command": "gitBranchesPanel.deleteBranch",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|publishableBranch|missingUpstreamBranch)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?(?::sourceUpdate)?|publishableBranch(?::sourceUpdate)?|missingUpstreamBranch(?::sourceUpdate)?)$/",
           "group": "inline@5"
         },
         {
@@ -3008,6 +3008,11 @@
           "command": "gitBranchesPanel.fetchAllPrune",
           "when": "viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/",
           "group": "inline@3"
+        },
+        {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/",
+          "group": "inline@3.5"
         },
         {
           "command": "gitBranchesPanel.showRepositoryActions",
@@ -3995,78 +4000,73 @@
           "group": "1_branchCustom@12"
         },
         {
-          "command": "gitBranchesPanel.updateBranchFromSource",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?:\\:.+)?|currentBranch(?:\\:.+)?|publishableBranch|publishableCurrentBranch(?:\\:.+)?|missingUpstreamBranch|protectedBranch(?:\\:.+)?|protectedPublishableBranch|protectedMissingUpstreamBranch|busyBranch|busyCurrentBranch|busyPublishableBranch|busyPublishableCurrentBranch|busyMissingUpstreamBranch)$/",
-          "group": "1_branchSource@1"
-        },
-        {
           "command": "gitBranchesPanel.openBranchOnRemote",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|remoteBranch|protectedBranch(?::ahead)?|protectedRemoteBranch)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|remoteBranch|protectedRemoteBranch)$/",
           "group": "1_remoteHosting@1"
         },
         {
           "command": "gitBranchesPanel.openComparePage",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|remoteBranch|protectedBranch(?::ahead)?|protectedRemoteBranch)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|remoteBranch|protectedRemoteBranch)$/",
           "group": "1_remoteHosting@2"
         },
         {
           "command": "gitBranchesPanel.createPullRequest",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|remoteBranch|protectedBranch(?::ahead)?|protectedRemoteBranch)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|remoteBranch|protectedRemoteBranch)$/",
           "group": "1_remoteHosting@3"
         },
         {
           "command": "gitBranchesPanel.copyBranchUrl",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|remoteBranch|protectedBranch(?::ahead)?|protectedRemoteBranch)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|remoteBranch|protectedRemoteBranch)$/",
           "group": "1_remoteHosting@4"
         },
         {
           "command": "gitBranchesPanel.copyCompareUrl",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|remoteBranch|protectedBranch(?::ahead)?|protectedRemoteBranch)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|remoteBranch|protectedRemoteBranch)$/",
           "group": "1_remoteHosting@5"
         },
         {
           "command": "gitBranchesPanel.compareWithUpstream",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|protectedBranch(?::ahead)?)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?$/",
           "group": "1_history@1"
         },
         {
           "command": "gitBranchesPanel.showBranchCommits",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)(?::sourceUpdate)?|remoteBranch|staleRemoteBranch|protectedRemoteBranch|protectedStaleRemoteBranch)$/",
           "group": "1_history@2"
         },
         {
           "command": "gitBranchesPanel.openChangedFilesForRef",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)(?::sourceUpdate)?|remoteBranch|staleRemoteBranch|protectedRemoteBranch|protectedStaleRemoteBranch)$/",
           "group": "1_history@3"
         },
         {
           "command": "gitBranchesPanel.rebaseCurrentOntoSelected",
-          "when": "config.gitBranchesPanel.branchContextMenu.showRebaseCurrentOntoSelected && viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
+          "when": "config.gitBranchesPanel.branchContextMenu.showRebaseCurrentOntoSelected && viewItem =~ /^(?:pinned:)?(?:(?:branch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|(?:publishableBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)(?::sourceUpdate)?|remoteBranch|staleRemoteBranch|protectedRemoteBranch|protectedStaleRemoteBranch)$/",
           "group": "2_advanced@1"
         },
         {
           "command": "gitBranchesPanel.rebaseSelectedOntoCurrent",
-          "when": "config.gitBranchesPanel.branchContextMenu.showRebaseSelectedOntoCurrent && viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|publishableBranch|missingUpstreamBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedMissingUpstreamBranch)$/",
+          "when": "config.gitBranchesPanel.branchContextMenu.showRebaseSelectedOntoCurrent && viewItem =~ /^(?:pinned:)?(?:(?:branch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|(?:publishableBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)(?::sourceUpdate)?)$/",
           "group": "2_advanced@2"
         },
         {
           "command": "gitBranchesPanel.squashMergeIntoCurrent",
-          "when": "config.gitBranchesPanel.branchContextMenu.showSquashMergeIntoCurrent && viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
+          "when": "config.gitBranchesPanel.branchContextMenu.showSquashMergeIntoCurrent && viewItem =~ /^(?:pinned:)?(?:(?:branch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|(?:publishableBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)(?::sourceUpdate)?|remoteBranch|staleRemoteBranch|protectedRemoteBranch|protectedStaleRemoteBranch)$/",
           "group": "2_advanced@3"
         },
         {
           "command": "gitBranchesPanel.resetCurrentToSelected",
-          "when": "config.gitBranchesPanel.branchContextMenu.showResetCurrentToSelected && viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|publishableBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
+          "when": "config.gitBranchesPanel.branchContextMenu.showResetCurrentToSelected && viewItem =~ /^(?:pinned:)?(?:(?:branch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|(?:publishableBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)(?::sourceUpdate)?|remoteBranch|staleRemoteBranch|protectedRemoteBranch|protectedStaleRemoteBranch)$/",
           "group": "2_advanced@4"
         },
         {
           "command": "gitBranchesPanel.forcePushWithLease",
-          "when": "config.gitBranchesPanel.branchContextMenu.showForcePushWithLease && viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|protectedBranch(?::ahead)?)$/",
+          "when": "config.gitBranchesPanel.branchContextMenu.showForcePushWithLease && viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?$/",
           "group": "2_advanced@5"
         },
         {
           "command": "gitBranchesPanel.showBranchActions",
-          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?::ahead)?|currentBranch(?::ahead)?|publishableBranch|publishableCurrentBranch|remoteBranch|staleRemoteBranch|missingUpstreamBranch|protectedBranch(?::ahead)?|protectedPublishableBranch|protectedRemoteBranch|protectedStaleRemoteBranch|protectedMissingUpstreamBranch)$/",
+          "when": "viewItem =~ /^(?:pinned:)?(?:(?:branch|currentBranch|protectedBranch)(?::ahead)?(?::sourceUpdate)?|(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch)(?::sourceUpdate)?|remoteBranch|staleRemoteBranch|protectedRemoteBranch|protectedStaleRemoteBranch)$/",
           "group": "2_more@1"
         },
         {
@@ -4280,6 +4280,11 @@
           "group": "1_repository@3"
         },
         {
+          "command": "gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches",
+          "when": "viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/",
+          "group": "1_repository@3.5"
+        },
+        {
           "command": "gitBranchesPanel.showRepositoryActions",
           "when": "viewItem =~ /^(?:activeRepository|repository)(?::(?:busyCurrentBranch|publishableCurrentBranch))?$/",
           "group": "1_repository@4"
@@ -4398,6 +4403,76 @@
           "command": "gitBranchesPanel.removeRemote",
           "when": "viewItem == remoteConfig",
           "group": "2_remoteConfig@1"
+        },
+        {
+          "command": "gitBranchesPanel.syncBranch",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|protectedBranch):sourceUpdate$/",
+          "group": "1_branchKnownSource@1"
+        },
+        {
+          "command": "gitBranchesPanel.publishBranch",
+          "when": "viewItem =~ /^(?:pinned:)?(?:publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedPublishableBranch|protectedMissingUpstreamBranch):sourceUpdate$/",
+          "group": "1_branchKnownSource@1"
+        },
+        {
+          "command": "gitBranchesPanel.checkout",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch):sourceUpdate$/",
+          "group": "1_branchKnownSource@2"
+        },
+        {
+          "command": "gitBranchesPanel.newBranchFromSelected",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch):sourceUpdate$/",
+          "group": "1_branchKnownSource@3"
+        },
+        {
+          "command": "gitBranchesPanel.newBranchFromSelectedAndCheckout",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch):sourceUpdate$/",
+          "group": "1_branchKnownSource@4"
+        },
+        {
+          "command": "gitBranchesPanel.createWorktreeFromRef",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch):sourceUpdate$/",
+          "group": "1_branchKnownSource@5"
+        },
+        {
+          "command": "gitBranchesPanel.renameBranch",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch):sourceUpdate$/",
+          "group": "1_branchKnownSource@6"
+        },
+        {
+          "command": "gitBranchesPanel.createTag",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch):sourceUpdate$/",
+          "group": "1_branchKnownSource@7"
+        },
+        {
+          "command": "gitBranchesPanel.copyBranchName",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|currentBranch|publishableBranch|publishableCurrentBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch):sourceUpdate$/",
+          "group": "1_branchKnownSource@8"
+        },
+        {
+          "command": "gitBranchesPanel.compareBranchWithCurrent",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch):sourceUpdate$/",
+          "group": "1_branchKnownSource@9"
+        },
+        {
+          "command": "gitBranchesPanel.mergeIntoCurrent",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch):sourceUpdate$/",
+          "group": "1_branchKnownSource@10"
+        },
+        {
+          "command": "gitBranchesPanel.cherryPickIntoCurrent",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|missingUpstreamBranch|protectedBranch|protectedPublishableBranch|protectedMissingUpstreamBranch):sourceUpdate$/",
+          "group": "1_branchKnownSource@11"
+        },
+        {
+          "command": "gitBranchesPanel.deleteBranch",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch|publishableBranch|missingUpstreamBranch):sourceUpdate$/",
+          "group": "1_branchKnownSource@12"
+        },
+        {
+          "command": "gitBranchesPanel.updateBranchFromSource",
+          "when": "viewItem =~ /^(?:pinned:)?(?:branch(?:\\:.+)?|currentBranch(?:\\:.+)?|publishableBranch|publishableCurrentBranch(?:\\:.+)?|missingUpstreamBranch|protectedBranch(?:\\:.+)?|protectedPublishableBranch|protectedMissingUpstreamBranch|busyBranch|busyCurrentBranch|busyPublishableBranch|busyPublishableCurrentBranch|busyMissingUpstreamBranch):sourceUpdate$/",
+          "group": "1_branchSource@1"
         }
       ],
       "scm/title": [

@@ -304,6 +304,47 @@ test('fetchAllPruneAndPruneMissingUpstreamBranches fetches, confirms, prunes sta
   );
 });
 
+test('fetchAllPruneAndPruneMissingUpstreamBranches can target the clicked repository item directly', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.warningResponses.push('Prune');
+  const fetchCalls = [];
+  const deleteCalls = [];
+
+  const { commandContext } = createRepositoryCommandsModule({
+    vscodeState,
+    gitMock: {
+      async cleanRepository() {},
+      async deleteBranch(repoRoot, branchName, force) {
+        deleteCalls.push({ repoRoot, branchName, force });
+      },
+      async fetchAllRemotes() {},
+      async fetchRemoteState(repoRoot) {
+        fetchCalls.push(repoRoot);
+      },
+      async getBranches(repoRoot) {
+        return repoRoot === '/repo-b'
+          ? [{ name: 'feature/stale-b', isCurrent: false, upstreamMissing: true }]
+          : [{ name: 'feature/stale-a', isCurrent: false, upstreamMissing: true }];
+      },
+    },
+  });
+  commandContext.state.repositoryDescriptors = [
+    { repoRoot: '/repo-a', label: 'repo-a' },
+    { repoRoot: '/repo-b', label: 'repo-b' },
+  ];
+
+  await vscodeState.registeredCommands['gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches']({
+    nodeType: 'repository',
+    repoRoot: '/repo-b',
+  });
+
+  assert.deepEqual(fetchCalls, ['/repo-b']);
+  assert.deepEqual(deleteCalls, [
+    { repoRoot: '/repo-b', branchName: 'feature/stale-b', force: true },
+  ]);
+  assert.deepEqual(commandContext.state.refreshCalls, [{ fetchRemoteState: false }]);
+});
+
 test('fetchAll can target the clicked repository item directly', async () => {
   const vscodeState = createVscodeState();
   const fetchCalls = [];

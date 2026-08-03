@@ -1,5 +1,6 @@
 import {
   buildBranchDescription,
+  canUpdateFromSourceBranch,
   formatSourceBranchStatus,
   formatSyncStatus,
   getCreatedFromLabel,
@@ -535,6 +536,8 @@ function getItemContextValue(nodeType: NodeType, branch: BranchInfo): string {
     contextValue = resolveAheadContextValue(contextValue, branch);
   }
 
+  contextValue = resolveSourceUpdateContextValue(contextValue, branch);
+
   return resolvePinnedContextValue(contextValue, branch.isPinned);
 }
 
@@ -620,6 +623,14 @@ function resolveProtectedContextValue(contextValue: string): string {
     default:
       return contextValue;
   }
+}
+
+function resolveSourceUpdateContextValue(contextValue: string, branch: BranchInfo): string {
+  if (!canUpdateFromSourceBranch(branch)) {
+    return contextValue;
+  }
+
+  return `${contextValue}:sourceUpdate`;
 }
 
 function hasOutgoingLocalBranchChanges(branch: BranchInfo): boolean {

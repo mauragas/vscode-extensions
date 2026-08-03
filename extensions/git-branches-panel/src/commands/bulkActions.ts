@@ -772,6 +772,17 @@ function buildRepositoryActionItems(
       },
     },
     {
+      actionId: 'fetchAllPruneAndPruneMissingUpstreamBranches',
+      label: '$(trash) Fetch all (prune) and prune missing upstreams',
+      description: 'Fetch every remote with pruning, then optionally delete local branches whose upstreams are gone',
+      run: async () => {
+        await executeCommandWithOptionalItem(
+          'gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches',
+          actionTarget
+        );
+      },
+    },
+    {
       actionId: 'cleanRepository',
       label: '$(trash) Clean repository…',
       description: 'Run git clean -fdx to remove untracked and ignored files',
@@ -829,6 +840,16 @@ function buildAllRepositoriesActionItems(commandContext: CommandContext): Advanc
       description: 'Fetch and prune every visible repository',
       run: async () => {
         await vscode.commands.executeCommand('gitBranchesPanel.fetchAllRepositoriesPrune');
+      },
+    },
+    {
+      actionId: 'fetchAllRepositoriesPruneAndPruneMissingUpstreams',
+      label: '$(trash) Fetch all (prune) and prune missing upstreams',
+      description: 'Fetch and prune every visible repository, then optionally delete local branches whose upstreams are gone',
+      run: async () => {
+        await vscode.commands.executeCommand(
+          'gitBranchesPanel.fetchAllPruneAndPruneMissingUpstreamBranches'
+        );
       },
     },
     {
