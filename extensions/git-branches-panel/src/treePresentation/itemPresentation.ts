@@ -519,7 +519,8 @@ function buildTreeItemLabel(
   isCurrent: boolean
 ): string {
   const isActiveRef =
-    nodeType === 'currentBranch' || (nodeType === 'worktree' && isCurrent) || (nodeType === 'tag' && isCurrent);
+    (nodeType === 'currentBranch' || nodeType === 'missingUpstreamBranch' || nodeType === 'worktree' || nodeType === 'tag') &&
+    isCurrent;
 
   return isActiveRef ? `▶ ${label}` : label;
 }
@@ -650,6 +651,8 @@ function isCurrentBranch(
   switch (nodeType) {
     case 'currentBranch':
       return true;
+    case 'missingUpstreamBranch':
+      return branch.isCurrent;
     case 'remoteBranch':
       return (
         currentBranchInfo?.scope === 'local' &&
