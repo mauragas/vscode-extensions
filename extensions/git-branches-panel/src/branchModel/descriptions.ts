@@ -117,7 +117,7 @@ export function formatSourceBranchStatus(
   }
 
   if (branch.sourceRefMissing) {
-    return 'source ref missing';
+    return 'ref missing';
   }
 
   if (!branch.isCurrent) {

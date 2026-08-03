@@ -288,13 +288,16 @@ The tooltip only shows created-from metadata when the final resolved source surv
 The label text depends on the evidence quality:
 
 - **`Created from:`**
-    - explicit extension metadata
-    - reflog-derived creation history
+
+  - explicit extension metadata
+  - reflog-derived creation history
+
 - **`Inferred base:`**
-    - `github-pr-base-branch`
-    - `vscode-merge-base`
-    - weak same-tip root/base normalization
-    - derived same-tip local anchors
+
+  - `github-pr-base-branch`
+  - `vscode-merge-base`
+  - weak same-tip root/base normalization
+  - derived same-tip local anchors
 
 The tooltip may also show `Source status`, but only for **current branches**.
 
@@ -305,7 +308,7 @@ For inferred ancestry, the status label also changes to match:
 
 Possible source-status results:
 
-- `source ref missing`
+- `ref missing`
 - `N commit available`
 - `N commits available`
 - `up to date`
@@ -538,7 +541,7 @@ When the branch is current, the extension also compares the current branch tip a
 ```mermaid
 flowchart TD
     A[Current branch has Created from source] --> B{Source ref exists?}
-    B -->|No| C[Source status: source ref missing]
+    B -->|No| C[Source status: ref missing]
     B -->|Yes| D[Compare current branch vs source ref]
     D --> E{Source ahead of current?}
     E -->|Yes| F[Source status: N commits available]
@@ -550,8 +553,9 @@ Result examples:
 - `Source status: 1 commit available`
 - `Source status: 2 commits available`
 - `Source status: up to date`
-- `Source status: source ref missing`
+- `Source status: ref missing`
 - `Base status: up to date`
+- `Base status: ref missing`
 
 ## Scenario 10: CLI branch creation from detached HEAD or a raw commit
 

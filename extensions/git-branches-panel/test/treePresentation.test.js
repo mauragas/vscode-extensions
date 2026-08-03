@@ -225,6 +225,27 @@ test('buildBranchTooltipContent uses inferred wording for heuristic branch ances
   assert.equal(tooltip.includes('Source status:'), false);
 });
 
+test('buildBranchTooltipContent uses label-neutral missing-ref status for inferred ancestry', () => {
+  const tooltip = buildBranchTooltipContent({
+    kind: 'branch',
+    fullName: 'feature/ambiguous',
+    label: 'ambiguous',
+    path: 'feature/ambiguous',
+    info: {
+      name: 'feature/ambiguous',
+      isCurrent: true,
+      createdFromRef: 'refs/heads/main',
+      createdFromDisplayName: 'main',
+      createdFromDisplayKind: 'inferred',
+      sourceRefMissing: true,
+    },
+  });
+
+  assert.match(tooltip, /Inferred base: main/);
+  assert.match(tooltip, /Base status: ref missing/);
+  assert.equal(tooltip.includes('source ref missing'), false);
+});
+
 test('buildBranchTooltipContent hides self-referential created-from metadata', () => {
   const tooltip = buildBranchTooltipContent({
     kind: 'branch',
