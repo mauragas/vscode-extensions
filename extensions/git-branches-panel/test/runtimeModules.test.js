@@ -1134,3 +1134,111 @@ test('BranchTreeProvider revealBranch prefers the visible tree view and focuses 
     select: true,
   });
 });
+
+test('BranchTreeProvider revealCurrentBranchOnStartup expands the current branch path only once per view', async () => {
+  const commandCalls = [];
+  const state = {
+    treeData: [
+      {
+        kind: 'section',
+        label: 'Local',
+        path: 'section:local',
+        scope: 'local',
+        repoRoot: '/repo',
+        children: [
+          {
+            kind: 'folder',
+            label: 'feature',
+            path: 'feature',
+            scope: 'local',
+            repoRoot: '/repo',
+            children: [
+              {
+                kind: 'folder',
+                label: 'demo',
+                path: 'feature/demo',
+                scope: 'local',
+                repoRoot: '/repo',
+                children: [
+                  {
+                    kind: 'branch',
+                    fullName: 'feature/demo/current',
+                    label: 'current',
+                    path: 'feature/demo/current',
+                    repoRoot: '/repo',
+                    info: {
+                      name: 'feature/demo/current',
+                      isCurrent: true,
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    currentBranch: {
+      name: 'feature/demo/current',
+      isCurrent: true,
+    },
+    repoRoot: '/repo',
+    loadedSections: new Set(['local']),
+  };
+  const dataLoader = createDataLoader(state);
+  const { BranchTreeProvider } = loadFresh('../out/treeProvider.js', {
+    vscode: createVscodeMock(commandCalls),
+    './git': {
+      fetchRemoteState() {},
+      getBranches() {},
+      getHooks() {},
+      getRemoteBranches() {},
+      getRepoRoot() {},
+      getStashes() {},
+      getWorktrees() {},
+      getTags() {},
+    },
+    './gitApi': {
+      getWorkspaceRepositories: async () => [],
+      resolveRepoRootForUri: async () => undefined,
+    },
+    './treeDataLoader': {
+      BranchDataLoader: class BranchDataLoader {},
+      getBranchSectionKey: (sectionPath) =>
+        sectionPath === 'section:local' ? 'local' : undefined,
+    },
+    './treeItem': createTreeItemMock(),
+    './treePresentation': {
+      findContainerNode,
+      findDescendantBranches,
+    },
+  });
+
+  const provider = new BranchTreeProvider({ subscriptions: [] }, dataLoader);
+  const revealCalls = [];
+
+  provider.registerTreeViews([
+    {
+      viewId: 'gitBranchesPanel',
+      treeView: {
+        visible: true,
+        async reveal(item, options) {
+          revealCalls.push({ item, options });
+        },
+      },
+    },
+  ]);
+
+  const firstReveal = await provider.revealCurrentBranchOnStartup('gitBranchesPanel');
+  const secondReveal = await provider.revealCurrentBranchOnStartup('gitBranchesPanel');
+
+  assert.equal(firstReveal, true);
+  assert.equal(secondReveal, false);
+  assert.equal(revealCalls.length, 1);
+  assert.equal(revealCalls[0].item.branchName, 'feature/demo/current');
+  assert.deepEqual(revealCalls[0].options, {
+    expand: 3,
+    focus: false,
+    select: false,
+  });
+});

@@ -34,7 +34,7 @@ function createVscodeState() {
   };
 }
 
-function createVscodeMock(showCurrentBranchInfo, treeViews, state) {
+function createVscodeMock(showCurrentBranchInfo, treeViews, state, initiallyVisibleViewIds = []) {
   return {
     commands: {
       async executeCommand(command, ...args) {
@@ -50,19 +50,31 @@ function createVscodeMock(showCurrentBranchInfo, treeViews, state) {
       },
       createTreeView: (viewId, options) => {
         const selectionListeners = [];
+        const visibilityListeners = [];
         const treeView = {
           viewId,
           options,
           message: undefined,
+          visible: initiallyVisibleViewIds.includes(viewId),
           selection: [],
           onDidChangeSelection(listener) {
             selectionListeners.push(listener);
+            return { dispose() {} };
+          },
+          onDidChangeVisibility(listener) {
+            visibilityListeners.push(listener);
             return { dispose() {} };
           },
           fireSelection(selection) {
             treeView.selection = selection;
             for (const listener of selectionListeners) {
               listener({ selection });
+            }
+          },
+          fireVisibility(visible) {
+            treeView.visible = visible;
+            for (const listener of visibilityListeners) {
+              listener({ visible });
             }
           },
           dispose() {},
@@ -516,4 +528,44 @@ test('registerBranchViews shows filter status and a no-results hint when filteri
     treeViews[1].message,
     'Filter: local:feature\n\nNo refs match the current filter.'
   );
+});
+
+test('registerBranchViews reveals the current branch path when a tree view is visible', () => {
+  const treeViews = [];
+  const listeners = [];
+  const vscodeState = createVscodeState();
+  const revealCalls = [];
+  const { registerBranchViews } = loadFresh('../out/viewRegistration.js', {
+    vscode: createVscodeMock(false, treeViews, vscodeState, ['gitBranchesPanel']),
+  }, ['../out/pinContext.js']);
+
+  const provider = {
+    getCurrentBranch: () => ({
+      name: 'feature/demo',
+      isCurrent: true,
+    }),
+    getActiveRepositoryLabel: () => undefined,
+    getFilterSummary: () => '',
+    hasActiveFilter: () => false,
+    hasVisibleResults: () => true,
+    registerTreeViews: () => {},
+    revealCurrentBranchOnStartup: async (viewId) => {
+      revealCalls.push(viewId);
+      return true;
+    },
+    setActiveRepositoryFromItem: async () => {},
+    syncActiveRepositoryToEditorIfEnabled: async () => {},
+    onDidChangeTreeData: (listener) => {
+      listeners.push(listener);
+      return { dispose() {} };
+    },
+  };
+
+  registerBranchViews({ subscriptions: [] }, provider);
+
+  assert.deepEqual(revealCalls, ['gitBranchesPanel']);
+
+  treeViews[1].fireVisibility(true);
+
+  assert.deepEqual(revealCalls, ['gitBranchesPanel', 'gitBranchesSCM']);
 });

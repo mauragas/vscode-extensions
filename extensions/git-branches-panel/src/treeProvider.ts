@@ -66,6 +66,7 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
   private busyOperationCount = 0;
   private activeRepoRoot?: string;
   private filterState: RefFilterState = clearRefFilterState();
+  private readonly startupCurrentBranchRevealViewIds = new Set<string>();
   private treeViews: ReadonlyArray<{
     readonly viewId: string;
     readonly treeView: vscode.TreeView<BranchTreeItem>;
@@ -312,6 +313,62 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     readonly treeView: vscode.TreeView<BranchTreeItem>;
   }>): void {
     this.treeViews = treeViews;
+    this.startupCurrentBranchRevealViewIds.clear();
+  }
+
+  async revealCurrentBranchOnStartup(viewId?: string): Promise<boolean> {
+    const revealTreeViewEntry = this.getRevealTreeViewEntry(viewId);
+    if (!revealTreeViewEntry) {
+      return false;
+    }
+
+    if (this.startupCurrentBranchRevealViewIds.has(revealTreeViewEntry.viewId)) {
+      return false;
+    }
+
+    if (viewId && !revealTreeViewEntry.treeView.visible) {
+      return false;
+    }
+
+    if (this.dataLoader.getRepoRoots().length === 0) {
+      await this.refresh({ sections: ['local'], fetchRemoteState: false });
+    }
+
+    await this.ensureActiveRepoRoot();
+
+    let repoRoot = this.getRepoRoot();
+    if (!repoRoot) {
+      return false;
+    }
+
+    if (!this.dataLoader.isSectionLoaded('local', repoRoot)) {
+      await this.refresh({
+        sections: ['local'],
+        repoRoots: [repoRoot],
+        fetchRemoteState: false,
+      });
+
+      repoRoot = this.getRepoRoot() ?? repoRoot;
+    }
+
+    const currentBranch = this.getCurrentBranch(repoRoot);
+    if (!currentBranch) {
+      return false;
+    }
+
+    const revealTarget = findLocalBranchTreeItem(this.getBaseVisibleTreeData(), repoRoot, currentBranch.name);
+    if (!revealTarget) {
+      return false;
+    }
+
+    await revealTreeViewEntry.treeView.reveal(revealTarget, {
+      expand: 3,
+      focus: false,
+      select: false,
+    });
+
+    this.startupCurrentBranchRevealViewIds.add(revealTreeViewEntry.viewId);
+    return true;
   }
 
   getSelectedItem(viewId?: string): BranchTreeItem | undefined {
@@ -407,7 +464,22 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
   }
 
   private getRevealTreeView(): vscode.TreeView<BranchTreeItem> | undefined {
-    return this.treeViews.find(({ treeView }) => treeView.visible)?.treeView ?? this.treeViews[0]?.treeView;
+    return this.getRevealTreeViewEntry()?.treeView;
+  }
+
+  private getRevealTreeViewEntry(
+    preferredViewId?: string
+  ):
+    | {
+        readonly viewId: string;
+        readonly treeView: vscode.TreeView<BranchTreeItem>;
+      }
+    | undefined {
+    if (preferredViewId) {
+      return this.treeViews.find((treeView) => treeView.viewId === preferredViewId);
+    }
+
+    return this.treeViews.find(({ treeView }) => treeView.visible) ?? this.treeViews[0];
   }
 
   private getBaseVisibleTreeData(): readonly BranchTreeNode[] {

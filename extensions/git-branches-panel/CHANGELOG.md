@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [2.4.4] - 2026-08-03
 
 - Restored the `▶` current-branch marker for active local branches whose tracked upstream is gone, so recreated or stale-tracking branches still show clearly as checked out.
+- On startup, the visible Branches tree now auto-expands the current branch's repository/section/folder path so the checked-out branch is immediately in view.
 
 ## [2.4.3] - 2026-08-03
 

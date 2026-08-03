@@ -26,6 +26,13 @@ export function registerBranchViews(
     createBranchTreeView('gitBranchesSCM', provider),
   ] as const;
   provider.registerTreeViews(treeViews);
+  const visibilitySubscriptions = treeViews.map(({ viewId, treeView }) =>
+    treeView.onDidChangeVisibility(() => {
+      if (treeView.visible) {
+        void provider.revealCurrentBranchOnStartup(viewId);
+      }
+    })
+  );
   const selectionSubscriptions = treeViews.map(({ viewId, treeView }) =>
     treeView.onDidChangeSelection(({ selection }) => {
       void updateSelectedItemPinnedContext(viewId, selection[0]);
@@ -41,8 +48,15 @@ export function registerBranchViews(
   void syncSelectedItemCanRenameBranchContexts(treeViews);
   void provider.syncActiveRepositoryToEditorIfEnabled();
 
+  for (const { viewId, treeView } of treeViews) {
+    if (treeView.visible) {
+      void provider.revealCurrentBranchOnStartup(viewId);
+    }
+  }
+
   context.subscriptions.push(
     ...treeViews.map(({ treeView }) => treeView),
+    ...visibilitySubscriptions,
     ...selectionSubscriptions,
     vscode.window.onDidChangeActiveTextEditor(() => {
       void provider.syncActiveRepositoryToEditorIfEnabled();
