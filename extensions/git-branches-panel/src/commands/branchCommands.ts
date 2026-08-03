@@ -89,6 +89,8 @@ const REMOTE_HOSTING_CUSTOM_PROVIDERS_SETTING = 'remoteHosting.customProviders';
 const DISCARD_CHANGES_AND_SWITCH_ACTION = 'Discard local changes and switch';
 const LOCAL_BRANCH_REF_PREFIX = 'refs/heads/';
 
+type BranchSelectionViewId = 'gitBranchesPanel' | 'gitBranchesSCM';
+
 type RemoteBranchTrackingState = RemoteTrackingState;
 type RemoteBranchDeleteFailureKind =
   | 'LocalPrePushHookBlocked'
@@ -213,6 +215,12 @@ export function registerBranchDomainCommands(
     vscode.commands.registerCommand('gitBranchesPanel.renameBranch', async (item: BranchTreeItem) => {
       await handleRenameBranch(item, commandContext);
     }),
+    vscode.commands.registerCommand(
+      'gitBranchesPanel.renameSelectedBranch',
+      async (viewId?: BranchSelectionViewId) => {
+        await handleRenameSelectedBranch(viewId, commandContext);
+      }
+    ),
     vscode.commands.registerCommand('gitBranchesPanel.copyBranchName', async (item: BranchTreeItem) => {
       await handleCopyBranchName(item);
     }),
@@ -792,6 +800,10 @@ async function handleRenameBranch(
   item: BranchTreeItem,
   commandContext: CommandContext
 ): Promise<void> {
+  if (!canRenameLocalBranchItem(item)) {
+    return;
+  }
+
   if (!item.branchName || !item.repoRoot) {
     return;
   }
@@ -813,6 +825,18 @@ async function handleRenameBranch(
   } catch (error) {
     commandContext.showCommandError(`Failed to rename '${item.branchName}'`, error);
   }
+}
+
+async function handleRenameSelectedBranch(
+  viewId: BranchSelectionViewId | undefined,
+  commandContext: CommandContext
+): Promise<void> {
+  const selectedItem = commandContext.provider.getSelectedItem(viewId);
+  if (!selectedItem || !canRenameLocalBranchItem(selectedItem)) {
+    return;
+  }
+
+  await handleRenameBranch(selectedItem, commandContext);
 }
 
 async function handleCopyBranchName(item: BranchTreeItem): Promise<void> {
@@ -1651,6 +1675,16 @@ function hasOutgoingBranchChanges(
   }
 
   return /(^|:)ahead$/u.test(item.contextValue ?? '');
+}
+
+function canRenameLocalBranchItem(
+  item: Pick<BranchTreeItem, 'nodeType'>
+): boolean {
+  return (
+    item.nodeType === 'branch' ||
+    item.nodeType === 'currentBranch' ||
+    item.nodeType === 'missingUpstreamBranch'
+  );
 }
 
 function canCreateWorktreeFromItem(item: BranchTreeItem): boolean {

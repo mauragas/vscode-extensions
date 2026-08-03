@@ -17,6 +17,11 @@ export const SELECTED_ITEM_SOURCE_UPDATE_CONTEXTS: Readonly<Record<BranchViewId,
   gitBranchesSCM: 'gitBranchesPanel.scmViewSelectedItemCanUpdateFromSource',
 };
 
+export const SELECTED_ITEM_RENAME_BRANCH_CONTEXTS: Readonly<Record<BranchViewId, string>> = {
+  gitBranchesPanel: 'gitBranchesPanel.branchesViewSelectedItemCanRenameBranch',
+  gitBranchesSCM: 'gitBranchesPanel.scmViewSelectedItemCanRenameBranch',
+};
+
 type PinnableBranchTreeItem = BranchTreeItem & {
   branchInfo: NonNullable<BranchTreeItem['branchInfo']>;
   repoRoot: NonNullable<BranchTreeItem['repoRoot']>;
@@ -52,6 +57,12 @@ const SOURCE_UPDATABLE_NODE_TYPES = new Set<NodeType>([
   'missingUpstreamBranch',
 ]);
 
+const RENAMEABLE_BRANCH_NODE_TYPES = new Set<NodeType>([
+  'branch',
+  'currentBranch',
+  'missingUpstreamBranch',
+]);
+
 const selectedItemStates = new Map<BranchViewId, SelectedPinnableItemState | undefined>();
 
 export function isPinnableItem(
@@ -70,6 +81,16 @@ export function isSourceUpdatableItem(
       item.branchInfo &&
       SOURCE_UPDATABLE_NODE_TYPES.has(item.nodeType) &&
       canUpdateFromSourceBranch(item.branchInfo)
+  );
+}
+
+export function isRenameableBranchItem(
+  item: BranchTreeItem | undefined
+): item is SourceUpdatableBranchTreeItem {
+  return Boolean(
+    item?.repoRoot &&
+      item.branchInfo &&
+      RENAMEABLE_BRANCH_NODE_TYPES.has(item.nodeType)
   );
 }
 
@@ -112,6 +133,24 @@ export async function updateSelectedItemCanUpdateFromSourceContext(
   await setSelectedItemCanUpdateFromSourceContextValue(viewId, isSourceUpdatableItem(item));
 }
 
+export async function setSelectedItemCanRenameBranchContextValue(
+  viewId: BranchViewId,
+  canRenameBranch: boolean
+): Promise<void> {
+  await vscode.commands.executeCommand(
+    'setContext',
+    SELECTED_ITEM_RENAME_BRANCH_CONTEXTS[viewId],
+    canRenameBranch
+  );
+}
+
+export async function updateSelectedItemCanRenameBranchContext(
+  viewId: BranchViewId,
+  item: BranchTreeItem | undefined
+): Promise<void> {
+  await setSelectedItemCanRenameBranchContextValue(viewId, isRenameableBranchItem(item));
+}
+
 export async function syncSelectedItemPinnedContexts(
   treeViews: ReadonlyArray<{
     readonly viewId: BranchViewId;
@@ -134,6 +173,19 @@ export async function syncSelectedItemCanUpdateFromSourceContexts(
   await Promise.all(
     treeViews.map(({ viewId, treeView }) =>
       updateSelectedItemCanUpdateFromSourceContext(viewId, treeView.selection[0])
+    )
+  );
+}
+
+export async function syncSelectedItemCanRenameBranchContexts(
+  treeViews: ReadonlyArray<{
+    readonly viewId: BranchViewId;
+    readonly treeView: vscode.TreeView<BranchTreeItem>;
+  }>
+): Promise<void> {
+  await Promise.all(
+    treeViews.map(({ viewId, treeView }) =>
+      updateSelectedItemCanRenameBranchContext(viewId, treeView.selection[0])
     )
   );
 }

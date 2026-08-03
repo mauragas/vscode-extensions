@@ -4498,6 +4498,20 @@
         }
       ]
     },
+    "keybindings": [
+      {
+        "command": "gitBranchesPanel.renameSelectedBranch",
+        "key": "f2",
+        "args": "gitBranchesPanel",
+        "when": "listFocus && focusedView == gitBranchesPanel && gitBranchesPanel.branchesViewSelectedItemCanRenameBranch"
+      },
+      {
+        "command": "gitBranchesPanel.renameSelectedBranch",
+        "key": "f2",
+        "args": "gitBranchesSCM",
+        "when": "listFocus && focusedView == gitBranchesSCM && gitBranchesPanel.scmViewSelectedItemCanRenameBranch"
+      }
+    ],
     "configuration": {
       "title": "Git Branches Panel",
       "properties": {

@@ -58,6 +58,12 @@ function getInlineViewItemContextCommands() {
   )];
 }
 
+function getKeybindings(commandId) {
+  return (packageJson.contributes.keybindings ?? []).filter(
+    (keybinding) => keybinding.command === commandId
+  );
+}
+
 test('package manifest exposes the 2.4.3 multi-repo, source-update, search, remote-host, history, remote-management, worktree, tag, and advanced-branch contributions', () => {
   assert.equal(packageJson.version, '2.4.3');
 
@@ -144,6 +150,28 @@ test('package manifest exposes the 2.4.3 multi-repo, source-update, search, remo
   assert.equal(getCommand('gitBranchesPanel.showAdvancedBranchOperations').icon, '$(tools)');
   assert.equal(getCommand('gitBranchesPanel.resetCurrentToSelected').icon, '$(discard)');
   assert.equal(getCommand('gitBranchesPanel.forcePushWithLease').icon, '$(cloud-upload)');
+
+  const renameSelectedBranchKeybindings = getKeybindings('gitBranchesPanel.renameSelectedBranch');
+  assert.equal(renameSelectedBranchKeybindings.length, 2);
+  assert.deepEqual(
+    renameSelectedBranchKeybindings.map((keybinding) => ({
+      key: keybinding.key,
+      args: keybinding.args,
+      when: keybinding.when,
+    })),
+    [
+      {
+        key: 'f2',
+        args: 'gitBranchesPanel',
+        when: 'listFocus && focusedView == gitBranchesPanel && gitBranchesPanel.branchesViewSelectedItemCanRenameBranch',
+      },
+      {
+        key: 'f2',
+        args: 'gitBranchesSCM',
+        when: 'listFocus && focusedView == gitBranchesSCM && gitBranchesPanel.scmViewSelectedItemCanRenameBranch',
+      },
+    ]
+  );
 
   const settings = packageJson.contributes.configuration.properties;
   assert.equal(settings['gitBranchesPanel.multiRepository.mode'].default, 'auto');

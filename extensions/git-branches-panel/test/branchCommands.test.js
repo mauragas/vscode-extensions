@@ -135,6 +135,8 @@ function createCommandContext() {
       isCurrent: true,
       scope: 'local',
     },
+    selectedItemsByViewId: new Map(),
+    selectedItemRequests: [],
     loadingTitles: [],
     refreshCalls: [],
     successRefreshes: [],
@@ -151,6 +153,10 @@ function createCommandContext() {
         },
         getCurrentBranch() {
           return state.currentBranch;
+        },
+        getSelectedItem(viewId) {
+          state.selectedItemRequests.push(viewId);
+          return state.selectedItemsByViewId.get(viewId);
         },
         async revealBranch(repoRoot, branchName, options) {
           state.revealedBranches.push({ repoRoot, branchName, options });
@@ -2948,6 +2954,143 @@ test('showBranchActions exposes actions for missing upstream branches', async ()
       args: [item],
     },
   ]);
+});
+
+test('renameSelectedBranch renames the selected local branch in the focused tree view', async () => {
+  const vscodeState = createVscodeState();
+  vscodeState.inputBoxResponse = 'feature/renamed';
+  const renameBranchCalls = [];
+
+  const { commandContext } = createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch(repoRoot, branchName, newBranchName) {
+        renameBranchCalls.push({ repoRoot, branchName, newBranchName });
+      },
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  commandContext.state.selectedItemsByViewId.set('gitBranchesPanel', {
+    nodeType: 'branch',
+    branchName: 'feature/demo',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'feature/demo',
+      isCurrent: false,
+      scope: 'local',
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.renameSelectedBranch']('gitBranchesPanel');
+
+  assert.deepEqual(commandContext.state.selectedItemRequests, ['gitBranchesPanel']);
+  assert.equal(vscodeState.inputBoxRequests.length, 1);
+  assert.equal(vscodeState.inputBoxRequests[0].prompt, "Rename 'feature/demo' to:");
+  assert.equal(vscodeState.inputBoxRequests[0].value, 'feature/demo');
+  assert.deepEqual(renameBranchCalls, [
+    {
+      repoRoot: '/repo',
+      branchName: 'feature/demo',
+      newBranchName: 'feature/renamed',
+    },
+  ]);
+  assert.deepEqual(commandContext.state.successRefreshes, [
+    {
+      message: "Renamed branch to 'feature/renamed'.",
+      options: {},
+    },
+  ]);
+});
+
+test('renameSelectedBranch ignores non-local selected items', async () => {
+  const vscodeState = createVscodeState();
+  const renameBranchCalls = [];
+
+  const { commandContext } = createBranchCommandsModule({
+    vscodeState,
+    validateSpy: [],
+    gitMock: {
+      async checkoutBranch() {},
+      async checkoutRemoteBranch() {},
+      async createBranch() {},
+      async createBranchFromRef() {},
+      async deleteBranch() {},
+      async deleteRemoteBranch() {},
+      async getDiffFilesBetweenRefs() {
+        return [];
+      },
+      async mergeBranchIntoCurrent() {},
+      async pushBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+      async renameBranch(repoRoot, branchName, newBranchName) {
+        renameBranchCalls.push({ repoRoot, branchName, newBranchName });
+      },
+      async syncBranch() {
+        return {
+          branchName: 'main',
+          upstreamName: 'origin/main',
+          didPull: false,
+          didPush: false,
+          publishedUpstream: false,
+        };
+      },
+    },
+  });
+
+  commandContext.state.selectedItemsByViewId.set('gitBranchesSCM', {
+    nodeType: 'remoteBranch',
+    branchName: 'origin/feature/demo',
+    repoRoot: '/repo',
+    branchInfo: {
+      name: 'origin/feature/demo',
+      isCurrent: false,
+      scope: 'remote',
+      remoteName: 'origin',
+    },
+  });
+
+  await vscodeState.registeredCommands['gitBranchesPanel.renameSelectedBranch']('gitBranchesSCM');
+
+  assert.deepEqual(commandContext.state.selectedItemRequests, ['gitBranchesSCM']);
+  assert.equal(vscodeState.inputBoxRequests.length, 0);
+  assert.deepEqual(renameBranchCalls, []);
+  assert.deepEqual(commandContext.state.successRefreshes, []);
 });
 
 test('checkout prompts to create a new branch when checkout would overwrite local changes', async () => {

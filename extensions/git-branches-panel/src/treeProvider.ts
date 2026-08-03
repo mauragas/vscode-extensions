@@ -66,7 +66,10 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
   private busyOperationCount = 0;
   private activeRepoRoot?: string;
   private filterState: RefFilterState = clearRefFilterState();
-  private treeViews: readonly vscode.TreeView<BranchTreeItem>[] = [];
+  private treeViews: ReadonlyArray<{
+    readonly viewId: string;
+    readonly treeView: vscode.TreeView<BranchTreeItem>;
+  }> = [];
 
   constructor(
     context: vscode.ExtensionContext,
@@ -304,8 +307,20 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
     return true;
   }
 
-  registerTreeViews(treeViews: readonly vscode.TreeView<BranchTreeItem>[]): void {
+  registerTreeViews(treeViews: ReadonlyArray<{
+    readonly viewId: string;
+    readonly treeView: vscode.TreeView<BranchTreeItem>;
+  }>): void {
     this.treeViews = treeViews;
+  }
+
+  getSelectedItem(viewId?: string): BranchTreeItem | undefined {
+    if (viewId) {
+      return this.treeViews.find((treeView) => treeView.viewId === viewId)?.treeView.selection[0];
+    }
+
+    return this.treeViews.find(({ treeView }) => treeView.visible)?.treeView.selection[0]
+      ?? this.treeViews.find(({ treeView }) => treeView.selection.length > 0)?.treeView.selection[0];
   }
 
   async setActiveRepositoryFromItem(item: BranchTreeItem | undefined): Promise<void> {
@@ -392,7 +407,7 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
   }
 
   private getRevealTreeView(): vscode.TreeView<BranchTreeItem> | undefined {
-    return this.treeViews.find((treeView) => treeView.visible) ?? this.treeViews[0];
+    return this.treeViews.find(({ treeView }) => treeView.visible)?.treeView ?? this.treeViews[0]?.treeView;
   }
 
   private getBaseVisibleTreeData(): readonly BranchTreeNode[] {
