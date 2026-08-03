@@ -998,8 +998,12 @@ test('BranchTreeProvider revealItem clears active filters before resolving the v
 
   provider.registerTreeViews([
     {
-      async reveal(item, options) {
-        revealCalls.push({ item, options });
+      viewId: 'gitBranchesPanel',
+      treeView: {
+        visible: true,
+        async reveal(item, options) {
+          revealCalls.push({ item, options });
+        },
       },
     },
   ]);
@@ -1097,15 +1101,21 @@ test('BranchTreeProvider revealBranch prefers the visible tree view and focuses 
 
   provider.registerTreeViews([
     {
-      visible: false,
-      async reveal(item, options) {
-        activityBarRevealCalls.push({ item, options });
+      viewId: 'gitBranchesPanel',
+      treeView: {
+        visible: false,
+        async reveal(item, options) {
+          activityBarRevealCalls.push({ item, options });
+        },
       },
     },
     {
-      visible: true,
-      async reveal(item, options) {
-        scmRevealCalls.push({ item, options });
+      viewId: 'gitBranchesSCM',
+      treeView: {
+        visible: true,
+        async reveal(item, options) {
+          scmRevealCalls.push({ item, options });
+        },
       },
     },
   ]);

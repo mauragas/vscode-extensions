@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.4.4] - 2026-08-03
+
+- Restored the `▶` current-branch marker for active local branches whose tracked upstream is gone, so recreated or stale-tracking branches still show clearly as checked out.
+
 ## [2.4.3] - 2026-08-03
 
 - Refined branch ancestry wording so exact evidence continues to show **Created from**, while weaker reconstructed ancestry now shows **Inferred base** with matching status text such as `Base status: ref missing`.

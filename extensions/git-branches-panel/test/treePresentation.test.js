@@ -1092,6 +1092,7 @@ test('buildTreeItemPresentation sets correct context value and icon for missing 
   assert.equal(missingUpstreamBranchPresentation.command.command, 'gitBranchesPanel.activateBranchItem');
 
   assert.equal(currentMissingUpstreamPresentation.nodeType, 'missingUpstreamBranch');
+  assert.equal(currentMissingUpstreamPresentation.label, '▶ main');
   assert.equal(currentMissingUpstreamPresentation.contextValue, 'publishableCurrentBranch');
   assert.equal(currentMissingUpstreamPresentation.icon.id, 'git-branch');
   assert.equal(currentMissingUpstreamPresentation.icon.colorId, 'list.warningForeground');
