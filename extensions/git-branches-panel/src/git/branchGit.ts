@@ -26,11 +26,24 @@ const GITHUB_PR_BASE_BRANCH_CONFIG_KEY_SUFFIX = 'github-pr-base-branch';
 const LOCAL_BRANCH_REF_PREFIX = 'refs/heads/';
 const LOCAL_BRANCH_TIP_SHA_FIELD_SEPARATOR = '\u001f';
 const LOCAL_BRANCH_TIP_SHA_RECORD_SEPARATOR = '\u001e';
+const REFLOG_FIELD_SEPARATOR = LOCAL_BRANCH_TIP_SHA_FIELD_SEPARATOR;
+const REFLOG_RECORD_SEPARATOR = LOCAL_BRANCH_TIP_SHA_RECORD_SEPARATOR;
+const REFLOG_HINT_CACHE_TTL_MS = 30_000;
 const REF_PREFIX = 'refs/';
 const REMOTE_BRANCH_REF_PREFIX = 'refs/remotes/';
 const VSCODE_MERGE_BASE_CONFIG_KEY_SUFFIX = 'vscode-merge-base';
 
-type CreatedFromResolutionKind = 'explicit' | 'githubPrBase' | 'mergeBase' | 'sameTipAnchor';
+const reflogHintCache = new Map<string, {
+  branchStateCacheKey: string;
+  createdFromByBranch: ReadonlyMap<string, string>;
+  expiresAt: number;
+}>();
+const reflogHintLoads = new Map<string, {
+  branchStateCacheKey: string;
+  loadPromise: Promise<ReadonlyMap<string, string>>;
+}>();
+
+type CreatedFromResolutionKind = 'explicit' | 'reflog' | 'githubPrBase' | 'mergeBase' | 'sameTipAnchor';
 
 interface CreatedFromResolution {
   sourceRef: string;
@@ -119,12 +132,25 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
     githubPrBaseEntries,
     mergeBaseEntries,
   };
+  const reflogCreatedFromByBranch = await getCreatedFromReflogHints(
+    repoRoot,
+    localBranchNames,
+    localBranchTipShas
+  );
 
   const configuredCreatedFromByBranch = new Map<string, CreatedFromResolution | undefined>(
     await Promise.all(
       branches.map(async (branch) => [
         branch.name,
-        await resolveConfiguredCreatedFromRef(repoRoot, branch.name, sourceMetadataLookup),
+        filterSelfReferentialCreatedFromResolution(
+          branch.name,
+          await resolveConfiguredCreatedFromRef(
+            repoRoot,
+            branch.name,
+            sourceMetadataLookup,
+            reflogCreatedFromByBranch
+          )
+        ),
       ] as const)
     )
   );
@@ -138,13 +164,16 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
 
       return [
         branch.name,
-        await resolvePreferredLocalSourceAnchor(
-          repoRoot,
+        filterSelfReferentialCreatedFromResolution(
           branch.name,
-          localBranchTipShas,
-          configuredCreatedFromByBranch,
-          localBranchesContainingTipCache
-        ) ?? configuredCreatedFrom,
+          await resolvePreferredLocalSourceAnchor(
+            repoRoot,
+            branch.name,
+            localBranchTipShas,
+            configuredCreatedFromByBranch,
+            localBranchesContainingTipCache
+          ) ?? configuredCreatedFrom
+        ),
       ] as const;
     }))
   );
@@ -152,12 +181,14 @@ export async function getBranches(repoRoot: string): Promise<BranchInfo[]> {
   const enrichedBranches: BranchInfo[] = await Promise.all(
     branches.map(async (branch: BranchInfo) => {
       if (branch.createdFromRef) {
-        return branch;
+        return isSelfReferentialCreatedFromRef(branch.name, branch.createdFromRef)
+          ? omitCreatedFromMetadata(branch)
+          : branch;
       }
 
       const createdFromRef = resolvedCreatedFromByBranch.get(branch.name)?.sourceRef;
 
-      if (!createdFromRef) {
+      if (!createdFromRef || isSelfReferentialCreatedFromRef(branch.name, createdFromRef)) {
         return branch;
       }
 
@@ -196,14 +227,23 @@ export async function createBranchFromRef(
   startPoint: string,
   options: CreateBranchFromRefOptions = {}
 ): Promise<void> {
+  let branchCreated = false;
+
   if (options.checkout ?? false) {
     await runGit(repoRoot, ['checkout', '-b', branchName, startPoint]);
   } else {
     await runGit(repoRoot, ['branch', branchName, startPoint]);
   }
+  branchCreated = true;
 
-  if (options.sourceRef) {
-    await writeGitConfig(repoRoot, buildCreatedFromConfigKey(branchName), options.sourceRef);
+  try {
+    if (options.sourceRef) {
+      await writeGitConfig(repoRoot, buildCreatedFromConfigKey(branchName), options.sourceRef);
+    }
+  } finally {
+    if (branchCreated) {
+      invalidateCreatedFromReflogHintCache(repoRoot);
+    }
   }
 }
 
@@ -214,10 +254,14 @@ export async function renameBranch(
 ): Promise<void> {
   await runGit(repoRoot, ['branch', '-m', branchName, newBranchName]);
 
-  const createdFromRef = await readGitConfig(repoRoot, buildCreatedFromConfigKey(branchName));
-  if (createdFromRef) {
-    await writeGitConfig(repoRoot, buildCreatedFromConfigKey(newBranchName), createdFromRef);
-    await unsetGitConfig(repoRoot, buildCreatedFromConfigKey(branchName));
+  try {
+    const createdFromRef = await readGitConfig(repoRoot, buildCreatedFromConfigKey(branchName));
+    if (createdFromRef) {
+      await writeGitConfig(repoRoot, buildCreatedFromConfigKey(newBranchName), createdFromRef);
+      await unsetGitConfig(repoRoot, buildCreatedFromConfigKey(branchName));
+    }
+  } finally {
+    invalidateCreatedFromReflogHintCache(repoRoot);
   }
 }
 
@@ -227,7 +271,12 @@ export async function deleteBranch(
   force: boolean
 ): Promise<void> {
   await runGit(repoRoot, ['branch', force ? '-D' : '-d', branchName]);
-  await unsetGitConfig(repoRoot, buildCreatedFromConfigKey(branchName));
+
+  try {
+    await unsetGitConfig(repoRoot, buildCreatedFromConfigKey(branchName));
+  } finally {
+    invalidateCreatedFromReflogHintCache(repoRoot);
+  }
 }
 
 export async function syncBranch(
@@ -711,6 +760,35 @@ function buildActualLocalBranchRef(branchName: string): string {
     : `${LOCAL_BRANCH_REF_PREFIX}${branchName}`;
 }
 
+function filterSelfReferentialCreatedFromResolution(
+  branchName: string,
+  resolution: CreatedFromResolution | undefined
+): CreatedFromResolution | undefined {
+  if (!resolution || !isSelfReferentialCreatedFromRef(branchName, resolution.sourceRef)) {
+    return resolution;
+  }
+
+  return undefined;
+}
+
+function isSelfReferentialCreatedFromRef(branchName: string, sourceRef: string): boolean {
+  if (!sourceRef.startsWith(LOCAL_BRANCH_REF_PREFIX)) {
+    return false;
+  }
+
+  return normalizeLocalBranchConfigName(sourceRef) === normalizeLocalBranchConfigName(branchName);
+}
+
+function omitCreatedFromMetadata(branch: BranchInfo): BranchInfo {
+  return {
+    ...branch,
+    createdFromRef: undefined,
+    createdFromDisplayName: undefined,
+    sourceBehindCount: undefined,
+    sourceRefMissing: undefined,
+  };
+}
+
 function normalizeLocalBranchConfigName(branchName: string): string {
   return branchName.startsWith(LOCAL_BRANCH_REF_PREFIX)
     ? branchName.slice(LOCAL_BRANCH_REF_PREFIX.length)
@@ -790,7 +868,8 @@ export async function getSourceBranchState(
 async function resolveConfiguredCreatedFromRef(
   repoRoot: string,
   branchName: string,
-  sourceMetadataLookup: BranchSourceMetadataLookup
+  sourceMetadataLookup: BranchSourceMetadataLookup,
+  reflogCreatedFromByBranch: ReadonlyMap<string, string>
 ): Promise<CreatedFromResolution | undefined> {
   const explicitCreatedFromRef = sourceMetadataLookup.createdFromEntries.get(
     buildCreatedFromConfigKey(branchName)
@@ -808,10 +887,11 @@ async function resolveConfiguredCreatedFromRef(
       };
     }
 
-    const fallbackSourceRef = await resolveCompatibleConfigCreatedFromRef(
+    const fallbackSourceRef = await resolveFallbackCreatedFromRef(
       repoRoot,
       branchName,
-      sourceMetadataLookup
+      sourceMetadataLookup,
+      reflogCreatedFromByBranch
     );
     return fallbackSourceRef ?? {
       sourceRef: normalizedExplicitSourceRef,
@@ -819,14 +899,28 @@ async function resolveConfiguredCreatedFromRef(
     };
   }
 
-  return resolveCompatibleConfigCreatedFromRef(repoRoot, branchName, sourceMetadataLookup);
+  return resolveFallbackCreatedFromRef(
+    repoRoot,
+    branchName,
+    sourceMetadataLookup,
+    reflogCreatedFromByBranch
+  );
 }
 
-async function resolveCompatibleConfigCreatedFromRef(
+async function resolveFallbackCreatedFromRef(
   repoRoot: string,
   branchName: string,
-  sourceMetadataLookup: BranchSourceMetadataLookup
+  sourceMetadataLookup: BranchSourceMetadataLookup,
+  reflogCreatedFromByBranch: ReadonlyMap<string, string>
 ): Promise<CreatedFromResolution | undefined> {
+  const reflogCreatedFromRef = reflogCreatedFromByBranch.get(branchName);
+  if (reflogCreatedFromRef) {
+    return {
+      sourceRef: reflogCreatedFromRef,
+      kind: 'reflog',
+    };
+  }
+
   const githubPrBaseRef = inferCreatedFromRefFromGitHubPrBase(
     branchName,
     sourceMetadataLookup.githubPrBaseEntries,
@@ -852,6 +946,225 @@ async function resolveCompatibleConfigCreatedFromRef(
   }
 
   return undefined;
+}
+
+async function getCreatedFromReflogHints(
+  repoRoot: string,
+  localBranchNames: ReadonlySet<string>,
+  localBranchTipShas: ReadonlyMap<string, string>
+): Promise<ReadonlyMap<string, string>> {
+  if (localBranchNames.size === 0) {
+    return new Map();
+  }
+
+  const branchStateCacheKey = buildLocalBranchStateCacheKey(localBranchTipShas);
+  const cachedEntry = reflogHintCache.get(repoRoot);
+  if (cachedEntry && cachedEntry.branchStateCacheKey === branchStateCacheKey && cachedEntry.expiresAt > Date.now()) {
+    return cachedEntry.createdFromByBranch;
+  }
+
+  const pendingLoad = reflogHintLoads.get(repoRoot);
+  if (pendingLoad && pendingLoad.branchStateCacheKey === branchStateCacheKey) {
+    return pendingLoad.loadPromise;
+  }
+
+  const loadPromise = loadCreatedFromReflogHints(repoRoot, localBranchNames)
+    .then((createdFromByBranch) => {
+      reflogHintCache.set(repoRoot, {
+        branchStateCacheKey,
+        createdFromByBranch,
+        expiresAt: Date.now() + REFLOG_HINT_CACHE_TTL_MS,
+      });
+
+      return createdFromByBranch;
+    })
+    .finally(() => {
+      const currentLoad = reflogHintLoads.get(repoRoot);
+      if (currentLoad?.loadPromise === loadPromise) {
+        reflogHintLoads.delete(repoRoot);
+      }
+    });
+
+  reflogHintLoads.set(repoRoot, {
+    branchStateCacheKey,
+    loadPromise,
+  });
+
+  return loadPromise;
+}
+
+async function loadCreatedFromReflogHints(
+  repoRoot: string,
+  localBranchNames: ReadonlySet<string>
+): Promise<ReadonlyMap<string, string>> {
+  if (localBranchNames.size === 0) {
+    return new Map();
+  }
+
+  let stdout = '';
+  try {
+    ({ stdout } = await runGit(repoRoot, [
+      'reflog',
+      'show',
+      '--all',
+      `--format=%gd${REFLOG_FIELD_SEPARATOR}%gs${REFLOG_RECORD_SEPARATOR}`,
+    ]));
+  } catch {
+    return new Map();
+  }
+
+  const oldestHeadCheckoutSourceByTargetBranch = new Map<string, string>();
+  const oldestBranchCreationSourceByBranch = new Map<string, string>();
+
+  for (const record of stdout.split(REFLOG_RECORD_SEPARATOR)) {
+    const trimmedRecord = record.trim();
+    if (!trimmedRecord) {
+      continue;
+    }
+
+    const [selector = '', subject = ''] = trimmedRecord.split(REFLOG_FIELD_SEPARATOR);
+    if (!selector || !subject) {
+      continue;
+    }
+
+    const reflogName = parseReflogSelectorName(selector);
+    if (!reflogName) {
+      continue;
+    }
+
+    if (reflogName === 'HEAD') {
+      const checkoutMatch = subject.match(/^checkout: moving from (.+) to (.+)$/u);
+      if (!checkoutMatch) {
+        continue;
+      }
+
+      const targetBranchName = normalizeHeadCheckoutTargetBranchName(
+        checkoutMatch[2],
+        localBranchNames
+      );
+      if (!targetBranchName) {
+        continue;
+      }
+
+      oldestHeadCheckoutSourceByTargetBranch.set(targetBranchName, checkoutMatch[1].trim());
+      continue;
+    }
+
+    if (!localBranchNames.has(reflogName)) {
+      continue;
+    }
+
+    const branchCreationMatch = subject.match(/^branch: Created from (.+)$/u);
+    if (!branchCreationMatch) {
+      continue;
+    }
+
+    oldestBranchCreationSourceByBranch.set(reflogName, branchCreationMatch[1].trim());
+  }
+
+  const createdFromEntries = await Promise.all(
+    [...oldestBranchCreationSourceByBranch.entries()].map(async ([branchName, sourceDescriptor]) => {
+      const normalizedSourceRef = await normalizeReflogSourceRef(
+        repoRoot,
+        sourceDescriptor === 'HEAD'
+          ? oldestHeadCheckoutSourceByTargetBranch.get(branchName)
+          : sourceDescriptor,
+        localBranchNames
+      );
+
+      return normalizedSourceRef
+        ? ([branchName, normalizedSourceRef] as const)
+        : undefined;
+    })
+  );
+
+  return new Map(
+    createdFromEntries.filter(
+      (entry): entry is readonly [string, string] => entry !== undefined
+    )
+  );
+}
+
+function invalidateCreatedFromReflogHintCache(repoRoot?: string): void {
+  if (repoRoot) {
+    reflogHintCache.delete(repoRoot);
+    reflogHintLoads.delete(repoRoot);
+    return;
+  }
+
+  reflogHintCache.clear();
+  reflogHintLoads.clear();
+}
+
+function buildLocalBranchStateCacheKey(localBranchTipShas: ReadonlyMap<string, string>): string {
+  return [...localBranchTipShas.entries()]
+    .sort(([leftBranchName], [rightBranchName]) => leftBranchName.localeCompare(rightBranchName))
+    .map(
+      ([branchName, tipSha]) =>
+        `${branchName}${LOCAL_BRANCH_TIP_SHA_FIELD_SEPARATOR}${tipSha}`
+    )
+    .join(LOCAL_BRANCH_TIP_SHA_RECORD_SEPARATOR);
+}
+
+function parseReflogSelectorName(selector: string): string | undefined {
+  const match = selector.trim().match(/^(.*)@\{\d+\}$/u);
+  return match?.[1]?.trim();
+}
+
+function normalizeHeadCheckoutTargetBranchName(
+  targetDescriptor: string,
+  localBranchNames: ReadonlySet<string>
+): string | undefined {
+  const normalizedTargetDescriptor = targetDescriptor.trim().replace(/^"+|"+$/gu, '');
+  if (localBranchNames.has(normalizedTargetDescriptor)) {
+    return normalizedTargetDescriptor;
+  }
+
+  if (!normalizedTargetDescriptor.startsWith(LOCAL_BRANCH_REF_PREFIX)) {
+    return undefined;
+  }
+
+  const branchName = normalizeLocalBranchConfigName(normalizedTargetDescriptor);
+  return localBranchNames.has(branchName) ? branchName : undefined;
+}
+
+async function normalizeReflogSourceRef(
+  repoRoot: string,
+  sourceDescriptor: string | undefined,
+  localBranchNames: ReadonlySet<string>
+): Promise<string | undefined> {
+  const normalizedSourceDescriptor = sourceDescriptor?.trim().replace(/^"+|"+$/gu, '');
+  if (
+    !normalizedSourceDescriptor ||
+    normalizedSourceDescriptor === 'HEAD' ||
+    normalizedSourceDescriptor === '(no branch)' ||
+    /^[0-9a-f]{7,40}$/iu.test(normalizedSourceDescriptor)
+  ) {
+    return undefined;
+  }
+
+  if (normalizedSourceDescriptor.startsWith(REF_PREFIX)) {
+    return normalizedSourceDescriptor;
+  }
+
+  if (localBranchNames.has(normalizedSourceDescriptor)) {
+    return buildLocalBranchRef(normalizedSourceDescriptor);
+  }
+
+  const remoteBranchReference = parseRemoteBranchReference(normalizedSourceDescriptor);
+  if (remoteBranchReference) {
+    return `${REMOTE_BRANCH_REF_PREFIX}${remoteBranchReference.fullName}`;
+  }
+
+  if (await doesTagExist(repoRoot, normalizedSourceDescriptor)) {
+    return `refs/tags/${normalizedSourceDescriptor}`;
+  }
+
+  if (/[~^:\\]/u.test(normalizedSourceDescriptor)) {
+    return undefined;
+  }
+
+  return buildLocalBranchRef(normalizedSourceDescriptor);
 }
 
 function shouldPreferSameTipSourceAnchor(

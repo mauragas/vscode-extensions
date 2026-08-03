@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.4.1] - 2026-08-03
+
+- Stopped showing self-referential **Created from** metadata (for example, `main` showing **Created from: main**) when compatible Git config hints point a branch back at itself.
+- Hardened source-branch detection for repositories and branches that were not originally created through this extension by preferring direct branch-creation reflog hints from Git CLI workflows such as `git branch` and `git checkout -b`, while still keeping valid fallback hints such as `github-pr-base-branch` and `vscode-merge-base` working for real source branches.
+
 ## [2.4.0] - 2026-08-01
 
 - Fixed the source-branch hover/tooltip and right-click context-menu regression so current branches with a recorded source ref and available source commits now consistently show the source status and expose **Update from Source Branch** without hiding the rest of the normal branch actions.

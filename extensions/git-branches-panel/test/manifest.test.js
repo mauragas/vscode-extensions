@@ -52,8 +52,8 @@ function getInlineViewItemContextCommands() {
   )];
 }
 
-test('package manifest exposes the 2.4.0 multi-repo, source-update, search, remote-host, history, remote-management, worktree, tag, and advanced-branch contributions', () => {
-  assert.equal(packageJson.version, '2.4.0');
+test('package manifest exposes the 2.4.1 multi-repo, source-update, search, remote-host, history, remote-management, worktree, tag, and advanced-branch contributions', () => {
+  assert.equal(packageJson.version, '2.4.1');
 
   const expectedCommands = [
     ['gitBranchesPanel.selectRepository', 'Select Active Repository'],
