@@ -77,6 +77,11 @@ function createVscodeMock(showCurrentBranchInfo, treeViews, state, initiallyVisi
               listener({ visible });
             }
           },
+          fireVisibilityEvent(visible) {
+            for (const listener of visibilityListeners) {
+              listener({ visible });
+            }
+          },
           dispose() {},
         };
         treeViews.push(treeView);
@@ -565,7 +570,7 @@ test('registerBranchViews reveals the current branch path when a tree view is vi
 
   assert.deepEqual(revealCalls, ['gitBranchesPanel']);
 
-  treeViews[1].fireVisibility(true);
+  treeViews[1].fireVisibilityEvent(true);
 
   assert.deepEqual(revealCalls, ['gitBranchesPanel', 'gitBranchesSCM']);
 });

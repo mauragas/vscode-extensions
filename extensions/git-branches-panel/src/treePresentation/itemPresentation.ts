@@ -650,8 +650,9 @@ function isCurrentBranch(
 ): boolean {
   switch (nodeType) {
     case 'currentBranch':
-    case 'missingUpstreamBranch':
       return true;
+    case 'missingUpstreamBranch':
+      return branch.isCurrent;
     case 'remoteBranch':
       return (
         currentBranchInfo?.scope === 'local' &&

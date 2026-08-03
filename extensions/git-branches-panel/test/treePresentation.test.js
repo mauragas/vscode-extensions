@@ -1115,6 +1115,19 @@ test('buildTreeItemPresentation adds pinned prefixes and busy context values whe
       aheadCount: 1,
     },
   });
+  const pinnedMissingUpstreamBranchPresentation = buildTreeItemPresentation({
+    kind: 'branch',
+    fullName: 'feature/missing-upstream',
+    label: 'missing-upstream',
+    path: 'feature/missing-upstream',
+    info: {
+      name: 'feature/missing-upstream',
+      isCurrent: false,
+      isPinned: true,
+      upstreamName: 'origin/feature/missing-upstream',
+      upstreamMissing: true,
+    },
+  });
   const pinnedCurrentWorktreePresentation = buildTreeItemPresentation({
     kind: 'branch',
     fullName: '/tmp/git-branches-panel-main-pinned-worktree',
@@ -1135,6 +1148,10 @@ test('buildTreeItemPresentation adds pinned prefixes and busy context values whe
   assert.equal(pinnedBusyBranchPresentation.icon.resourcePath, 'branch-outgoing.svg');
   assert.equal(pinnedBusyBranchPresentation.description, '↑1');
   assert.match(pinnedBusyBranchPresentation.tooltip, /_Pinned item_/);
+
+  assert.equal(pinnedMissingUpstreamBranchPresentation.label, 'missing-upstream');
+  assert.equal(pinnedMissingUpstreamBranchPresentation.contextValue, 'pinned:missingUpstreamBranch');
+  assert.equal(pinnedMissingUpstreamBranchPresentation.icon.resourcePath, 'star.svg');
 
   assert.equal(pinnedCurrentWorktreePresentation.label, '▶ git-branches-panel-main-pinned-worktree');
   assert.equal(pinnedCurrentWorktreePresentation.contextValue, 'pinned:currentWorktree');

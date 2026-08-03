@@ -1135,7 +1135,7 @@ test('BranchTreeProvider revealBranch prefers the visible tree view and focuses 
   });
 });
 
-test('BranchTreeProvider revealCurrentBranchOnStartup expands the current branch path only once per view', async () => {
+test('BranchTreeProvider revealCurrentBranchOnStartup expands the full current branch path and skips overlapping duplicate work', async () => {
   const commandCalls = [];
   const state = {
     treeData: [
@@ -1216,6 +1216,10 @@ test('BranchTreeProvider revealCurrentBranchOnStartup expands the current branch
 
   const provider = new BranchTreeProvider({ subscriptions: [] }, dataLoader);
   const revealCalls = [];
+  let resolveReveal;
+  const revealCompletion = new Promise((resolve) => {
+    resolveReveal = resolve;
+  });
 
   provider.registerTreeViews([
     {
@@ -1224,20 +1228,32 @@ test('BranchTreeProvider revealCurrentBranchOnStartup expands the current branch
         visible: true,
         async reveal(item, options) {
           revealCalls.push({ item, options });
+          await revealCompletion;
         },
       },
     },
   ]);
 
-  const firstReveal = await provider.revealCurrentBranchOnStartup('gitBranchesPanel');
-  const secondReveal = await provider.revealCurrentBranchOnStartup('gitBranchesPanel');
+  const firstRevealPromise = provider.revealCurrentBranchOnStartup('gitBranchesPanel');
+  const secondRevealPromise = provider.revealCurrentBranchOnStartup('gitBranchesPanel');
+
+  await Promise.resolve();
+
+  assert.equal(revealCalls.length, 1);
+
+  resolveReveal();
+
+  const firstReveal = await firstRevealPromise;
+  const secondReveal = await secondRevealPromise;
+  const thirdReveal = await provider.revealCurrentBranchOnStartup('gitBranchesPanel');
 
   assert.equal(firstReveal, true);
   assert.equal(secondReveal, false);
+  assert.equal(thirdReveal, false);
   assert.equal(revealCalls.length, 1);
   assert.equal(revealCalls[0].item.branchName, 'feature/demo/current');
   assert.deepEqual(revealCalls[0].options, {
-    expand: 3,
+    expand: true,
     focus: false,
     select: false,
   });

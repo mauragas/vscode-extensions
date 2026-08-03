@@ -27,8 +27,8 @@ export function registerBranchViews(
   ] as const;
   provider.registerTreeViews(treeViews);
   const visibilitySubscriptions = treeViews.map(({ viewId, treeView }) =>
-    treeView.onDidChangeVisibility(() => {
-      if (treeView.visible) {
+    treeView.onDidChangeVisibility(({ visible }) => {
+      if (visible) {
         void provider.revealCurrentBranchOnStartup(viewId);
       }
     })

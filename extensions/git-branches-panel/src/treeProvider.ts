@@ -322,53 +322,59 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<BranchTreeIte
       return false;
     }
 
-    if (this.startupCurrentBranchRevealViewIds.has(revealTreeViewEntry.viewId)) {
+    const revealViewId = revealTreeViewEntry.viewId;
+    if (this.startupCurrentBranchRevealViewIds.has(revealViewId)) {
       return false;
     }
 
-    if (viewId && !revealTreeViewEntry.treeView.visible) {
-      return false;
-    }
+    this.startupCurrentBranchRevealViewIds.add(revealViewId);
+    let revealed = false;
 
-    if (this.dataLoader.getRepoRoots().length === 0) {
-      await this.refresh({ sections: ['local'], fetchRemoteState: false });
-    }
+    try {
+      if (this.dataLoader.getRepoRoots().length === 0) {
+        await this.refresh({ sections: ['local'], fetchRemoteState: false });
+      }
 
-    await this.ensureActiveRepoRoot();
+      await this.ensureActiveRepoRoot();
 
-    let repoRoot = this.getRepoRoot();
-    if (!repoRoot) {
-      return false;
-    }
+      let repoRoot = this.getRepoRoot();
+      if (!repoRoot) {
+        return false;
+      }
 
-    if (!this.dataLoader.isSectionLoaded('local', repoRoot)) {
-      await this.refresh({
-        sections: ['local'],
-        repoRoots: [repoRoot],
-        fetchRemoteState: false,
+      if (!this.dataLoader.isSectionLoaded('local', repoRoot)) {
+        await this.refresh({
+          sections: ['local'],
+          repoRoots: [repoRoot],
+          fetchRemoteState: false,
+        });
+
+        repoRoot = this.getRepoRoot() ?? repoRoot;
+      }
+
+      const currentBranch = this.getCurrentBranch(repoRoot);
+      if (!currentBranch) {
+        return false;
+      }
+
+      const revealTarget = findLocalBranchTreeItem(this.getBaseVisibleTreeData(), repoRoot, currentBranch.name);
+      if (!revealTarget) {
+        return false;
+      }
+
+      await revealTreeViewEntry.treeView.reveal(revealTarget, {
+        expand: true,
+        focus: false,
+        select: false,
       });
 
-      repoRoot = this.getRepoRoot() ?? repoRoot;
+      revealed = true;
+      return true;
+    } finally {
+      if (!revealed) {
+        this.startupCurrentBranchRevealViewIds.delete(revealViewId);
+      }
     }
-
-    const currentBranch = this.getCurrentBranch(repoRoot);
-    if (!currentBranch) {
-      return false;
-    }
-
-    const revealTarget = findLocalBranchTreeItem(this.getBaseVisibleTreeData(), repoRoot, currentBranch.name);
-    if (!revealTarget) {
-      return false;
-    }
-
-    await revealTreeViewEntry.treeView.reveal(revealTarget, {
-      expand: 3,
-      focus: false,
-      select: false,
-    });
-
-    this.startupCurrentBranchRevealViewIds.add(revealTreeViewEntry.viewId);
-    return true;
   }
 
   getSelectedItem(viewId?: string): BranchTreeItem | undefined {
