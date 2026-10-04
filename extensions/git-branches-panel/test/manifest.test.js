@@ -64,8 +64,8 @@ function getKeybindings(commandId) {
   );
 }
 
-test('package manifest exposes the 2.4.5 multi-repo, source-update, search, remote-host, history, remote-management, worktree, tag, and advanced-branch contributions', () => {
-  assert.equal(packageJson.version, '2.4.5');
+test('package manifest exposes the 2.4.6 multi-repo, source-update, search, remote-host, history, remote-management, worktree, tag, and advanced-branch contributions', () => {
+  assert.equal(packageJson.version, '2.4.6');
 
   const expectedCommands = [
     ['gitBranchesPanel.selectRepository', 'Select Active Repository'],

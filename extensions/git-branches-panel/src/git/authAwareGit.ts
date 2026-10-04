@@ -1,4 +1,10 @@
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
 import type { GitApiFetchOptions, GitApiRepository } from '../gitApi';
+
+const execFileAsync = promisify(execFile);
+const GIT_COMMAND_MAX_BUFFER = 10 * 1024 * 1024;
 
 type GitNetworkFailureKind =
   | 'authentication'
@@ -7,40 +13,6 @@ type GitNetworkFailureKind =
   | 'network'
   | 'tls'
   | 'repositoryAccess';
-
-interface BuiltInGitApiRepository extends GitApiRepository {
-  readonly repository?: BuiltInGitHighLevelRepository;
-}
-
-interface BuiltInGitHighLevelRepository {
-  getRemoteRefs?(
-    remote: string,
-    options?: {
-      heads?: boolean;
-      tags?: boolean;
-    }
-  ): Promise<readonly BuiltInGitRemoteRef[]>;
-  pushTags?(remote?: string): Promise<void>;
-  readonly repository?: BuiltInGitLowLevelRepository;
-}
-
-interface BuiltInGitRemoteRef {
-  readonly name?: string;
-}
-
-interface BuiltInGitLowLevelRepository {
-  readonly git?: BuiltInGitRuntime;
-}
-
-interface BuiltInGitRuntime {
-  exec(
-    cwd: string,
-    args: string[],
-    options?: {
-      encoding?: string;
-    }
-  ): Promise<{ stdout: string; stderr: string }>;
-}
 
 interface BuiltInGitExecutor {
   exec(workingDirectory: string, args: string[]): Promise<{ stdout: string; stderr: string }>;
@@ -57,7 +29,7 @@ export interface GitCommandError extends Error {
 }
 
 export interface GitWithBuiltInAuthDependencies {
-  loadBuiltInRepository(repoRoot: string): Promise<BuiltInGitApiRepository | undefined>;
+  loadBuiltInRepository(repoRoot: string): Promise<GitApiRepository | undefined>;
   loadBuiltInExecutor(repoRoot: string): Promise<BuiltInGitExecutor | undefined>;
 }
 
@@ -172,10 +144,11 @@ export async function pushTagsWithBuiltInGit(
 
   const args = ['push', remoteName, '--tags'];
   const repository = await dependencies.loadBuiltInRepository(repoRoot);
+  const pushTags = getRepositoryPushTags(repository);
 
   try {
-    if (repository?.repository?.pushTags) {
-      await repository.repository.pushTags(remoteName);
+    if (pushTags) {
+      await pushTags(remoteName);
       return;
     }
 
@@ -204,8 +177,8 @@ export async function listRemoteRefsWithBuiltInGit(
   const repository = await dependencies.loadBuiltInRepository(repoRoot);
 
   try {
-    if (repository?.repository?.getRemoteRefs) {
-      const refs = await repository.repository.getRemoteRefs(remoteName, options);
+    if (typeof repository?.getRemoteRefs === 'function') {
+      const refs = await repository.getRemoteRefs(remoteName, options);
       return refs
         .map((ref) => normalizeRemoteRefName(ref.name))
         .filter((refName): refName is string => Boolean(refName));
@@ -343,28 +316,44 @@ export function classifyGitNetworkError(
 
 async function loadBuiltInGitExecutor(repoRoot: string): Promise<BuiltInGitExecutor | undefined> {
   try {
-    const repository = await loadBuiltInGitRepository(repoRoot);
+    const { getGitApi } = await import('../gitApi');
+    const gitApi = await getGitApi();
+    const gitPath = gitApi?.git?.path?.trim();
 
-    const gitRuntime = repository?.repository?.repository?.git;
-    if (!gitRuntime || typeof gitRuntime.exec !== 'function') {
+    if (!gitPath) {
       return undefined;
     }
 
+    const env = toBuiltInGitEnvironment(gitApi?.git?.env);
+
     return {
-      exec: async (workingDirectory, args) => gitRuntime.exec(workingDirectory, args),
+      exec: async (workingDirectory, args) =>
+        executeGitWithBuiltInRuntime(gitPath, env, workingDirectory, args),
     };
   } catch {
     return undefined;
   }
 }
 
-async function loadBuiltInGitRepository(repoRoot: string): Promise<BuiltInGitApiRepository | undefined> {
+async function loadBuiltInGitRepository(repoRoot: string): Promise<GitApiRepository | undefined> {
   try {
     const { getRepositoryForRoot } = await import('../gitApi');
-    return (await getRepositoryForRoot(repoRoot)) as BuiltInGitApiRepository | undefined;
+    return await getRepositoryForRoot(repoRoot);
   } catch {
     return undefined;
   }
+}
+
+function getRepositoryPushTags(
+  repository: GitApiRepository | undefined
+): ((remoteName?: string) => Promise<void>) | undefined {
+  const candidate = repository as (GitApiRepository & {
+    pushTags?: (remoteName?: string) => Promise<void>;
+  }) | undefined;
+
+  return typeof candidate?.pushTags === 'function'
+    ? candidate.pushTags.bind(candidate)
+    : undefined;
 }
 
 function normalizeGitCommandError(
@@ -562,4 +551,31 @@ function buildListRemoteRefsArgs(
 
 function normalizeRemoteRefName(refName: string | undefined): string | undefined {
   return refName?.trim().replace(/^refs\/(?:tags|heads)\//u, '');
+}
+
+function toBuiltInGitEnvironment(
+  env: Readonly<Record<string, string>> | undefined
+): NodeJS.ProcessEnv | undefined {
+  if (!env || Object.keys(env).length === 0) {
+    return undefined;
+  }
+
+  return {
+    ...process.env,
+    ...env,
+  };
+}
+
+async function executeGitWithBuiltInRuntime(
+  gitPath: string,
+  env: NodeJS.ProcessEnv | undefined,
+  workingDirectory: string,
+  args: string[]
+): Promise<{ stdout: string; stderr: string }> {
+  return execFileAsync(gitPath, args, {
+    cwd: workingDirectory,
+    encoding: 'utf8',
+    env,
+    maxBuffer: GIT_COMMAND_MAX_BUFFER,
+  });
 }
