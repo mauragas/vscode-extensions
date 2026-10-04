@@ -1,5 +1,6 @@
+import { pushTagsWithBuiltInGit, pushWithBuiltInGit } from './authAwareGit';
 import { invalidateRemoteTagCache, listRefs } from './refListing';
-import { ensureRemoteExists, runGit } from './shared';
+import { ensureRemoteExists, runGit, runGitWithAuth } from './shared';
 
 const TAG_FIELD_SEPARATOR = '\u001f';
 const TAG_RECORD_SEPARATOR = '\u001e';
@@ -95,7 +96,13 @@ export async function deleteTag(repoRoot: string, tagName: string): Promise<void
 
 export async function pushAllTags(repoRoot: string, remoteName: string): Promise<void> {
   await ensureRemoteExists(repoRoot, remoteName);
-  await runGit(repoRoot, ['push', remoteName, '--tags']);
+  await pushTagsWithBuiltInGit(
+    repoRoot,
+    remoteName,
+    async () => {
+      await runGitWithAuth(repoRoot, ['push', remoteName, '--tags']);
+    }
+  );
   invalidateRemoteTagCache(repoRoot);
 }
 
@@ -105,7 +112,16 @@ export async function pushTag(
   tagName: string
 ): Promise<void> {
   await ensureRemoteExists(repoRoot, remoteName);
-  await runGit(repoRoot, ['push', remoteName, `refs/tags/${tagName}`]);
+  await pushWithBuiltInGit(
+    repoRoot,
+    {
+      remoteName,
+      refspec: `refs/tags/${tagName}`,
+    },
+    async () => {
+      await runGitWithAuth(repoRoot, ['push', remoteName, `refs/tags/${tagName}`]);
+    }
+  );
   invalidateRemoteTagCache(repoRoot);
 }
 
@@ -115,7 +131,16 @@ export async function deleteRemoteTag(
   tagName: string
 ): Promise<void> {
   await ensureRemoteExists(repoRoot, remoteName);
-  await runGit(repoRoot, ['push', remoteName, `:refs/tags/${tagName}`]);
+  await pushWithBuiltInGit(
+    repoRoot,
+    {
+      remoteName,
+      refspec: `:refs/tags/${tagName}`,
+    },
+    async () => {
+      await runGitWithAuth(repoRoot, ['push', remoteName, `:refs/tags/${tagName}`]);
+    }
+  );
   invalidateRemoteTagCache(repoRoot);
 }
 

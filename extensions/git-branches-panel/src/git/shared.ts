@@ -4,7 +4,7 @@ import { access } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 
-import { getErrorMessage } from '../errorUtils';
+import { createGitCommandError, runGitWithBuiltInAuth } from './authAwareGit';
 
 const execFileAsync = promisify(execFile);
 
@@ -62,15 +62,18 @@ export async function runGit(
   args: string[]
 ): Promise<{ stdout: string; stderr: string }> {
   try {
-    return await execFileAsync('git', args, {
-      cwd: workingDirectory,
-      encoding: 'utf8',
-      maxBuffer: 10 * 1024 * 1024,
-    });
+    return await executeRawGit(workingDirectory, args);
   } catch (error) {
-    const message = getErrorMessage(error, 'Unknown git error');
-    throw new Error(message);
+    throw createGitCommandError(error, args, { classifyNetworkFailures: false });
   }
+}
+
+export async function runGitWithAuth(
+  repoRoot: string,
+  args: string[],
+  workingDirectory = repoRoot
+): Promise<{ stdout: string; stderr: string }> {
+  return runGitWithBuiltInAuth(repoRoot, workingDirectory, args, executeRawGit);
 }
 
 export async function cleanRepository(repoRoot: string): Promise<void> {
@@ -316,4 +319,15 @@ async function doesPathExist(path: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+async function executeRawGit(
+  workingDirectory: string,
+  args: string[]
+): Promise<{ stdout: string; stderr: string }> {
+  return execFileAsync('git', args, {
+    cwd: workingDirectory,
+    encoding: 'utf8',
+    maxBuffer: 10 * 1024 * 1024,
+  });
 }

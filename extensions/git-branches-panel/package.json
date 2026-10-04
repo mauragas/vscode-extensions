@@ -2,7 +2,7 @@
   "name": "git-branches-panel",
   "displayName": "Git Branches Panel",
   "description": "Tree view for branches, tags, stashes, worktrees, hooks, and remotes across one or multiple Git repositories with grouping, search, filtering, compare/history workflows, remote host integration, worktree maintenance, sync state, and quick actions.",
-  "version": "2.4.4",
+  "version": "2.4.5",
   "publisher": "karolis-mauragas",
   "license": "MIT",
   "repository": {
@@ -17,6 +17,9 @@
   "engines": {
     "vscode": "^1.85.0"
   },
+  "extensionDependencies": [
+    "vscode.git"
+  ],
   "categories": [
     "SCM Providers"
   ],
@@ -4944,6 +4947,6 @@
     "lint": "npm --prefix ../.. run lint:git-branches-panel",
     "test": "npm --prefix ../.. run test:git-branches-panel",
     "test:coverage": "npm --prefix ../.. run test:coverage:git-branches-panel",
-    "package": "npx -y -p node@20 -p @vscode/vsce vsce package"
+    "package": "npx -y -p node@22 -p @vscode/vsce@4.0.0 vsce package"
   }
 }

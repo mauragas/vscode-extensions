@@ -1,4 +1,5 @@
 import type { RemoteTrackingState } from '../branchModel';
+import { fetchWithBuiltInGit, pushWithBuiltInGit } from './authAwareGit';
 import { resolveHostedRepository } from './hosting';
 import type { RemoteInfo } from './hosting';
 import { invalidateRemoteTagCache, listRefs } from './refListing';
@@ -7,6 +8,7 @@ import {
   ensureRemoteExists,
   parseRemoteBranchReference,
   runGit,
+  runGitWithAuth,
   type RemoteBranchReference,
 } from './shared';
 
@@ -123,7 +125,16 @@ export async function fetchRemote(
   options: FetchRemoteOptions = {}
 ): Promise<void> {
   await ensureRemoteExists(repoRoot, remoteName);
-  await runGit(repoRoot, ['fetch', ...(options.prune ? ['--prune'] : []), remoteName]);
+  await fetchWithBuiltInGit(
+    repoRoot,
+    {
+      remote: remoteName,
+      prune: options.prune,
+    },
+    async () => {
+      await runGitWithAuth(repoRoot, ['fetch', ...(options.prune ? ['--prune'] : []), remoteName]);
+    }
+  );
   invalidateRemoteTagCache(repoRoot);
 }
 
@@ -244,19 +255,47 @@ export async function deleteRemoteBranch(
 
   if (options.skipPushHooks ?? false) {
     args.push('--no-verify');
+    args.push(remoteBranchRef.remoteName, '--delete', remoteBranchRef.branchName);
+    await runGitWithAuth(repoRoot, args);
+    return;
   }
 
-  args.push(remoteBranchRef.remoteName, '--delete', remoteBranchRef.branchName);
-  await runGit(repoRoot, args);
+  await pushWithBuiltInGit(
+    repoRoot,
+    {
+      remoteName: remoteBranchRef.remoteName,
+      refspec: `:${remoteBranchRef.branchName}`,
+    },
+    async () => {
+      await runGitWithAuth(repoRoot, ['push', remoteBranchRef.remoteName, '--delete', remoteBranchRef.branchName]);
+    }
+  );
 }
 
 export async function fetchRemoteState(repoRoot: string): Promise<void> {
-  await runGit(repoRoot, ['fetch', '--all', '--prune']);
+  await fetchWithBuiltInGit(
+    repoRoot,
+    {
+      all: true,
+      prune: true,
+    },
+    async () => {
+      await runGitWithAuth(repoRoot, ['fetch', '--all', '--prune']);
+    }
+  );
   invalidateRemoteTagCache(repoRoot);
 }
 
 export async function fetchAllRemotes(repoRoot: string): Promise<void> {
-  await runGit(repoRoot, ['fetch', '--all']);
+  await fetchWithBuiltInGit(
+    repoRoot,
+    {
+      all: true,
+    },
+    async () => {
+      await runGitWithAuth(repoRoot, ['fetch', '--all']);
+    }
+  );
   invalidateRemoteTagCache(repoRoot);
 }
 

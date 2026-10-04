@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.4.5] - 2026-10-04
+
+- Fixed auth-sensitive Git network operations such as fetch, pull, push, remote branch deletion, remote tag push/delete, and remote tag discovery so they now run through VS Code's built-in Git backend instead of a blind `git` child-process path, inheriting VS Code's resolved Git executable and credential/askpass environment.
+- Preserved the existing current-branch and non-current branch sync semantics, including temporary-worktree flows, while moving only the networked Git steps onto the auth-aware backend.
+- Improved auth/network failure reporting for migrated network commands by recognizing credential-prompt, authentication, SSH, connectivity, TLS/SSL, and repository-access failures and surfacing clearer user-facing messages.
+- Added focused auth-backend coverage to verify built-in Git backend selection, raw-runner fallback behavior, and auth/network error classification.
+
 ## [2.4.4] - 2026-08-03
 
 - Restored the `▶` current-branch marker for active local branches whose tracked upstream is gone, so recreated or stale-tracking branches still show clearly as checked out.

@@ -1,7 +1,9 @@
 import { parseUpstreamTrack, type BranchInfo } from '../branchModel';
+import { listRemoteRefsWithBuiltInGit } from './authAwareGit';
 import {
   parseRemoteBranchReference,
   runGit,
+  runGitWithAuth,
 } from './shared';
 
 const GIT_RECORD_SEPARATOR = '\u001e';
@@ -166,15 +168,27 @@ async function loadRemoteTagNames(repoRoot: string): Promise<Set<string> | null>
 
     for (const remote of remotes) {
       try {
-        const { stdout: tagsOutput } = await runGit(repoRoot, ['ls-remote', '--tags', '--refs', remote]);
+        const remoteTagNames = await listRemoteRefsWithBuiltInGit(
+          repoRoot,
+          remote,
+          { tags: true },
+          async () => {
+            const { stdout: tagsOutput } = await runGitWithAuth(repoRoot, [
+              'ls-remote',
+              '--tags',
+              '--refs',
+              remote,
+            ]);
 
-        if (tagsOutput.trim()) {
-          for (const line of tagsOutput.split(/\r?\n/u)) {
-            const tagName = line.trim().split('\t')[1]?.replace('refs/tags/', '');
-            if (tagName) {
-              allTagNames.add(tagName);
-            }
+            return tagsOutput
+              .split(/\r?\n/u)
+              .map((line) => line.trim().split('\t')[1]?.replace('refs/tags/', ''))
+              .filter((tagName): tagName is string => Boolean(tagName));
           }
+        );
+
+        for (const tagName of remoteTagNames) {
+          allTagNames.add(tagName);
         }
       } catch {
         // Skip remotes that fail

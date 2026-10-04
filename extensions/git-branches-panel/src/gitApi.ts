@@ -3,13 +3,31 @@ import { basename, sep } from 'node:path';
 
 import { getRepoRoot } from './git/shared';
 
+export interface GitApiFetchOptions {
+  readonly remote?: string;
+  readonly ref?: string;
+  readonly all?: boolean;
+  readonly prune?: boolean;
+  readonly depth?: number;
+}
+
 export interface GitApiRepository {
   readonly rootUri: vscode.Uri;
+  fetch(options?: GitApiFetchOptions): Promise<void>;
+  fetch(remote?: string, ref?: string, depth?: number): Promise<void>;
+  pull(unshallow?: boolean): Promise<void>;
+  push(
+    remoteName?: string,
+    branchName?: string,
+    setUpstream?: boolean,
+    force?: number
+  ): Promise<void>;
 }
 
 export interface GitApi {
   readonly repositories: readonly GitApiRepository[];
   getRepository(uri: vscode.Uri): GitApiRepository | null;
+  openRepository(root: vscode.Uri): Promise<GitApiRepository | null>;
   toGitUri(uri: vscode.Uri, ref: string): vscode.Uri;
 }
 
@@ -65,6 +83,23 @@ export async function resolveRepoRootForUri(uri: vscode.Uri | undefined): Promis
   const gitApi = await getGitApi();
   const repository = gitApi?.getRepository(uri);
   return repository?.rootUri.fsPath || undefined;
+}
+
+export async function getRepositoryForRoot(
+  repoRoot: string
+): Promise<GitApiRepository | undefined> {
+  const gitApi = await getGitApi();
+  if (!gitApi) {
+    return undefined;
+  }
+
+  const repoUri = vscode.Uri.file(repoRoot);
+  return (
+    gitApi.getRepository(repoUri) ??
+    (typeof gitApi.openRepository === 'function'
+      ? (await gitApi.openRepository(repoUri)) ?? undefined
+      : undefined)
+  );
 }
 
 function toWorkspaceRepositoryDescriptors(

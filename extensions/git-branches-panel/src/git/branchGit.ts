@@ -4,6 +4,7 @@ import { join } from 'node:path';
 
 import type { BranchInfo, CreatedFromDisplayKind } from '../branchModel';
 import { isTrackedBranch } from '../branchModel';
+import { BUILT_IN_FORCE_PUSH_MODE, pushWithBuiltInGit } from './authAwareGit';
 import { listRefs } from './refListing';
 import { fetchRemoteState } from './remoteGit';
 import { clearCheckedOutTag } from './tagGit';
@@ -17,6 +18,7 @@ import {
   readGitConfig,
   readGitConfigEntries,
   runGit,
+  runGitWithAuth,
   unsetGitConfig,
   writeGitConfig,
 } from './shared';
@@ -573,11 +575,11 @@ async function syncNonCurrentBranch(
 ): Promise<void> {
   await withTemporaryBranchWorktree(repoRoot, branchName, async (worktreePath) => {
     if (syncPlan.shouldPull) {
-      await pullBranch(worktreePath, syncTarget, syncPlan.hasOutgoingCommits, false);
+      await pullFetchedRemoteIntoBranch(worktreePath, syncTarget, syncPlan.hasOutgoingCommits, false);
     }
 
     if (syncPlan.shouldPush) {
-      await pushBranchToRemote(worktreePath, branchName, syncTarget, syncPlan.shouldSetUpstream);
+      await pushBranchToRemote(repoRoot, branchName, syncTarget, syncPlan.shouldSetUpstream);
     }
   });
 }
@@ -635,58 +637,76 @@ async function rebaseWorkingTree(
 }
 
 async function pullBranch(
+  repoRoot: string,
+  syncTarget: BranchSyncTarget,
+  useRebase: boolean,
+  allowAutostash: boolean
+): Promise<void> {
+  await pullFetchedRemoteIntoBranch(repoRoot, syncTarget, useRebase, allowAutostash);
+}
+
+async function pushBranchToRemote(
+  repoRoot: string,
+  branchName: string,
+  syncTarget: BranchSyncTarget,
+  setUpstream: boolean
+): Promise<void> {
+  const refspec = `${branchName}:refs/heads/${syncTarget.remoteBranchName}`;
+
+  await pushWithBuiltInGit(
+    repoRoot,
+    {
+      remoteName: syncTarget.remoteName,
+      refspec,
+      setUpstream,
+    },
+    async () => {
+      await runGitWithAuth(repoRoot, [
+        'push',
+        ...(setUpstream ? ['-u'] : []),
+        syncTarget.remoteName,
+        refspec,
+      ]);
+    }
+  );
+}
+
+async function forcePushBranchToRemote(
+  repoRoot: string,
+  branchName: string,
+  syncTarget: BranchSyncTarget
+): Promise<void> {
+  const refspec = `${branchName}:refs/heads/${syncTarget.remoteBranchName}`;
+
+  await pushWithBuiltInGit(
+    repoRoot,
+    {
+      remoteName: syncTarget.remoteName,
+      refspec,
+      forcePushMode: BUILT_IN_FORCE_PUSH_MODE.ForceWithLease,
+    },
+    async () => {
+      await runGitWithAuth(repoRoot, ['push', '--force-with-lease', syncTarget.remoteName, refspec]);
+    }
+  );
+}
+
+async function pullFetchedRemoteIntoBranch(
   workingDirectory: string,
   syncTarget: BranchSyncTarget,
   useRebase: boolean,
   allowAutostash: boolean
 ): Promise<void> {
-  const args = ['pull'];
+  const fetchedUpstreamRef = `${syncTarget.remoteName}/${syncTarget.remoteBranchName}`;
 
   if (useRebase) {
-    args.push('--rebase');
-    if (allowAutostash) {
-      args.push('--autostash');
-    }
-  } else {
-    args.push('--ff-only');
+    await rebaseWorkingTree(workingDirectory, fetchedUpstreamRef, {
+      autostash: allowAutostash,
+    });
+    return;
   }
 
-  args.push(syncTarget.remoteName, syncTarget.remoteBranchName);
-
-  await runGit(workingDirectory, args);
-}
-
-async function pushBranchToRemote(
-  workingDirectory: string,
-  branchName: string,
-  syncTarget: BranchSyncTarget,
-  setUpstream: boolean
-): Promise<void> {
-  const args = ['push'];
-
-  if (setUpstream) {
-    args.push('-u');
-  }
-
-  args.push(
-    syncTarget.remoteName,
-    `${branchName}:refs/heads/${syncTarget.remoteBranchName}`
-  );
-
-  await runGit(workingDirectory, args);
-}
-
-async function forcePushBranchToRemote(
-  workingDirectory: string,
-  branchName: string,
-  syncTarget: BranchSyncTarget
-): Promise<void> {
-  await runGit(workingDirectory, [
-    'push',
-    '--force-with-lease',
-    syncTarget.remoteName,
-    `${branchName}:refs/heads/${syncTarget.remoteBranchName}`,
-  ]);
+  await runGit(workingDirectory, ['merge', '--ff-only', fetchedUpstreamRef]);
 }
 
 async function resolveBranchRemoteState(
