@@ -1,4 +1,4 @@
-import type * as vscode from 'vscode';
+import type { GitApiFetchOptions, GitApiRepository } from '../gitApi';
 
 type GitNetworkFailureKind =
   | 'authentication'
@@ -8,32 +8,7 @@ type GitNetworkFailureKind =
   | 'tls'
   | 'repositoryAccess';
 
-interface BuiltInGitExtensionExports {
-  getAPI(version: number): BuiltInGitApi;
-}
-
-interface BuiltInGitApi {
-  getRepository(uri: vscode.Uri): BuiltInGitApiRepository | null;
-  openRepository?(root: vscode.Uri): Promise<BuiltInGitApiRepository | null>;
-}
-
-interface BuiltInGitFetchOptions {
-  remote?: string;
-  ref?: string;
-  all?: boolean;
-  prune?: boolean;
-  depth?: number;
-}
-
-interface BuiltInGitApiRepository {
-  readonly rootUri: vscode.Uri;
-  fetch?(options?: BuiltInGitFetchOptions): Promise<void>;
-  push?(
-    remoteName?: string,
-    branchName?: string,
-    setUpstream?: boolean,
-    force?: number
-  ): Promise<void>;
+interface BuiltInGitApiRepository extends GitApiRepository {
   readonly repository?: BuiltInGitHighLevelRepository;
 }
 
@@ -124,7 +99,7 @@ export async function runGitWithBuiltInAuth(
 
 export async function fetchWithBuiltInGit(
   repoRoot: string,
-  options: BuiltInGitFetchOptions,
+  options: GitApiFetchOptions,
   fallback: () => Promise<void>,
   overrides: Partial<GitWithBuiltInAuthDependencies> = {}
 ): Promise<void> {
@@ -232,7 +207,7 @@ export async function listRemoteRefsWithBuiltInGit(
     if (repository?.repository?.getRemoteRefs) {
       const refs = await repository.repository.getRemoteRefs(remoteName, options);
       return refs
-        .map((ref) => ref.name?.trim())
+        .map((ref) => normalizeRemoteRefName(ref.name))
         .filter((refName): refName is string => Boolean(refName));
     }
 
@@ -385,25 +360,8 @@ async function loadBuiltInGitExecutor(repoRoot: string): Promise<BuiltInGitExecu
 
 async function loadBuiltInGitRepository(repoRoot: string): Promise<BuiltInGitApiRepository | undefined> {
   try {
-    const vscodeModule = (await import('vscode')) as typeof import('vscode');
-    const extension = vscodeModule.extensions.getExtension<BuiltInGitExtensionExports>('vscode.git');
-    if (!extension) {
-      return undefined;
-    }
-
-    const exports = extension.isActive ? extension.exports : await extension.activate();
-    if (!exports || typeof exports.getAPI !== 'function') {
-      return undefined;
-    }
-
-    const gitApi = exports.getAPI(1);
-    const repoUri = vscodeModule.Uri.file(repoRoot);
-    return (
-      gitApi.getRepository(repoUri) ??
-      (typeof gitApi.openRepository === 'function'
-        ? (await gitApi.openRepository(repoUri)) ?? undefined
-        : undefined)
-    );
+    const { getRepositoryForRoot } = await import('../gitApi');
+    return (await getRepositoryForRoot(repoRoot)) as BuiltInGitApiRepository | undefined;
   } catch {
     return undefined;
   }
@@ -523,7 +481,7 @@ function isGitCommandError(error: unknown): error is GitCommandError {
   return Boolean(error && typeof error === 'object' && 'message' in error);
 }
 
-function buildFetchArgs(options: BuiltInGitFetchOptions): string[] {
+function buildFetchArgs(options: GitApiFetchOptions): string[] {
   const args = ['fetch'];
 
   if (options.remote) {
@@ -600,4 +558,8 @@ function buildListRemoteRefsArgs(
 
   args.push(remoteName);
   return args;
+}
+
+function normalizeRemoteRefName(refName: string | undefined): string | undefined {
+  return refName?.trim().replace(/^refs\/(?:tags|heads)\//u, '');
 }

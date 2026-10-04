@@ -96,7 +96,7 @@ test('pushTagsWithBuiltInGit prefers the built-in repository pushTags API when a
   assert.deepEqual(fallbackCalls, []);
 });
 
-test('listRemoteRefsWithBuiltInGit prefers the built-in repository remote-ref API when available', async () => {
+test('listRemoteRefsWithBuiltInGit normalizes built-in remote ref names to match raw git output', async () => {
   const fallbackCalls = [];
 
   const refNames = await listRemoteRefsWithBuiltInGit(
@@ -112,8 +112,9 @@ test('listRemoteRefsWithBuiltInGit prefers the built-in repository remote-ref AP
         repository: {
           async getRemoteRefs() {
             return [
-              { name: 'v1.0.0' },
-              { name: ' release/v1.1.0 ' },
+              { name: ' refs/tags/v1.0.0 ' },
+              { name: 'refs/heads/release/v1.1.0' },
+              { name: ' release/v1.2.0 ' },
               { name: undefined },
             ];
           },
@@ -123,7 +124,7 @@ test('listRemoteRefsWithBuiltInGit prefers the built-in repository remote-ref AP
     }
   );
 
-  assert.deepEqual(refNames, ['v1.0.0', 'release/v1.1.0']);
+  assert.deepEqual(refNames, ['v1.0.0', 'release/v1.1.0', 'release/v1.2.0']);
   assert.deepEqual(fallbackCalls, []);
 });
 
