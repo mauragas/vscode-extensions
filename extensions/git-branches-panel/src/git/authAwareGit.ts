@@ -314,7 +314,7 @@ export function classifyGitNetworkError(
   return undefined;
 }
 
-async function loadBuiltInGitExecutor(repoRoot: string): Promise<BuiltInGitExecutor | undefined> {
+async function loadBuiltInGitExecutor(_repoRoot: string): Promise<BuiltInGitExecutor | undefined> {
   try {
     const { getGitApi } = await import('../gitApi');
     const gitApi = await getGitApi();
