@@ -6,7 +6,6 @@ import {
   type BranchSortOrder,
   type TagSortOrder,
   type BranchTreeNode,
-  hasSourceBranchUpdate,
   isPublishableBranch,
   type TreeBranch,
 } from './branchModel';

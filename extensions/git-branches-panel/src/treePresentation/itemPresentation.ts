@@ -6,7 +6,6 @@ import {
   getCreatedFromLabel,
   getCreatedFromStatusLabel,
   getPublishTargetName,
-  hasSourceBranchUpdate,
   isPublishableBranch,
 } from '../branchModel/descriptions';
 import type {

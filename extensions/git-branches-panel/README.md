@@ -328,7 +328,7 @@ For the Tags and Worktree section shortcuts, the extension uses the currently ch
 ### Requirements
 
 - Node.js 18+ for local development
-- Node.js 20+ recommended for creating `.vsix` packages
+- Node.js 22+ recommended for creating `.vsix` packages
 - Visual Studio Code 1.85+
 
 ### Run locally
@@ -352,6 +352,8 @@ Quickest option from the repository root:
 ```bash
 npm run package:git-branches-panel
 ```
+
+The package scripts automatically download the pinned `@vscode/vsce` version used by this repo, so you do not need a separate global `vsce` installation.
 
 Or from this extension folder directly:
 
