@@ -70,9 +70,8 @@ test('pushWithBuiltInGit prefers the built-in repository push API when available
   assert.deepEqual(fallbackCalls, []);
 });
 
-test('pushTagsWithBuiltInGit prefers the built-in repository pushTags API when available', async () => {
+test('pushTagsWithBuiltInGit falls back to the auth-aware runner when the public Git API has no pushTags helper', async () => {
   const fallbackCalls = [];
-  const pushTagCalls = [];
 
   await pushTagsWithBuiltInGit(
     '/repo',
@@ -82,18 +81,19 @@ test('pushTagsWithBuiltInGit prefers the built-in repository pushTags API when a
     },
     {
       loadBuiltInRepository: async () => ({
-        repository: {
-          async pushTags(remoteName) {
-            pushTagCalls.push(remoteName);
-          },
+        rootUri: { fsPath: '/repo' },
+        async fetch() {},
+        async getRemoteRefs() {
+          return [];
         },
+        async pull() {},
+        async push() {},
       }),
       loadBuiltInExecutor: async () => undefined,
     }
   );
 
-  assert.deepEqual(pushTagCalls, ['origin']);
-  assert.deepEqual(fallbackCalls, []);
+  assert.deepEqual(fallbackCalls, ['fallback']);
 });
 
 test('listRemoteRefsWithBuiltInGit normalizes built-in remote ref names to match raw git output', async () => {
@@ -109,16 +109,18 @@ test('listRemoteRefsWithBuiltInGit normalizes built-in remote ref names to match
     },
     {
       loadBuiltInRepository: async () => ({
-        repository: {
-          async getRemoteRefs() {
-            return [
-              { name: ' refs/tags/v1.0.0 ' },
-              { name: 'refs/heads/release/v1.1.0' },
-              { name: ' release/v1.2.0 ' },
-              { name: undefined },
-            ];
-          },
+        rootUri: { fsPath: '/repo' },
+        async fetch() {},
+        async getRemoteRefs() {
+          return [
+            { name: ' refs/tags/v1.0.0 ' },
+            { name: 'refs/heads/release/v1.1.0' },
+            { name: ' release/v1.2.0 ' },
+            { name: undefined },
+          ];
         },
+        async pull() {},
+        async push() {},
       }),
       loadBuiltInExecutor: async () => undefined,
     }

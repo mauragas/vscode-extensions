@@ -11,10 +11,27 @@ export interface GitApiFetchOptions {
   readonly depth?: number;
 }
 
+export interface GitApiRemoteRef {
+  readonly name?: string;
+  readonly commit?: string;
+}
+
+export interface GitApiRuntime {
+  readonly path: string;
+  readonly env?: Readonly<Record<string, string>>;
+}
+
 export interface GitApiRepository {
   readonly rootUri: vscode.Uri;
   fetch(options?: GitApiFetchOptions): Promise<void>;
   fetch(remote?: string, ref?: string, depth?: number): Promise<void>;
+  getRemoteRefs(
+    remote: string,
+    opts?: {
+      heads?: boolean;
+      tags?: boolean;
+    }
+  ): Promise<readonly GitApiRemoteRef[]>;
   pull(unshallow?: boolean): Promise<void>;
   push(
     remoteName?: string,
@@ -25,6 +42,7 @@ export interface GitApiRepository {
 }
 
 export interface GitApi {
+  readonly git: GitApiRuntime;
   readonly repositories: readonly GitApiRepository[];
   getRepository(uri: vscode.Uri): GitApiRepository | null;
   openRepository(root: vscode.Uri): Promise<GitApiRepository | null>;

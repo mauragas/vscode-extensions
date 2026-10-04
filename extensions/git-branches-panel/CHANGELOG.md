@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.4.6] - 2026-10-04
+
+- Fixed authenticated **Push All Tags** so it no longer falls back to a blind `git` child-process path that bypasses VS Code's Git credentials/askpass environment.
+- Fixed authenticated remote tag discovery to use the public VS Code Git repository API (`getRemoteRefs`) instead of unsupported internal object nesting, restoring reliable remote-tag state for protected/authenticated remotes.
+- Hardened the shared auth-aware raw Git fallback so every migrated network fallback now uses VS Code Git's resolved executable path and injected environment when the public repository helper is unavailable.
+- Audited the related fallback call sites affected by the same issue, including remote tag listing, tag push/delete flows, fetch compatibility paths, no-verify remote branch delete, and branch push compatibility fallbacks.
+
 ## [2.4.5] - 2026-10-04
 
 - Fixed auth-sensitive Git network operations such as fetch, pull, push, remote branch deletion, remote tag push/delete, and remote tag discovery so they now run through VS Code's built-in Git backend instead of a blind `git` child-process path, inheriting VS Code's resolved Git executable and credential/askpass environment.
